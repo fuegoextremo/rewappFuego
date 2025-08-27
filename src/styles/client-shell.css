@@ -1,0 +1,14 @@
+/* Quita el flash azul en iOS */
+*:focus { outline: none; }
+html { -webkit-tap-highlight-color: transparent; }
+
+/* Scroll suave y momentum */
+html, body { scroll-behavior: smooth; overscroll-behavior-y: none; }
+
+/* Mejora la perf en móviles */
+img, svg { shape-rendering: optimizeSpeed; }
+
+/* Constrain para verse como app en desktop */
+@media (min-width: 640px) {
+  .max-w-sm { border: 1px solid #eee; border-radius: 1rem; }
+}

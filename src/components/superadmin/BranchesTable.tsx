@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import BranchDetailsModal from "./BranchDetailsModal";
 import { useToast } from "@/hooks/use-toast";
 import { deleteBranch, toggleBranchStatus } from "@/app/superadmin/branches/actions";
 import BranchForm from "./BranchForm";
@@ -52,8 +53,14 @@ export default function BranchesTable({ branches, onBranchUpdated }: BranchesTab
   const [selectedBranch, setSelectedBranch] = useState<BranchWithStats | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const { toast } = useToast();
+
+  const handleView = (branch: BranchWithStats) => {
+    setSelectedBranch(branch);
+    setDetailsModalOpen(true);
+  };
 
   const handleEdit = (branch: BranchWithStats) => {
     setSelectedBranch(branch);
@@ -182,6 +189,7 @@ export default function BranchesTable({ branches, onBranchUpdated }: BranchesTab
                       size="sm"
                       className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
                       title="Ver detalles"
+                      onClick={() => handleView(branch)}
                     >
                       <EyeIcon className="h-4 w-4" />
                     </Button>
@@ -260,6 +268,13 @@ export default function BranchesTable({ branches, onBranchUpdated }: BranchesTab
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de detalles */}
+      <BranchDetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        branch={selectedBranch}
+      />
     </>
   );
 }

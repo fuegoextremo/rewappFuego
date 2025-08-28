@@ -1,0 +1,200 @@
+"use client";
+
+import { useState } from "react";
+import { Tables } from "@/types/database";
+import { Button } from "@/components/ui/button";
+import PrizesTable from "@/components/admin/PrizesTable";
+import PrizeForm from "@/components/admin/PrizeForm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { createPrize, updatePrize, deletePrize } from "./actions";
+
+export default function PrizesClient({ prizes: initialPrizes }: { prizes: Tables<"prizes">[] }) {
+  const [prizes, setPrizes] = useState<Tables<"prizes">[]>(initialPrizes);
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPrize, setSelectedPrize] = useState<Tables<"prizes"> | undefined>();
+  const { toast } = useToast();
+
+  const handleCreate = async (data: Partial<Tables<"prizes">>) => {
+    try {
+      const newPrize = await createPrize(data);
+      setPrizes([newPrize, ...prizes]);
+      toast({
+        title: "Éxito",
+        description: "Premio creado correctamente",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al crear el premio",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdate = async (data: Partial<Tables<"prizes">>) => {
+    if (!selectedPrize) return;
+    try {
+      const updatedPrize = await updatePrize(selectedPrize.id, data);
+      setPrizes(prizes.map((p) => (p.id === updatedPrize.id ? updatedPrize : p)));
+      toast({
+        title: "Éxito",
+        description: "Premio actualizado correctamente",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al actualizar el premio",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (prizeId: string) => {
+    try {
+      await deletePrize(prizeId);
+      setPrizes(prizes.filter((p) => p.id !== prizeId));
+      toast({
+        title: "Éxito",
+        description: "Premio eliminado correctamente",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al eliminar el premio",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openCreateForm = () => {
+    setSelectedPrize(undefined);
+    setFormOpen(true);
+  };
+
+  const openEditForm = (prize: Tables<"prizes">) => {
+    setSelectedPrize(prize);
+    setFormOpen(true);
+  };
+
+  const openDeleteDialog = (prize: Tables<"prizes">) => {
+    setSelectedPrize(prize);
+    setDeleteDialogOpen(true);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={openCreateForm}>Nuevo Premio</Button>
+      </div>
+
+      {/* Tabla de Premios de Ruleta */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Premios de Ruleta</h2>
+        <PrizesTable
+          prizes={prizes.filter(p => p.type === "roulette")}
+          onEdit={openEditForm}
+          onDelete={(id) => {
+            const prize = prizes.find((p) => p.id === id);
+            if (prize) openDeleteDialog(prize);
+          }}
+          showFields={["weight", "inventory_count"]}
+          hideFields={["streak_threshold"]}
+        />
+      </div>
+
+      {/* Tabla de Premios de Racha */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Premios por Racha</h2>
+        <PrizesTable
+          prizes={prizes.filter(p => p.type === "streak")}
+          onEdit={openEditForm}
+          onDelete={(id) => {
+            const prize = prizes.find((p) => p.id === id);
+            if (prize) openDeleteDialog(prize);
+          }}
+          showFields={["streak_threshold"]}
+          hideFields={["weight", "inventory_count"]}
+        />
+      </div>
+
+      <PrizeForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSubmit={selectedPrize ? handleUpdate : handleCreate}
+        prize={selectedPrize}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El premio se marcará como inactivo y no estará
+              disponible para futuras operaciones.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedPrize) {
+                  handleDelete(selectedPrize.id);
+                  setDeleteDialogOpen(false);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+      </div>
+
+      <PrizeForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSubmit={selectedPrize ? handleUpdate : handleCreate}
+        prize={selectedPrize}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El premio se marcará como inactivo y no estará
+              disponible para futuras operaciones.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedPrize) {
+                  handleDelete(selectedPrize.id);
+                  setDeleteDialogOpen(false);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

@@ -31,6 +31,7 @@ export default function UserQR({ size = 240 }: { size?: number }) {
         setCode(json.code ?? '')
       } catch (e) {
         if (!mounted) return
+        console.error('Error generating QR:', e)
         setErr('No se pudo generar el QR. Intenta de nuevo.')
       } finally {
         if (mounted) setLoading(false)

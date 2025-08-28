@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       app_configurations: {
@@ -460,6 +435,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      grant_coupon_to_user: {
+        Args:
+          | { p_prize_id: string; p_user_id: string }
+          | { p_prize_id: string; p_user_id: string; p_validity_days?: number }
+        Returns: undefined
+      }
+      increment_user_spins: {
+        Args: { p_spin_amount: number; p_user_id: string }
+        Returns: undefined
+      }
       is_admin_any: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -608,9 +593,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

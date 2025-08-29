@@ -3,6 +3,7 @@ import { getSuperAdminSettings } from "./actions";
 import PremiosSection from "./components/PremiosSection";
 import CuponesSection from "./components/CuponesSection";
 import EmpresaSection from "./components/EmpresaSection";
+import NotificacionesSection from "./components/NotificacionesSection";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CogIcon } from "@heroicons/react/24/outline";
 
@@ -57,6 +58,12 @@ export default async function SistemaPage() {
         <Suspense fallback={<div className="animate-pulse bg-gray-100 h-32 rounded-lg" />}>
           <CuponesSection 
             settings={('coupons' in settingsResult.data) ? settingsResult.data.coupons : []} 
+          />
+        </Suspense>
+
+        <Suspense fallback={<div className="animate-pulse bg-gray-100 h-48 rounded-lg" />}>
+          <NotificacionesSection 
+            settings={('notifications' in settingsResult.data) ? settingsResult.data.notifications : []} 
           />
         </Suspense>
 

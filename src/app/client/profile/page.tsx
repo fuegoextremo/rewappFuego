@@ -1,50 +1,55 @@
-// src/app/admin/users/[id]/page.tsx
-import { createAdminClient } from "@/lib/supabase/admin";
-import { notFound } from "next/navigation";
-import EditUserForm from "@/components/admin/EditUserForm";
+// src/app/client/profile/page.tsx
+import { createClientServer } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import ProfileForm from "@/components/client/ProfileForm";
+import ChangePasswordForm from "@/components/client/ChangePasswordForm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
-type PageProps = {
-  params: { id: string }
-};
 
 export const revalidate = 0;
 
-export default async function AdminUserPage({ params }: PageProps) {
-  const { id } = params;
-  const supabase = createAdminClient();
+export default async function ClientProfilePage() {
+  const supabase = createClientServer();
 
-  // Perfil del usuario
+  // Verificar autenticación
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    redirect('/login');
+  }
+
+  // Obtener perfil del usuario actual
   const { data: profile, error: profileError } = await supabase
     .from("user_profiles")
     .select("*")
-    .eq("id", id)
+    .eq("id", user.id)
     .single();
 
   if (profileError || !profile) {
-    return notFound();
-  }
-
-  // Check-ins del usuario (histórico)
-  const { data: checkins, error: checkinsError } = await supabase
-    .from("check_ins")
-    .select("*")
-    .eq("user_id", id)
-    .order("created_at", { ascending: false }); // sin coma extra
-
-  if (checkinsError) {
-    // No es crítico para render; podrías loguearlo
-    // console.error(checkinsError)
+    redirect('/login');
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Editar usuario</CardTitle>
+          <CardTitle>Mi Perfil</CardTitle>
         </CardHeader>
         <CardContent>
-          <EditUserForm defaultValues={profile} checkins={checkins ?? []} />
+          <ProfileForm defaultValues={{
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            phone: profile.phone || '',
+            birth_date: profile.birth_date || ''
+          }} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cambiar Contraseña</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChangePasswordForm />
         </CardContent>
       </Card>
     </div>

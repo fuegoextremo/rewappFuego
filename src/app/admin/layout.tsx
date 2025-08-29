@@ -1,10 +1,11 @@
 
 import Sidebar from "@/components/admin/Sidebar";
 import SuperAdminBanner from "@/components/admin/SuperAdminBanner";
+import { UnauthorizedBanner } from "@/components/shared/UnauthorizedBanner";
 import { createClientServer } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-const ADMIN_ROLES = ['admin', 'superadmin'];
+const ADMIN_ROLES = ['admin', 'superadmin', 'manager', 'verifier'];
 
 export default async function AdminLayout({
   children,
@@ -18,7 +19,7 @@ export default async function AdminLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   const { data: profile } = await supabase
@@ -54,6 +55,8 @@ export default async function AdminLayout({
         {/* Content Container con bordes redondeados */}
         <div className="p-4 md:p-6 pb-24 md:pb-6">
           <div className="mx-auto max-w-7xl bg-white rounded-lg shadow-sm min-h-full p-4 md:p-6">
+            {/* Banner de error */}
+            <UnauthorizedBanner />
             {children}
           </div>
         </div>

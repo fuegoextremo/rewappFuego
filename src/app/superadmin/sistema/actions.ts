@@ -179,7 +179,7 @@ export async function getSuperAdminSettings() {
       .from('system_settings')
       .select('*')
       .eq('is_active', true)
-      .in('category', ['prizes', 'coupons', 'general'])
+      .in('category', ['prizes', 'coupons', 'general', 'notifications'])
       .order('category, key');
 
     if (error) {

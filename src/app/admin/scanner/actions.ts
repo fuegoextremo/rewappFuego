@@ -37,22 +37,25 @@ export async function processCheckin(qrToken: string): Promise<ActionResponse> {
   }
   const customerUserId = payload.u;
 
-  // 3. Ejecutar el check-in
+  // 3. Ejecutar el check-in (ahora usa configuraciones dinámicas internamente)
   const { error } = await supabase.rpc('process_checkin', {
     p_user: customerUserId,
-    p_branch: branchId,
-    p_spins: 1 // Otorgar 1 spin por check-in
+    p_branch: branchId
+    // Ya no necesitamos p_spins porque la función usa la configuración dinámica
   });
 
   if (error) {
-    // Personalizar mensaje de error para el caso de check-in ya realizado
-    if (error.message.includes('checkin_time_constraint')) {
-        return { success: false, message: "Este usuario ya ha hecho check-in recientemente." };
+    // Personalizar mensaje de error
+    if (error.message.includes('límite de check-ins diarios')) {
+      return { success: false, message: "Has alcanzado el límite de check-ins diarios." };
+    }
+    if (error.message.includes('ya realizó check-in hoy')) {
+      return { success: false, message: "Ya tienes un check-in registrado hoy." };
     }
     return { success: false, message: `Error en el check-in: ${error.message}` };
   }
 
-  return { success: true, message: "Check-in exitoso." };
+  return { success: true, message: "Check-in exitoso. Puntos otorgados según configuración!" };
 }
 
 export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {

@@ -12,6 +12,7 @@ import {
   LogOut,
   ArrowLeft,
   Shield,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ const links = [
   { name: "Usuarios", href: "/users", icon: Users },
   { name: "Premios", href: "/prizes", icon: Award },
   { name: "Scanner", href: "/scanner", icon: QrCode },
+  { name: "Configuraciones", href: "/configuraciones", icon: Settings },
   { name: "Ajustes", href: "/settings", icon: Settings },
 ];
 
@@ -200,8 +202,20 @@ export default function Sidebar() {
             </div>
           </nav>
 
-          {/* Logout Button */}
-          <div className="p-3 border-t border-gray-200">
+          {/* Actions */}
+          <div className="p-3 border-t border-gray-200 space-y-2">
+            {/* Ver como Cliente Button */}
+            <Link href="/client?admin=true">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all duration-200"
+              >
+                <Eye className="w-5 h-5" />
+                <span>Ver como Cliente</span>
+              </Button>
+            </Link>
+            
+            {/* Logout Button */}
             <Button
               onClick={handleSignOut}
               variant="ghost"

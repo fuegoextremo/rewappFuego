@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 const items = [
   { href: '/client', label: 'Inicio', icon: '🏠' },
@@ -12,6 +13,17 @@ const items = [
 
 export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [adminPreview, setAdminPreview] = useState(false)
+  
+  useEffect(() => {
+    const isPreview = searchParams.get('admin') === 'true' || sessionStorage.getItem('adminPreview') === 'true'
+    setAdminPreview(isPreview)
+  }, [searchParams])
+  
+  const getHref = (href: string) => {
+    return adminPreview ? `${href}?admin=true` : href
+  }
   return (
     <nav className="fixed bottom-0 inset-x-0 z-30 border-t border-gray-200 bg-white/95 backdrop-blur">
       <ul className="mx-auto grid max-w-sm grid-cols-5">
@@ -32,7 +44,7 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
                 </button>
               ) : (
                 <Link
-                  href={it.href}
+                  href={getHref(it.href)}
                   prefetch
                   className="flex flex-col items-center py-2 text-xs"
                 >

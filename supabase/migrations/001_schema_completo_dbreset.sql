@@ -211,12 +211,36 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.user_profiles (id, unique_code, is_active, created_at, updated_at)
-  VALUES (NEW.id, generate_unique_code(), true, NOW(), NOW())
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
+    -- Crear perfil automáticamente para el nuevo usuario
+    INSERT INTO public.user_profiles (
+        id,
+        first_name,
+        last_name,
+        unique_code,
+        role,
+        is_active,
+        created_at,
+        updated_at
+    ) VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
+        COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
+        generate_unique_code(),
+        'client', -- Rol por defecto según la tabla
+        true,
+        NOW(),
+        NOW()
+    ) ON CONFLICT (id) DO NOTHING;
+    
+    RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- En caso de error, log y continuar
+        RAISE WARNING 'Error creando perfil para usuario %: %', NEW.email, SQLERRM;
+        RETURN NEW;
 END;
 $$;
 

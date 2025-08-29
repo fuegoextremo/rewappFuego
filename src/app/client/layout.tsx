@@ -5,13 +5,15 @@ import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
 import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
 import { AdminPreviewBanner } from '@/components/shared/AdminPreviewBanner'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import '@/styles/client-shell.css' // estilos puntuales (ver sección 6)
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   const [openCheckin, setOpenCheckin] = useState(false)
 
   return (
-    <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900">
+    <ThemeProvider>
+      <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900">
       {/* Banners de estado */}
       <AdminPreviewBanner />
       
@@ -38,6 +40,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
 
       {/* Bottom nav persistente */}
       <BottomNav onCheckinClick={() => setOpenCheckin(true)} />
-    </div>
+      </div>
+    </ThemeProvider>
   )
 }

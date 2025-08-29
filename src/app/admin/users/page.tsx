@@ -2,13 +2,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import UserTable from "@/components/admin/UserTable";
 import { Tables } from "@/types/database";
+import Breadcrumbs from '@/components/shared/Breadcrumbs';
 
 // Define a new type for the merged user data
 export type UserWithDetails = Tables<"user_profiles"> & {
   email: string | undefined;
   provider: string | undefined;
-  check_ins: [{ count: number }];
-  coupons: [{ count: number }];
+  check_ins: { count: number }[];
+  coupons: { count: number }[];
 };
 
 export default async function Page() {
@@ -28,7 +29,7 @@ export default async function Page() {
 
   if (authError || profilesError) {
     return (
-      <div>
+      <div className="container mx-auto p-4 space-y-6">
         <h1 className="text-2xl font-bold">Usuarios</h1>
         <p className="text-red-500">Error al cargar los usuarios.</p>
         {authError && <p>Auth Error: {authError.message}</p>}
@@ -45,14 +46,30 @@ export default async function Page() {
       email: authUser?.email,
       provider: authUser?.app_metadata.provider,
       // Ensure counts are arrays with at least one object
-      check_ins: Array.isArray(profile.check_ins) ? profile.check_ins : [{ count: 0 }],
-      coupons: Array.isArray(profile.coupons) ? profile.coupons : [{ count: 0 }],
+      check_ins: Array.isArray(profile.check_ins) && profile.check_ins.length > 0 ? profile.check_ins : [{ count: 0 }],
+      coupons: Array.isArray(profile.coupons) && profile.coupons.length > 0 ? profile.coupons : [{ count: 0 }],
     };
   });
 
+  const breadcrumbItems = [
+    { label: 'Admin', href: '/admin/dashboard' },
+    { label: 'Usuarios', current: true }
+  ];
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Gestión de Usuarios</h1>
+    <div className="container mx-auto p-4 space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs items={breadcrumbItems} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <p className="text-gray-600">Administra usuarios, perfiles y actividad del sistema</p>
+        </div>
+      </div>
+
+      {/* Table */}
       <UserTable users={usersWithDetails || []} />
     </div>
   );

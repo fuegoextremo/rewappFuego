@@ -5,7 +5,17 @@ import { Button } from "@/components/ui/button";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
 import UserForm from "./UserForm";
 
-export default function CreateUserButton() {
+interface Branch {
+  id: string;
+  name: string;
+  is_active: boolean | null;
+}
+
+interface CreateUserButtonProps {
+  branches: Branch[];
+}
+
+export default function CreateUserButton({ branches }: CreateUserButtonProps) {
   const [formOpen, setFormOpen] = useState(false);
 
   return (
@@ -22,6 +32,7 @@ export default function CreateUserButton() {
         open={formOpen}
         onOpenChange={setFormOpen}
         mode="create"
+        branches={branches}
       />
     </>
   );

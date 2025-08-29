@@ -14,6 +14,7 @@ import CouponHistoryTable from "@/components/admin/CouponHistoryTable";
 import GrantSpinsModal from "@/components/admin/GrantSpinsModal";
 import GrantCouponModal from "@/components/admin/GrantCouponModal";
 import DeleteUserDialog from "@/components/admin/DeleteUserDialog";
+import Breadcrumbs from '@/components/shared/Breadcrumbs';
 
 interface UserDetailPageProps {
   params: {
@@ -62,13 +63,25 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     return notFound();
   }
 
+  const breadcrumbItems = [
+    { label: 'Admin', href: '/admin/dashboard' },
+    { label: 'Usuarios', href: '/admin/users' },
+    { label: `${profile.first_name} ${profile.last_name}` || 'Usuario', current: true }
+  ];
+
   return (
-    <div className="space-y-6 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">Gestión de Usuario</h1>
-        <p className="text-gray-500">
-          Editando el perfil de {profile.first_name} {profile.last_name}.
-        </p>
+    <div className="container mx-auto p-4 space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs items={breadcrumbItems} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuario</h1>
+          <p className="text-gray-600">
+            Editando el perfil de {profile.first_name} {profile.last_name}
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

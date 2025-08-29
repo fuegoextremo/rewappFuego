@@ -1,5 +1,5 @@
 import { getDashboardStats, getCustomPeriodStats } from './actions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, CheckCircle, Gift, Target } from 'lucide-react';
 import DashboardCharts from '@/components/admin/DashboardCharts';

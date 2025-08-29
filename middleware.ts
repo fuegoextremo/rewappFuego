@@ -54,45 +54,60 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Si no hay sesión
+  // CASO 1: No hay sesión - solo permitir rutas públicas
   if (!session) {
     const publicRoutes = ['/', '/login', '/register', '/forgot-password']
-    if (!publicRoutes.includes(pathname) && !pathname.startsWith('/(auth)')) {
-      return NextResponse.redirect(new URL('/login', req.url))
+    const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/(auth)')
+    
+    if (!isPublicRoute) {
+      // Redirigir a login con información del destino original
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
     }
     return res
   }
 
-  // Obtener perfil del usuario
-  const { data: profile } = await supabase
+  // CASO 2: Hay sesión - verificar que el usuario existe en user_profiles
+  const { data: profile, error: profileError } = await supabase
     .from('user_profiles')
     .select('role')
     .eq('id', session.user.id)
     .single()
 
-  const userRole = profile?.role || 'client'
+  // Si el usuario no existe en user_profiles (fue borrado)
+  if (profileError || !profile) {
+    // Limpiar sesión y redirigir a login
+    await supabase.auth.signOut()
+    const loginUrl = new URL('/login', req.url)
+    loginUrl.searchParams.set('error', 'user_deleted')
+    loginUrl.searchParams.set('message', 'Tu cuenta ha sido desactivada. Contacta al administrador.')
+    return NextResponse.redirect(loginUrl)
+  }
 
-  // Si está en login y ya está autenticado → redirigir rápido
-  if (pathname === '/login' || pathname === '/(auth)/login') {
+  const userRole = profile.role || 'client'
+
+  // CASO 3: Usuario autenticado en página de login - redirigir a su dashboard
+  if (pathname === '/login' || pathname.startsWith('/(auth)/login')) {
     const destination = getRoleDestination(userRole)
     return NextResponse.redirect(new URL(destination, req.url))
   }
 
-  // Admin queriendo ver como cliente
+  // CASO 4: Admin queriendo ver como cliente (modo preview)
   if (pathname.startsWith('/client') && searchParams.get('admin') === 'true') {
     if (['admin', 'superadmin', 'manager'].includes(userRole)) {
-      return res // Permitir acceso
+      return res // Permitir acceso en modo preview
     }
   }
 
-  // Verificar permisos normales
+  // CASO 5: Verificar permisos normales
   const access = checkAccess(pathname, userRole)
   if (!access.allowed) {
-    // Redirigir con mensaje de error
+    // Redirigir a su dashboard correspondiente con error
     const destination = getRoleDestination(userRole)
     const redirectUrl = new URL(destination, req.url)
     redirectUrl.searchParams.set('error', 'unauthorized')
-    redirectUrl.searchParams.set('from', pathname)
+    redirectUrl.searchParams.set('message', 'No tienes permisos para acceder a esta página')
     return NextResponse.redirect(redirectUrl)
   }
 

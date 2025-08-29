@@ -42,12 +42,19 @@ import SuperAdminGrantSpinsModal from "./SuperAdminGrantSpinsModal";
 import ResetPasswordModal from "./ResetPasswordModal";
 import UserDetailsModal from "./UserDetailsModal";
 
+interface Branch {
+  id: string;
+  name: string;
+  is_active: boolean | null;
+}
+
 interface UsersTableProps {
   users: UserWithProfile[];
+  branches: Branch[];
   onUserUpdated?: () => void;
 }
 
-export default function UsersTable({ users, onUserUpdated }: UsersTableProps) {
+export default function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) {
   const [selectedUser, setSelectedUser] = useState<UserWithProfile | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -137,8 +144,8 @@ export default function UsersTable({ users, onUserUpdated }: UsersTableProps) {
         return <Badge variant="default" className="text-xs bg-purple-600">Admin</Badge>;
       case 'verifier':
         return <Badge variant="secondary" className="text-xs bg-blue-600 text-white">Verificador</Badge>;
-      case 'user':
-        return <Badge variant="outline" className="text-xs">Usuario</Badge>;
+      case 'client':
+        return <Badge variant="outline" className="text-xs">Cliente</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">Sin rol</Badge>;
     }
@@ -254,7 +261,7 @@ export default function UsersTable({ users, onUserUpdated }: UsersTableProps) {
                     >
                       <KeyIcon className="h-4 w-4" />
                     </Button>
-                    {user.role === 'user' && (
+                    {user.role === 'client' && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -304,6 +311,7 @@ export default function UsersTable({ users, onUserUpdated }: UsersTableProps) {
         }}
         user={selectedUser || undefined}
         mode={formMode}
+        branches={branches}
       />
 
       {/* Modal de reseteo de contraseña */}

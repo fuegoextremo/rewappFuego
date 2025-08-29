@@ -31,8 +31,8 @@ export default function UserDetailsModal({
         return <Badge variant="default" className="text-xs bg-purple-600">Admin</Badge>;
       case 'verifier':
         return <Badge variant="secondary" className="text-xs bg-blue-600 text-white">Verificador</Badge>;
-      case 'user':
-        return <Badge variant="outline" className="text-xs">Usuario</Badge>;
+      case 'client':
+        return <Badge variant="outline" className="text-xs">Cliente</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">Sin rol</Badge>;
     }

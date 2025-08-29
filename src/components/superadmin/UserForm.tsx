@@ -28,14 +28,6 @@ import {
   type CreateUserData,
   type UpdateUserData 
 } from "@/app/superadmin/users/actions";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-interface UserFormProps {
-  open: boolean;
-  onOpenChange: ((open: boolean) => void) | undefined;
-  user?: UserWithProfile;
-  mode: "create" | "edit";
-}
 
 interface Branch {
   id: string;
@@ -43,8 +35,16 @@ interface Branch {
   is_active: boolean | null;
 }
 
+interface UserFormProps {
+  open: boolean;
+  onOpenChange: ((open: boolean) => void) | undefined;
+  user?: UserWithProfile;
+  mode: "create" | "edit";
+  branches: Branch[];
+}
+
 export default function UserForm(props: UserFormProps) {
-  const { open, onOpenChange, user, mode } = props;
+  const { open, onOpenChange, user, mode, branches } = props;
   const [formData, setFormData] = useState<CreateUserData>({
     email: "",
     password: "",
@@ -55,40 +55,8 @@ export default function UserForm(props: UserFormProps) {
     branch_id: "",
     is_active: true,
   });
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingBranches, setLoadingBranches] = useState(true);
   const { toast } = useToast();
-
-  // Cargar sucursales disponibles
-  useEffect(() => {
-    async function loadBranches() {
-      try {
-        const supabase = createAdminClient();
-        const { data, error } = await supabase
-          .from('branches')
-          .select('id, name, is_active')
-          .eq('is_active', true)
-          .order('name');
-
-        if (error) throw error;
-        setBranches(data || []);
-      } catch (error) {
-        console.error('Error loading branches:', error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las sucursales",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingBranches(false);
-      }
-    }
-
-    if (open) {
-      loadBranches();
-    }
-  }, [open, toast]);
 
   // Actualizar formulario cuando cambie el usuario o el modo
   useEffect(() => {
@@ -307,7 +275,6 @@ export default function UserForm(props: UserFormProps) {
               </Select>
             </div>
 
-            {/* Sucursal */}
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="branch">Sucursal</Label>
               <Select
@@ -315,12 +282,9 @@ export default function UserForm(props: UserFormProps) {
                 onValueChange={(value) => 
                   setFormData({ ...formData, branch_id: value === "none" ? "" : value })
                 }
-                disabled={loadingBranches}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={
-                    loadingBranches ? "Cargando sucursales..." : "Seleccionar sucursal (opcional)"
-                  } />
+                  <SelectValue placeholder="Seleccionar sucursal (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin sucursal asignada</SelectItem>
@@ -362,7 +326,7 @@ export default function UserForm(props: UserFormProps) {
             </Button>
             <Button 
               type="submit" 
-              disabled={isLoading || loadingBranches}
+              disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isLoading 

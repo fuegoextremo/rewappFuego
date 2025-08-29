@@ -14,19 +14,26 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tables } from "@/types/database";
 import { User } from "@supabase/supabase-js";
 import { useTransition } from "react";
 import { updateUser } from "@/app/admin/users/[id]/actions";
 import { useToast } from "@/hooks/use-toast";
 
-// Define the form schema using Zod
+// Define the form schema using Zod - Admin puede asignar hasta admin, no superadmin
 const formSchema = z.object({
   first_name: z.string().min(1, "El nombre es requerido"),
   last_name: z.string().min(1, "El apellido es requerido"),
   phone: z.string().optional(),
   birth_date: z.string().optional(),
-  role: z.enum(["user", "verifier", "admin", "superadmin"]),
+  role: z.enum(["client", "verifier", "admin"]), // Limitado: sin superadmin
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -35,6 +42,12 @@ interface EditUserFormProps {
   profile: Tables<"user_profiles">;
   authUser: User;
 }
+
+const roleOptions = [
+  { value: "client", label: "Cliente", description: "Usuario regular del sistema" },
+  { value: "verifier", label: "Verificador", description: "Puede escanear QR y validar check-ins" },
+  { value: "admin", label: "Administrador", description: "Acceso completo al panel de administración" },
+];
 
 export default function EditUserForm({ profile, authUser }: EditUserFormProps) {
   const [isPending, startTransition] = useTransition();
@@ -47,7 +60,8 @@ export default function EditUserForm({ profile, authUser }: EditUserFormProps) {
       last_name: profile.last_name || "",
       phone: profile.phone || "",
       birth_date: profile.birth_date || "",
-      role: (profile.role as FormData['role']) || "user",
+      // Si el rol actual es superadmin, lo mantenemos como admin para el form
+      role: (profile.role === "superadmin" ? "admin" : profile.role as FormData['role']) || "client",
     },
   });
 
@@ -118,7 +132,6 @@ export default function EditUserForm({ profile, authUser }: EditUserFormProps) {
               </FormItem>
             )}
           />
-          {/* TODO: Add a proper Date Picker for birth_date */}
           <FormField
             control={form.control}
             name="birth_date"
@@ -132,16 +145,29 @@ export default function EditUserForm({ profile, authUser }: EditUserFormProps) {
               </FormItem>
             )}
           />
-          {/* TODO: Use a Select component for the role */}
-           <FormField
+          <FormField
             control={form.control}
             name="role"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Rol</FormLabel>
-                <FormControl>
-                  <Input {...field} disabled={isPending} />
-                </FormControl>
+                <FormLabel>Rol del Usuario</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un rol" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {roleOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{option.label}</span>
+                          <span className="text-xs text-gray-500">{option.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

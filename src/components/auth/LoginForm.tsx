@@ -5,6 +5,19 @@ import { createClientBrowser } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useToast } from '@/hooks/use-toast'
+
+// Función para obtener el destino según el rol
+function getRoleDestination(role: string): string {
+  switch (role) {
+    case 'client': return '/client'
+    case 'verifier':
+    case 'manager': 
+    case 'admin': return '/admin/dashboard'
+    case 'superadmin': return '/superadmin/dashboard'
+    default: return '/client'
+  }
+}
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
@@ -13,6 +26,7 @@ export default function LoginForm() {
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClientBrowser()
+  const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,12 +41,37 @@ export default function LoginForm() {
 
       if (error) throw error
 
-      // Redirigir basado en el rol del usuario
-      router.push('/client')
-      router.refresh()
+      // Obtener el perfil del usuario para determinar la redirección
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role, first_name')
+        .eq('id', data.user.id)
+        .single()
+
+      const destination = getRoleDestination(profile?.role || 'client')
+      const userName = profile?.first_name || 'Usuario'
+
+      // Mostrar toast de éxito
+      toast({
+        title: `¡Bienvenido ${userName}!`,
+        description: "Acceso exitoso, redirigiendo a tu panel...",
+        duration: 2000,
+      })
+
+      // Esperar un poco para que el usuario vea el toast antes de redirigir
+      setTimeout(() => {
+        router.push(destination)
+        router.refresh()
+      }, 1500)
 
     } catch (error: any) {
       setError(error.message || 'Error al iniciar sesión')
+      toast({
+        title: "Error al iniciar sesión",
+        description: error.message || 'Verifica tus credenciales e intenta nuevamente',
+        variant: "destructive",
+        duration: 4000,
+      })
     } finally {
       setLoading(false)
     }

@@ -178,19 +178,21 @@ BEGIN
     updated_at = NOW();
 
   -- Actualizar racha
-  INSERT INTO public.streaks(user_id, current_streak, best_streak, last_checkin, created_at, updated_at)
-  VALUES (p_user, 1, 1, CURRENT_DATE, NOW(), NOW())
+  INSERT INTO public.streaks(user_id, current_count, max_count, last_check_in, created_at, updated_at)
+  VALUES (p_user, 1, 20, CURRENT_DATE, NOW(), NOW())
   ON CONFLICT (user_id) DO UPDATE SET
-    current_streak = CASE
-      WHEN streaks.last_checkin = CURRENT_DATE - INTERVAL '1 day' THEN streaks.current_streak + 1
+    current_count = CASE
+      WHEN streaks.last_check_in = CURRENT_DATE - INTERVAL '1 day' THEN 
+        LEAST(streaks.current_count + 1, streaks.max_count)
       ELSE 1
     END,
-    best_streak = GREATEST(streaks.best_streak, CASE
-      WHEN streaks.last_checkin = CURRENT_DATE - INTERVAL '1 day' THEN streaks.current_streak + 1
-      ELSE 1
-    END),
-    last_checkin = CURRENT_DATE,
-    updated_at = NOW();
+    last_check_in = CURRENT_DATE,
+    updated_at = NOW(),
+    is_completed = CASE
+      WHEN streaks.last_check_in = CURRENT_DATE - INTERVAL '1 day' THEN 
+        (streaks.current_count + 1) >= streaks.max_count
+      ELSE FALSE
+    END;
 END;
 $$;
 

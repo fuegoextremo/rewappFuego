@@ -5,13 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 
-// Schema for the user update form
+// Schema for the user update form - Admin puede asignar hasta admin, no superadmin
 const updateUserSchema = z.object({
   first_name: z.string().min(1, "El nombre es requerido"),
   last_name: z.string().min(1, "El apellido es requerido"),
   phone: z.string().optional(),
   birth_date: z.string().optional(),
-  role: z.enum(["user", "verifier", "admin", "superadmin"]),
+  role: z.enum(["client", "verifier", "admin"]), // Limitado: sin superadmin
 });
 
 // Schema for granting spins

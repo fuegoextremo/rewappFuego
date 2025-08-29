@@ -26,7 +26,6 @@ const links = [
   { name: "Usuarios", href: "/users", icon: Users },
   { name: "Premios", href: "/prizes", icon: Award },
   { name: "Scanner", href: "/scanner", icon: QrCode },
-  { name: "Configuraciones", href: "/configuraciones", icon: Settings },
   { name: "Ajustes", href: "/settings", icon: Settings },
 ];
 

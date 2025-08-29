@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UsersIcon, UserPlusIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import Breadcrumbs from '@/components/shared/Breadcrumbs';
 import { getAllUsers } from './actions';
+import { createAdminClient } from "@/lib/supabase/admin";
 import UsersTable from '@/components/superadmin/UsersTable';
 import CreateUserButton from '@/components/superadmin/CreateUserButton';
 
@@ -21,7 +22,20 @@ export default async function UsersPage() {
     );
   }
 
+  // Obtener las sucursales disponibles
+  const supabase = createAdminClient();
+  const { data: branches, error: branchesError } = await supabase
+    .from('branches')
+    .select('id, name, is_active')
+    .eq('is_active', true)
+    .order('name');
+
+  if (branchesError) {
+    console.error('Error loading branches:', branchesError);
+  }
+
   const users = result.data || [];
+  const branchesData = branches || [];
   
   // Estadísticas
   const totalUsers = users.length;
@@ -47,7 +61,7 @@ export default async function UsersPage() {
             Administra todos los usuarios del sistema con control total sobre roles y permisos
           </p>
         </div>
-        <CreateUserButton />
+        <CreateUserButton branches={branchesData} />
       </div>
 
       {/* Nota informativa */}
@@ -134,7 +148,7 @@ export default async function UsersPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <UsersTable users={users} />
+          <UsersTable users={users} branches={branchesData} />
         </CardContent>
       </Card>
     </div>

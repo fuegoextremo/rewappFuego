@@ -44,7 +44,7 @@ const navigationItems = [
   },
   {
     name: 'Sistema',
-    href: '/superadmin/system',
+    href: '/superadmin/sistema',
     icon: CogIcon,
   },
 ];

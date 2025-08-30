@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { updateSystemSettings, resetSettingsToDefault, type SystemSetting } from "../actions";
+import { getPrizeLimits } from "@/app/admin/settings/actions";
 import { TrophyIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import PrizeLimitsForm from "@/components/admin/PrizeLimitsForm";
 
 interface PremiosSectionProps {
   settings: SystemSetting[];
@@ -16,7 +18,38 @@ interface PremiosSectionProps {
 export default function PremiosSection({ settings }: PremiosSectionProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [prizeLimits, setPrizeLimits] = useState({
+    max_roulette_prizes: 10,
+    max_streak_prizes: 5
+  });
   const { toast } = useToast();
+
+  // Cargar límites de premios al montar el componente
+  useEffect(() => {
+    async function loadPrizeLimits() {
+      try {
+        const result = await getPrizeLimits();
+        if (result.success) {
+          setPrizeLimits(result.data);
+        }
+      } catch (error) {
+        console.error('Error loading prize limits:', error);
+      }
+    }
+    loadPrizeLimits();
+  }, []);
+
+  // Función para refrescar límites después de actualizaciones
+  const refreshPrizeLimits = async () => {
+    try {
+      const result = await getPrizeLimits();
+      if (result.success) {
+        setPrizeLimits(result.data);
+      }
+    } catch (error) {
+      console.error('Error refreshing prize limits:', error);
+    }
+  };
 
   // Extraer valores actuales
   const getSettingValue = (key: string, defaultValue: string = "") => {
@@ -217,6 +250,15 @@ export default function PremiosSection({ settings }: PremiosSectionProps) {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Límites de Premios - Solo SuperAdmin */}
+        <div className="mt-8">
+          <PrizeLimitsForm 
+            initialLimits={prizeLimits}
+            userRole="superadmin"
+            onSuccess={refreshPrizeLimits}
+          />
         </div>
 
         {/* Botón de guardar */}

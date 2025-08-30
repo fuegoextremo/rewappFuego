@@ -2,39 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClientBrowser } from '@/lib/supabase/client'
+import { SystemSettings, DEFAULT_SETTINGS } from '@/constants/default-settings'
 
-export type SystemSettings = {
-  company_name: string
-  company_logo_url: string
-  company_theme_primary: string
-  company_theme_secondary: string
-  company_contact_email: string
-  company_contact_phone: string
-  company_address: string
-  company_terms_conditions: string
-  company_privacy_policy: string
-  streak_initial_image?: string
-  streak_progress_default?: string
-  streak_complete_image?: string
-}
-
-// Configuraciones por defecto (fallbacks)
-function getDefaultSettings(): SystemSettings {
-  return {
-    company_name: 'Fuego Rewards',
-    company_logo_url: '',
-    company_theme_primary: '#D73527', // Rojo del diseño
-    company_theme_secondary: '#F97316', // Naranja complementario
-    company_contact_email: '',
-    company_contact_phone: '',
-    company_address: '',
-    company_terms_conditions: 'Términos y condiciones por definir...',
-    company_privacy_policy: 'Política de privacidad por definir...',
-    streak_initial_image: '/images/streak-start-default.svg',
-    streak_progress_default: '/images/streak-progress-default.svg',
-    streak_complete_image: '/images/streak-complete-default.svg'
-  }
-}
+export { type SystemSettings }
 
 export function useSystemSettings() {
   const [settings, setSettings] = useState<SystemSettings | null>(null)
@@ -54,7 +24,7 @@ export function useSystemSettings() {
 
         if (error) {
           console.error('Error obteniendo configuraciones:', error)
-          setSettings(getDefaultSettings())
+          setSettings(DEFAULT_SETTINGS)
           return
         }
 
@@ -64,11 +34,11 @@ export function useSystemSettings() {
           return acc
         }, {} as Partial<SystemSettings>)
 
-        setSettings({ ...getDefaultSettings(), ...settingsObj })
+        setSettings({ ...DEFAULT_SETTINGS, ...settingsObj })
       } catch (err) {
         setError('Error cargando configuraciones')
         console.error(err)
-        setSettings(getDefaultSettings())
+        setSettings(DEFAULT_SETTINGS)
       } finally {
         setLoading(false)
       }
@@ -79,3 +49,5 @@ export function useSystemSettings() {
 
   return { settings, loading, error }
 }
+
+// Ya no necesitamos getDefaultSettings() aquí porque usamos DEFAULT_SETTINGS

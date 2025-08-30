@@ -50,6 +50,12 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res })
   const { pathname, searchParams } = req.nextUrl
   
+  // IMPORTANTE: Si es una ruta de logout, NO verificar sesión para evitar loops
+  if (searchParams.get('logout') === 'true') {
+    console.log('🚨 Logout detected, bypassing auth checks')
+    return res
+  }
+  
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -69,46 +75,49 @@ export async function middleware(req: NextRequest) {
   }
 
   // CASO 2: Hay sesión - verificar que el usuario existe en user_profiles
-  const { data: profile, error: profileError } = await supabase
-    .from('user_profiles')
-    .select('role')
-    .eq('id', session.user.id)
-    .single()
+  // OPTIMIZACIÓN: Solo verificar perfil para rutas protegidas, no para auth
+  if (!pathname.startsWith('/(auth)') && pathname !== '/login') {
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
 
-  // Si el usuario no existe en user_profiles (fue borrado)
-  if (profileError || !profile) {
-    // Limpiar sesión y redirigir a login
-    await supabase.auth.signOut()
-    const loginUrl = new URL('/login', req.url)
-    loginUrl.searchParams.set('error', 'user_deleted')
-    loginUrl.searchParams.set('message', 'Tu cuenta ha sido desactivada. Contacta al administrador.')
-    return NextResponse.redirect(loginUrl)
-  }
-
-  const userRole = profile.role || 'client'
-
-  // CASO 3: Usuario autenticado en página de login - redirigir a su dashboard
-  if (pathname === '/login' || pathname.startsWith('/(auth)/login')) {
-    const destination = getRoleDestination(userRole)
-    return NextResponse.redirect(new URL(destination, req.url))
-  }
-
-  // CASO 4: Admin queriendo ver como cliente (modo preview)
-  if (pathname.startsWith('/client') && searchParams.get('admin') === 'true') {
-    if (['admin', 'superadmin', 'manager'].includes(userRole)) {
-      return res // Permitir acceso en modo preview
+    // Si el usuario no existe en user_profiles (fue borrado)
+    if (profileError || !profile) {
+      // Limpiar sesión y redirigir a login
+      await supabase.auth.signOut()
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('error', 'user_deleted')
+      loginUrl.searchParams.set('message', 'Tu cuenta ha sido desactivada. Contacta al administrador.')
+      return NextResponse.redirect(loginUrl)
     }
-  }
 
-  // CASO 5: Verificar permisos normales
-  const access = checkAccess(pathname, userRole)
-  if (!access.allowed) {
-    // Redirigir a su dashboard correspondiente con error
-    const destination = getRoleDestination(userRole)
-    const redirectUrl = new URL(destination, req.url)
-    redirectUrl.searchParams.set('error', 'unauthorized')
-    redirectUrl.searchParams.set('message', 'No tienes permisos para acceder a esta página')
-    return NextResponse.redirect(redirectUrl)
+    const userRole = profile.role || 'client'
+
+    // CASO 3: Usuario autenticado en página de login - redirigir a su dashboard
+    if (pathname === '/login') {
+      const destination = getRoleDestination(userRole)
+      return NextResponse.redirect(new URL(destination, req.url))
+    }
+
+    // CASO 4: Admin queriendo ver como cliente (modo preview)
+    if (pathname.startsWith('/client') && searchParams.get('admin') === 'true') {
+      if (['admin', 'superadmin', 'manager'].includes(userRole)) {
+        return res // Permitir acceso en modo preview
+      }
+    }
+
+    // CASO 5: Verificar permisos normales
+    const access = checkAccess(pathname, userRole)
+    if (!access.allowed) {
+      // Redirigir a su dashboard correspondiente con error
+      const destination = getRoleDestination(userRole)
+      const redirectUrl = new URL(destination, req.url)
+      redirectUrl.searchParams.set('error', 'unauthorized')
+      redirectUrl.searchParams.set('message', 'No tienes permisos para acceder a esta página')
+      return NextResponse.redirect(redirectUrl)
+    }
   }
 
   return res

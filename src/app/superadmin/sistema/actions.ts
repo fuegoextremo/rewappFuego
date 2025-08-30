@@ -257,6 +257,8 @@ export async function resetSettingsToDefault(category: SystemSettingCategory) {
       // Notifications
       'checkin_points_daily': '10',
       'max_checkins_per_day': '1',
+      'streak_break_days': '12',
+      'streak_expiry_days': '90',
       // General
       'company_name': 'Mi Empresa',
       'company_logo_url': '',

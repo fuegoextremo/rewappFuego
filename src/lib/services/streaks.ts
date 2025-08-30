@@ -1,8 +1,7 @@
 // src/lib/services/streaks.ts
 import { createClientServer } from "@/lib/supabase/server"
 import { createClientBrowser } from "@/lib/supabase/client"
-import { getSystemSettings, getSystemSettingsClient, type SystemSettings } from "./settings"
-import { type SystemSettings as HookSystemSettings } from "@/hooks/use-system-settings"
+import { getSystemSettings, type SystemSettings } from "./settings"
 
 export type StreakStage = {
   image: string
@@ -27,14 +26,31 @@ export type StreakPrize = {
 const FALLBACK_IMAGES = {
   streak_initial: "🔥", // Emoji como fallback
   streak_progress: "🚀", 
-  streak_complete: "🏆"
-}
-
-// Para uso en Server Components
+  streak_complete: "🏆",
+  streak_expired: "😴" // Para rachas expiradas
+}// Para uso en Server Components
 export async function getStreakStage(userId: string, currentCount: number): Promise<StreakStage> {
   const supabase = createClientServer()
   const settings = await getSystemSettings()
   
+  // Obtener información de la racha del usuario (incluyendo expiración)
+  const { data: userStreak } = await supabase
+    .from('streaks')
+    .select('current_count, expires_at, last_check_in')
+    .eq('user_id', userId)
+    .single()
+
+  // Verificar si la racha ha expirado
+  const isExpired = userStreak?.expires_at ? 
+    new Date(userStreak.expires_at) < new Date() : false
+
+  // Verificar si han pasado más días del configurado desde el último check-in
+  const breakDaysLimit = parseInt(settings.streak_break_days || '1')
+  const daysSinceLastCheckin = userStreak?.last_check_in ?
+    Math.floor((new Date().getTime() - new Date(userStreak.last_check_in).getTime()) / (1000 * 60 * 60 * 24)) : 999
+
+  const streakBroken = daysSinceLastCheckin > breakDaysLimit
+
   // Obtener premios de racha ordenados
   const { data: streakPrizes, error } = await supabase
     .from('prizes')
@@ -48,13 +64,38 @@ export async function getStreakStage(userId: string, currentCount: number): Prom
     return getDefaultStreakStage(currentCount)
   }
 
-  return calculateStreakStage(currentCount, streakPrizes, settings)
+  // Si la racha ha expirado o se rompió, mostrar estado especial
+  if (isExpired || streakBroken) {
+    return {
+      image: FALLBACK_IMAGES.streak_expired,
+      stage: isExpired ? "Racha expirada - ¡Comienza de nuevo!" : "Racha perdida - ¡Reinicia!",
+      progress: 0,
+      nextGoal: streakPrizes?.[0]?.streak_threshold || 5,
+      nextReward: streakPrizes?.[0]?.name || "Premio sorpresa",
+      canRestart: true
+    }
+  }
+
+  // Usar el count real de la base de datos
+  const actualCount = userStreak?.current_count || currentCount
+  return calculateStreakStage(actualCount, streakPrizes, settings)
 }
 
 // Para uso en Client Components
 export async function getStreakStageClient(userId: string, currentCount: number): Promise<StreakStage> {
   const supabase = createClientBrowser()
   
+  // Obtener información de la racha del usuario (incluyendo expiración)
+  const { data: userStreak } = await supabase
+    .from('streaks')
+    .select('current_count, expires_at, last_check_in')
+    .eq('user_id', userId)
+    .single()
+
+  // Verificar si la racha ha expirado
+  const isExpired = userStreak?.expires_at ? 
+    new Date(userStreak.expires_at) < new Date() : false
+
   // Obtener configuraciones directamente
   const { data: settingsData, error: settingsError } = await supabase
     .from('system_settings')
@@ -65,6 +106,13 @@ export async function getStreakStageClient(userId: string, currentCount: number)
     acc[key] = value
     return acc
   }, {} as Record<string, string>)
+
+  // Verificar si han pasado más días del configurado desde el último check-in
+  const breakDaysLimit = parseInt(settings.streak_break_days || '1')
+  const daysSinceLastCheckin = userStreak?.last_check_in ?
+    Math.floor((new Date().getTime() - new Date(userStreak.last_check_in).getTime()) / (1000 * 60 * 60 * 24)) : 999
+
+  const streakBroken = daysSinceLastCheckin > breakDaysLimit
 
   const { data: streakPrizes, error } = await supabase
     .from('prizes')
@@ -78,7 +126,21 @@ export async function getStreakStageClient(userId: string, currentCount: number)
     return getDefaultStreakStage(currentCount)
   }
 
-  return calculateStreakStageSimple(currentCount, streakPrizes, settings)
+  // Si la racha ha expirado o se rompió, mostrar estado especial
+  if (isExpired || streakBroken) {
+    return {
+      image: FALLBACK_IMAGES.streak_expired,
+      stage: isExpired ? "Racha expirada - ¡Comienza de nuevo!" : "Racha perdida - ¡Reinicia!",
+      progress: 0,
+      nextGoal: streakPrizes?.[0]?.streak_threshold || 5,
+      nextReward: streakPrizes?.[0]?.name || "Premio sorpresa",
+      canRestart: true
+    }
+  }
+
+  // Usar el count real de la base de datos
+  const actualCount = userStreak?.current_count || currentCount
+  return calculateStreakStageSimple(actualCount, streakPrizes, settings)
 }
 
 // Versión simplificada para cliente

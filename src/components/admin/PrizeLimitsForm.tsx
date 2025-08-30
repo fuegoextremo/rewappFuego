@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,14 +14,21 @@ interface PrizeLimitsFormProps {
     max_streak_prizes: number;
   };
   userRole: string;
+  onSuccess?: () => void; // Callback opcional para cuando se actualicen los límites
 }
 
-export default function PrizeLimitsForm({ initialLimits, userRole }: PrizeLimitsFormProps) {
+export default function PrizeLimitsForm({ initialLimits, userRole, onSuccess }: PrizeLimitsFormProps) {
   const [maxRoulette, setMaxRoulette] = useState(initialLimits.max_roulette_prizes);
   const [maxStreak, setMaxStreak] = useState(initialLimits.max_streak_prizes);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const isSuperAdmin = userRole === 'superadmin';
+
+  // Actualizar los valores del formulario cuando cambien los límites iniciales
+  useEffect(() => {
+    setMaxRoulette(initialLimits.max_roulette_prizes);
+    setMaxStreak(initialLimits.max_streak_prizes);
+  }, [initialLimits.max_roulette_prizes, initialLimits.max_streak_prizes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +48,10 @@ export default function PrizeLimitsForm({ initialLimits, userRole }: PrizeLimits
         title: "Éxito",
         description: "Límites actualizados correctamente",
       });
+      // Llamar al callback si está definido
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       toast({
         title: "Error",

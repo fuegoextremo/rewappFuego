@@ -19,7 +19,6 @@ type SystemSettings = {
   streak_initial_image?: string
   streak_progress_default?: string
   streak_complete_image?: string
-  [key: string]: any
 }
 
 export type StreakStage = {
@@ -41,7 +40,8 @@ type Props = {
 const FALLBACK_IMAGES = {
   streak_initial: "🔥", 
   streak_progress: "🚀", 
-  streak_complete: "🏆"
+  streak_complete: "🏆",
+  streak_expired: "😴" // Para rachas expiradas
 }
 
 export function StreakSection({ userId, currentCount }: Props) {
@@ -55,6 +55,24 @@ export function StreakSection({ userId, currentCount }: Props) {
       try {
         const supabase = createClientBrowser()
         
+        // Obtener información de la racha del usuario (incluyendo expiración)
+        const { data: userStreak } = await supabase
+          .from('streaks')
+          .select('current_count, expires_at, last_check_in')
+          .eq('user_id', userId)
+          .single()
+
+        // Verificar si la racha ha expirado
+        const isExpired = userStreak?.expires_at ? 
+          new Date(userStreak.expires_at) < new Date() : false
+
+        // Verificar si han pasado más días del configurado desde el último check-in
+        const breakDaysLimit = parseInt(settings?.streak_break_days || '1')
+        const daysSinceLastCheckin = userStreak?.last_check_in ?
+          Math.floor((new Date().getTime() - new Date(userStreak.last_check_in).getTime()) / (1000 * 60 * 60 * 24)) : 999
+
+        const streakBroken = daysSinceLastCheckin > breakDaysLimit
+
         // Obtener premios de racha ordenados
         const { data: streakPrizes, error } = await supabase
           .from('prizes')
@@ -69,8 +87,22 @@ export function StreakSection({ userId, currentCount }: Props) {
           return
         }
 
-        // Calcular la etapa de racha
-        const stage = calculateStreakStage(currentCount, streakPrizes || [], settings)
+        // Si la racha ha expirado o se rompió, mostrar estado especial
+        if (isExpired || streakBroken) {
+          setStreakStage({
+            image: FALLBACK_IMAGES.streak_expired,
+            stage: isExpired ? "Racha expirada - ¡Comienza de nuevo!" : "Racha perdida - ¡Reinicia!",
+            progress: 0,
+            nextGoal: streakPrizes?.[0]?.streak_threshold || 5,
+            nextReward: streakPrizes?.[0]?.name || "Premio sorpresa",
+            canRestart: true
+          })
+          return
+        }
+
+        // Calcular la etapa de racha usando el count real de la base de datos
+        const actualCount = userStreak?.current_count || currentCount
+        const stage = calculateStreakStage(actualCount, streakPrizes || [], settings)
         setStreakStage(stage)
       } catch (error) {
         console.error('Error cargando etapa de racha:', error)
@@ -102,16 +134,24 @@ export function StreakSection({ userId, currentCount }: Props) {
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white">
+    <div className={`relative overflow-hidden rounded-2xl p-6 text-white ${
+      streakStage.stage.includes('expirada') || streakStage.stage.includes('perdida') 
+        ? 'bg-gradient-to-br from-gray-600 to-gray-700' 
+        : 'bg-gradient-to-br from-gray-900 to-gray-800'
+    }`}>
       {/* Efectos de partículas/fuego en el fondo */}
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-orange-500/30 to-transparent"></div>
+        {streakStage.stage.includes('expirada') || streakStage.stage.includes('perdida') ? (
+          <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-gray-400/30 to-transparent"></div>
+        ) : (
+          <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-orange-500/30 to-transparent"></div>
+        )}
       </div>
 
       <div className="relative z-10">
         {/* Imagen/Icono de la racha */}
         <div className="text-center mb-6">
-          {streakStage.image.startsWith('http') ? (
+          {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
             <Image 
               src={streakStage.image} 
               alt="Racha" 

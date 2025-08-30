@@ -48,6 +48,8 @@ export default function CheckinSettingsCard({
   const [formData, setFormData] = useState({
     checkin_points_daily: getSettingValue('checkin_points_daily', '10'),
     max_checkins_per_day: getSettingValue('max_checkins_per_day', '1'),
+    streak_break_days: getSettingValue('streak_break_days', '12'),
+    streak_expiry_days: getSettingValue('streak_expiry_days', '90'),
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -60,6 +62,8 @@ export default function CheckinSettingsCard({
       // Validaciones
       const dailyPoints = parseInt(formData.checkin_points_daily);
       const maxCheckins = parseInt(formData.max_checkins_per_day);
+      const streakBreakDays = parseInt(formData.streak_break_days);
+      const streakExpiryDays = parseInt(formData.streak_expiry_days);
 
       if (dailyPoints < 0 || dailyPoints > 1000) {
         throw new Error('Los puntos por check-in deben estar entre 0 y 1000');
@@ -67,6 +71,14 @@ export default function CheckinSettingsCard({
 
       if (maxCheckins < 1 || maxCheckins > 10) {
         throw new Error('El límite de check-ins debe estar entre 1 y 10 por día');
+      }
+
+      if (streakBreakDays < 1 || streakBreakDays > 365) {
+        throw new Error('Los días para romper racha deben estar entre 1 y 365');
+      }
+
+      if (streakExpiryDays < streakBreakDays || streakExpiryDays > 365) {
+        throw new Error('Los días de expiración deben ser mayores a los días de ruptura y no superar 365');
       }
 
       const result = await onUpdate(formData);
@@ -100,6 +112,8 @@ export default function CheckinSettingsCard({
         setFormData({
           checkin_points_daily: '10',
           max_checkins_per_day: '1',
+          streak_break_days: '12',
+          streak_expiry_days: '90',
         });
 
         toast({
@@ -188,6 +202,46 @@ export default function CheckinSettingsCard({
               Máximo número de check-ins que puede hacer un usuario por día (1-10)
             </p>
           </div>
+
+          {/* Días para romper racha */}
+          <div className="space-y-2">
+            <Label htmlFor="streak_break_days" className="text-sm font-medium text-gray-700">
+              Días sin check-in para romper racha
+            </Label>
+            <Input
+              id="streak_break_days"
+              type="number"
+              min="1"
+              max="365"
+              value={formData.streak_break_days}
+              onChange={(e) => handleInputChange('streak_break_days', e.target.value)}
+              className="border-indigo-200 focus:border-indigo-400"
+              disabled={isLoading}
+            />
+            <p className="text-xs text-gray-500">
+              Días consecutivos sin check-in antes de que la racha se rompa (1-365)
+            </p>
+          </div>
+
+          {/* Días para expirar racha */}
+          <div className="space-y-2">
+            <Label htmlFor="streak_expiry_days" className="text-sm font-medium text-gray-700">
+              Días para expirar racha completamente
+            </Label>
+            <Input
+              id="streak_expiry_days"
+              type="number"
+              min="1"
+              max="365"
+              value={formData.streak_expiry_days}
+              onChange={(e) => handleInputChange('streak_expiry_days', e.target.value)}
+              className="border-indigo-200 focus:border-indigo-400"
+              disabled={isLoading}
+            />
+            <p className="text-xs text-gray-500">
+              Días totales para que la racha expire completamente (debe ser mayor a días de ruptura)
+            </p>
+          </div>
         </div>
 
         {/* Información sobre funcionalidad */}
@@ -197,7 +251,9 @@ export default function CheckinSettingsCard({
             <li>• Los usuarios ganan puntos automáticamente al hacer check-in</li>
             <li>• Los puntos se pueden usar para obtener spins en la ruleta</li>
             <li>• El límite diario previene abuso del sistema</li>
-            <li>• Los check-ins consecutivos pueden dar bonificaciones adicionales</li>
+            <li>• Los check-ins consecutivos crean rachas que pueden dar bonificaciones adicionales</li>
+            <li>• Las rachas se rompen si no hay check-in en los días configurados</li>
+            <li>• Las rachas expiran completamente después del tiempo límite configurado</li>
           </ul>
         </div>
 
@@ -215,6 +271,18 @@ export default function CheckinSettingsCard({
               <span className="text-gray-600">Límite diario:</span>
               <span className="ml-2 font-semibold text-indigo-700">
                 {formData.max_checkins_per_day} check-in{parseInt(formData.max_checkins_per_day) > 1 ? 's' : ''} máximo
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">Ruptura de racha:</span>
+              <span className="ml-2 font-semibold text-orange-600">
+                {formData.streak_break_days} día{parseInt(formData.streak_break_days) > 1 ? 's' : ''} sin check-in
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">Expiración total:</span>
+              <span className="ml-2 font-semibold text-red-600">
+                {formData.streak_expiry_days} día{parseInt(formData.streak_expiry_days) > 1 ? 's' : ''} totales
               </span>
             </div>
           </div>

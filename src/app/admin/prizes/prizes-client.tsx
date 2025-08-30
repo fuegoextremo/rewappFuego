@@ -21,7 +21,26 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { createPrize, updatePrize, deletePrize, CreatePrizeData } from "./actions";
 
-export default function PrizesClient({ prizes: initialPrizes }: { prizes: Tables<"prizes">[] }) {
+type PrizeStats = {
+  roulette: {
+    active: number;
+    limit: number;
+    canCreate: boolean;
+  };
+  streak: {
+    active: number;
+    limit: number;
+    canCreate: boolean;
+  };
+};
+
+export default function PrizesClient({ 
+  prizes: initialPrizes, 
+  prizeStats 
+}: { 
+  prizes: Tables<"prizes">[]; 
+  prizeStats: PrizeStats;
+}) {
   const [prizes, setPrizes] = useState<Tables<"prizes">[]>(initialPrizes);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -138,7 +157,19 @@ export default function PrizesClient({ prizes: initialPrizes }: { prizes: Tables
         
         <TabsContent value="roulette" className="space-y-4">
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-gray-900">Premios de Ruleta</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Premios de Ruleta</h2>
+              <div className="flex items-center gap-2 text-sm">
+                <span className={`font-medium ${prizeStats.roulette.canCreate ? 'text-green-600' : 'text-red-600'}`}>
+                  {prizeStats.roulette.active}/{prizeStats.roulette.limit} activos
+                </span>
+                {!prizeStats.roulette.canCreate && (
+                  <span className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded">
+                    Límite alcanzado
+                  </span>
+                )}
+              </div>
+            </div>
             <p className="text-sm text-gray-600">
               Premios disponibles en la ruleta con sus probabilidades y peso
             </p>
@@ -157,7 +188,19 @@ export default function PrizesClient({ prizes: initialPrizes }: { prizes: Tables
         
         <TabsContent value="streak" className="space-y-4">
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-gray-900">Premios por Racha</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Premios por Racha</h2>
+              <div className="flex items-center gap-2 text-sm">
+                <span className={`font-medium ${prizeStats.streak.canCreate ? 'text-green-600' : 'text-red-600'}`}>
+                  {prizeStats.streak.active}/{prizeStats.streak.limit} activos
+                </span>
+                {!prizeStats.streak.canCreate && (
+                  <span className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded">
+                    Límite alcanzado
+                  </span>
+                )}
+              </div>
+            </div>
             <p className="text-sm text-gray-600">
               Premios obtenibles por racha de check-ins consecutivos
             </p>

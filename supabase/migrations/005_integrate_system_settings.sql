@@ -138,7 +138,7 @@ DECLARE
 BEGIN
   -- Obtener configuraciones dinámicas
   v_final_spins := COALESCE(p_spins, get_system_setting('checkin_points_daily', '1')::int);
-  v_max_checkins_daily := get_system_setting('max_checkins_daily', '3')::int;
+  v_max_checkins_daily := get_system_setting('max_checkins_per_day', '1')::int;
 
   -- Validar autenticación
   SELECT role, branch_id INTO v_role, v_my_branch
@@ -162,10 +162,6 @@ BEGIN
     RAISE EXCEPTION 'Has alcanzado el límite de check-ins diarios (%)', v_max_checkins_daily;
   END IF;
 
-  IF v_existing_checkins > 0 THEN
-    RAISE EXCEPTION 'El usuario ya realizó check-in hoy';
-  END IF;
-
   -- Insertar check-in
   INSERT INTO public.check_ins(user_id, branch_id, verified_by, check_in_date, spins_earned, created_at)
   VALUES (p_user, p_branch, auth.uid(), CURRENT_DATE, v_final_spins, NOW());
@@ -177,22 +173,27 @@ BEGIN
     available_spins = user_spins.available_spins + v_final_spins,
     updated_at = NOW();
 
-  -- Actualizar racha
+  -- Actualizar racha con cada check-in válido
   INSERT INTO public.streaks(user_id, current_count, max_count, last_check_in, created_at, updated_at)
-  VALUES (p_user, 1, 20, CURRENT_DATE, NOW(), NOW())
+  VALUES (p_user, 1, 1, NOW(), NOW(), NOW())
   ON CONFLICT (user_id) DO UPDATE SET
     current_count = CASE
-      WHEN streaks.last_check_in = CURRENT_DATE - INTERVAL '1 day' THEN 
-        LEAST(streaks.current_count + 1, streaks.max_count)
+      -- Si el último check-in fue ayer, continuar la racha
+      WHEN streaks.last_check_in::date = CURRENT_DATE - INTERVAL '1 day' THEN 
+        streaks.current_count + 1
+      -- Si el último check-in fue hoy, continuar la racha (múltiples check-ins por día)
+      WHEN streaks.last_check_in::date = CURRENT_DATE THEN 
+        streaks.current_count + 1
+      -- Si fue hace más de 1 día, reiniciar la racha
       ELSE 1
     END,
-    last_check_in = CURRENT_DATE,
-    updated_at = NOW(),
-    is_completed = CASE
-      WHEN streaks.last_check_in = CURRENT_DATE - INTERVAL '1 day' THEN 
-        (streaks.current_count + 1) >= streaks.max_count
-      ELSE FALSE
-    END;
+    max_count = CASE 
+      WHEN streaks.last_check_in::date >= CURRENT_DATE - INTERVAL '1 day' THEN 
+        GREATEST(streaks.max_count, streaks.current_count + 1)
+      ELSE GREATEST(streaks.max_count, 1)
+    END,
+    last_check_in = NOW(),
+    updated_at = NOW();
 END;
 $$;
 

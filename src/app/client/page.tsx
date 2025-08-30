@@ -5,6 +5,7 @@ import { StreakSection } from '@/components/client/StreakSection'
 import { CTAButton } from '@/components/client/CTAButton'
 import { RecentActivity } from '@/components/client/RecentActivity'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export const revalidate = 0
 
@@ -53,6 +54,10 @@ export default async function ClientHome() {
   const availableSpins = spinsRow?.available_spins || 0
   const streakCount = currentStreak?.current_count || 0
 
+  // Generar saludo personalizado
+  const userName = profile?.first_name ? profile.first_name : 'Usuario'
+  const greeting = `¡Hola ${userName}!`
+
   return (
     <div className="p-4 space-y-6">
       {/* Header con saludo personalizado */}
@@ -61,6 +66,9 @@ export default async function ClientHome() {
           <div className="text-2xl">🔥</div>
           <h1 className="text-2xl font-bold">{settings.company_name}</h1>
         </div>
+        <p className="text-lg font-medium text-gray-800 mb-2">
+          {greeting}
+        </p>
         <p className="text-gray-600">
           ¡Visita {settings.company_name}! <strong>Registra tus visitas y participa</strong> en la ruleta para ganar increíbles regalos.
         </p>
@@ -85,10 +93,12 @@ export default async function ClientHome() {
       {/* Logo del establecimiento */}
       {settings.company_logo_url && (
         <div className="text-center py-6">
-          <img 
+          <Image 
             src={settings.company_logo_url} 
             alt={settings.company_name}
-            className="h-16 mx-auto opacity-60"
+            width={64}
+            height={64}
+            className="mx-auto opacity-60"
           />
         </div>
       )}

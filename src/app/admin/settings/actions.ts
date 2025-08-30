@@ -145,6 +145,104 @@ export async function updateSystemSettings(updates: SystemSettingsUpdate) {
   }
 }
 
+// Obtener límites de premios (solo superadmin)
+export async function getPrizeLimits() {
+  try {
+    const { supabase, role } = await verifyAdminPermissions();
+
+    // Solo superadmin puede ver límites de premios
+    if (role !== 'superadmin') {
+      throw new Error('Solo superadmins pueden acceder a límites de premios');
+    }
+
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'prize_limits')
+      .eq('category', 'prizes')
+      .eq('is_active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      throw new Error(`Error al obtener límites: ${error.message}`);
+    }
+
+    // Valores por defecto
+    let limits = {
+      max_roulette_prizes: 10,
+      max_streak_prizes: 5
+    };
+
+    // Si existe la configuración, parsear el JSON
+    if (data?.value) {
+      try {
+        const parsedLimits = JSON.parse(data.value);
+        limits = {
+          max_roulette_prizes: parsedLimits.max_roulette_prizes || 10,
+          max_streak_prizes: parsedLimits.max_streak_prizes || 5
+        };
+      } catch (parseError) {
+        console.warn('Error parsing prize_limits JSON:', parseError);
+      }
+    }
+
+    return { success: true, data: limits };
+  } catch (error) {
+    console.error('Error in getPrizeLimits:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+      data: { max_roulette_prizes: 10, max_streak_prizes: 5 }
+    };
+  }
+}
+
+// Actualizar límites de premios (solo superadmin)
+export async function updatePrizeLimits(maxRoulettePrizes: number, maxStreakPrizes: number) {
+  try {
+    const { supabase, user, role } = await verifyAdminPermissions();
+
+    // Solo superadmin puede modificar límites de premios
+    if (role !== 'superadmin') {
+      throw new Error('Solo superadmins pueden modificar límites de premios');
+    }
+
+    const limitsJson = JSON.stringify({
+      max_roulette_prizes: maxRoulettePrizes,
+      max_streak_prizes: maxStreakPrizes
+    });
+
+    // Insertar o actualizar la configuración como JSON
+    const { error } = await supabase
+      .from('system_settings')
+      .upsert({
+        key: 'prize_limits',
+        value: limitsJson,
+        category: 'prizes',
+        setting_type: 'json',
+        description: 'Límites máximos de premios activos simultáneamente',
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+        is_active: true
+      }, {
+        onConflict: 'key'
+      });
+
+    if (error) {
+      throw new Error(`Error al actualizar límites: ${error.message}`);
+    }
+
+    revalidatePath('/admin/settings');
+    return { 
+      success: true, 
+      message: 'Límites de premios actualizados exitosamente' 
+    };
+  } catch (error) {
+    console.error('Error in updatePrizeLimits:', error);
+    throw error;
+  }
+}
+
 // Resetear configuraciones a valores por defecto
 export async function resetSettingsToDefault(category: SystemSettingCategory) {
   try {
@@ -159,6 +257,8 @@ export async function resetSettingsToDefault(category: SystemSettingCategory) {
       // Notificaciones y Check-ins
       'checkin_points_daily': '10',
       'max_checkins_per_day': '1',
+      'streak_break_days': '12',
+      'streak_expiry_days': '90',
       
       // Empresa
       'company_name': 'Mi Empresa',

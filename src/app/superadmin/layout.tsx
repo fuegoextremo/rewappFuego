@@ -12,7 +12,7 @@ export default async function SuperAdminLayout({
   // Verificar autenticación
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) {
-    redirect('/auth/login');
+    redirect('/login');
   }
 
   // Verificar rol de superadmin

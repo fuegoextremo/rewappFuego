@@ -140,16 +140,16 @@ export function StreakSection({ userId, currentCount }: Props) {
 
   if (loading) {
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 p-6">
         <div className="animate-pulse space-y-6">
           <div className="text-center">
-            <div className="h-32 bg-white/10 rounded-xl mx-auto w-full"></div>
+            <div className="h-32 bg-gray-100 rounded-xl mx-auto w-full"></div>
           </div>
           <div className="space-y-3">
-            <div className="h-8 bg-white/20 rounded-lg mx-auto w-3/4"></div>
-            <div className="h-6 bg-white/15 rounded-lg mx-auto w-1/2"></div>
+            <div className="h-8 bg-gray-200 rounded-lg mx-auto w-3/4"></div>
+            <div className="h-6 bg-gray-150 rounded-lg mx-auto w-1/2"></div>
           </div>
-          <div className="h-20 bg-white/10 rounded-xl w-full"></div>
+          <div className="h-20 bg-gray-100 rounded-xl w-full"></div>
         </div>
       </div>
     )
@@ -160,19 +160,19 @@ export function StreakSection({ userId, currentCount }: Props) {
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl text-white ${
+    <div className={`relative overflow-hidden rounded-2xl ${
       streakStage.stage.includes('perdida') 
-        ? 'bg-gradient-to-br from-gray-600 to-gray-700' 
-        : 'bg-gradient-to-br from-gray-900 to-gray-800'
+        ? 'bg-white text-gray-700' 
+        : 'bg-white text-gray-900'
     }`}>
 
       {/* Imagen/Icono de la racha - FUERA del contenedor con padding */}
       <div className="relative z-10 mb-6">
         {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
-          <div className="relative w-full aspect-square overflow-hidden bg-white/10">
+          <div className="relative w-full aspect-square overflow-hidden bg-gray-50">
             {imageLoading && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
               </div>
             )}
             <Image 
@@ -186,7 +186,7 @@ export function StreakSection({ userId, currentCount }: Props) {
             />
           </div>
         ) : (
-          <div className="text-6xl text-center p-6">{streakStage.image}</div>
+          <div className="text-6xl text-center p-6 bg-gray-50">{streakStage.image}</div>
         )}
       </div>
 
@@ -195,10 +195,14 @@ export function StreakSection({ userId, currentCount }: Props) {
 
         {/* Título y descripción */}
         <div className="text-center mb-6">
-          <h3 className="text-xl font-bold mb-2">{streakStage.stage}</h3>
+          <h3 className={`text-xl font-bold mb-2 ${
+            streakStage.stage.includes('perdida') ? 'text-gray-700' : 'text-gray-900'
+          }`}>{streakStage.stage}</h3>
           {streakStage.nextReward && (
-            <p className="text-white/80 text-sm">
-              Próximo premio: <span className="font-semibold text-yellow-300">{streakStage.nextReward}</span>
+            <p className={`text-sm ${
+              streakStage.stage.includes('perdida') ? 'text-gray-500' : 'text-gray-600'
+            }`}>
+              Próximo premio: <span className="font-semibold text-blue-600">{streakStage.nextReward}</span>
             </p>
           )}
         </div>
@@ -206,11 +210,11 @@ export function StreakSection({ userId, currentCount }: Props) {
         {/* Barra de progreso */}
         {!streakStage.isCompleted && streakStage.nextGoal && (
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-white/70">
+            <div className="flex justify-between text-xs text-gray-500">
               <span>{currentCount} visitas</span>
               <span>{streakStage.nextGoal} visitas</span>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="h-2 rounded-full transition-all duration-500 ease-out"
                 style={{ 
@@ -219,7 +223,7 @@ export function StreakSection({ userId, currentCount }: Props) {
                 }}
               ></div>
             </div>
-            <div className="text-center text-xs text-white/70">
+            <div className="text-center text-xs text-gray-500">
               {Math.round(streakStage.progress)}% completado
             </div>
           </div>
@@ -229,10 +233,9 @@ export function StreakSection({ userId, currentCount }: Props) {
         {streakStage.canRestart && (
           <div className="text-center mt-4">
             <button 
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white"
               style={{ 
-                backgroundColor: primaryColor,
-                color: 'white'
+                backgroundColor: primaryColor
               }}
             >
               ¡Empezar nueva racha!

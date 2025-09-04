@@ -28,7 +28,7 @@ export interface CreateUserData {
   first_name: string;
   last_name: string;
   phone?: string;
-  role: 'user' | 'verifier' | 'admin' | 'superadmin';
+  role: 'client' | 'verifier' | 'admin' | 'superadmin';
   branch_id?: string;
   is_active?: boolean;
 }
@@ -37,7 +37,7 @@ export interface UpdateUserData {
   first_name?: string;
   last_name?: string;
   phone?: string;
-  role?: 'user' | 'verifier' | 'admin' | 'superadmin';
+  role?: 'client' | 'verifier' | 'admin' | 'superadmin';
   branch_id?: string;
   is_active?: boolean;
 }
@@ -143,44 +143,97 @@ export async function createUser(userData: CreateUserData) {
   try {
     const { supabase } = await verifySupaAdminPermissions();
 
-    // Crear usuario en Auth
+    // Verificar si ya existe un usuario con este email
+    const { data: existingAuthUser } = await supabase.auth.admin.listUsers();
+    const userExists = existingAuthUser.users.some(user => user.email === userData.email);
+    
+    if (userExists) {
+      throw new Error(`Ya existe un usuario con el email: ${userData.email}`);
+    }
+
+    // Crear usuario en Auth con metadatos para el trigger
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
-      email_confirm: true // Auto-confirmar email para usuarios creados por admin
+      email_confirm: true, // Auto-confirmar email para usuarios creados por admin
+      user_metadata: {
+        first_name: userData.first_name,
+        last_name: userData.last_name
+      }
     });
 
     if (authError || !authUser.user) {
       throw new Error(`Error al crear usuario en Auth: ${authError?.message}`);
     }
 
-    // Crear perfil de usuario
-    const { error: profileError } = await supabase
+    const actualUserId = authUser.user.id;
+    console.log(`Auth user created with ID: ${actualUserId}`);
+
+    // El trigger automáticamente crea el perfil básico
+    // Actualizamos directamente con los datos completos del formulario
+    const { error: profileUpdateError } = await supabase
       .from('user_profiles')
-      .insert({
-        id: authUser.user.id,
+      .update({
         first_name: userData.first_name,
         last_name: userData.last_name,
         phone: userData.phone || null,
         role: userData.role,
         branch_id: userData.branch_id || null,
         is_active: userData.is_active ?? true,
-      });
+      })
+      .eq('id', actualUserId);
 
-    if (profileError) {
-      // Si falla el perfil, eliminar el usuario de Auth
-      await supabase.auth.admin.deleteUser(authUser.user.id);
-      throw new Error(`Error al crear perfil: ${profileError.message}`);
+    if (profileUpdateError) {
+      console.error('Error updating profile created by trigger:', profileUpdateError);
+      try {
+        await supabase.auth.admin.deleteUser(actualUserId);
+        console.log('Successfully cleaned up auth user after profile update failure');
+      } catch (cleanupError) {
+        console.error('Failed to cleanup auth user:', cleanupError);
+      }
+      throw new Error(`Error al actualizar perfil: ${profileUpdateError.message}`);
+    }
+
+    console.log(`Profile updated successfully for user ${actualUserId}`);
+
+    // Actualizar el perfil creado automáticamente por el trigger
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        phone: userData.phone || null,
+        role: userData.role,
+        branch_id: userData.branch_id || null,
+        is_active: userData.is_active ?? true,
+      })
+      .eq('id', actualUserId);
+
+    if (updateError) {
+      // Si falla la actualización, eliminar el usuario de Auth
+      console.error('Error updating profile, attempting to clean up auth user:', updateError);
+      try {
+        await supabase.auth.admin.deleteUser(actualUserId);
+        console.log('Successfully cleaned up auth user after profile update failure');
+      } catch (cleanupError) {
+        console.error('Failed to cleanup auth user:', cleanupError);
+      }
+      throw new Error(`Error al actualizar perfil: ${updateError.message}`);
     }
 
     // Crear registro de spins si es necesario
-    if (userData.role === 'user') {
-      await supabase
+    if (userData.role === 'client') {
+      const { error: spinsError } = await supabase
         .from('user_spins')
         .insert({
-          user_id: authUser.user.id,
+          user_id: actualUserId,
           available_spins: 0
         });
+      
+      if (spinsError) {
+        console.error('Error creating user_spins, but user was created successfully:', spinsError);
+        // No lanzar error aquí, ya que el usuario principal se creó correctamente
+      }
     }
 
     revalidatePath('/superadmin/users');
@@ -328,6 +381,118 @@ export async function grantSpinsToUser(userId: string, spins: number) {
     return { success: true, message: `${spins} giros otorgados exitosamente` };
   } catch (error) {
     console.error('Error in grantSpinsToUser:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    };
+  }
+}
+
+// Función para limpiar usuarios huérfanos (usuarios en Auth sin perfil)
+export async function cleanupOrphanedUsers() {
+  try {
+    const { supabase } = await verifySupaAdminPermissions();
+
+    // Obtener todos los usuarios de Auth
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    
+    // Obtener todos los perfiles
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id');
+
+    const profileIds = new Set(profiles?.map(p => p.id) || []);
+    
+    // Encontrar usuarios de Auth sin perfil
+    const orphanedUsers = authUsers.users.filter(user => !profileIds.has(user.id));
+    
+    console.log(`Found ${orphanedUsers.length} orphaned users`);
+    
+    // Eliminar usuarios huérfanos
+    const cleanupResults = [];
+    for (const user of orphanedUsers) {
+      try {
+        await supabase.auth.admin.deleteUser(user.id);
+        cleanupResults.push({ id: user.id, email: user.email, status: 'deleted' });
+        console.log(`Cleaned up orphaned user: ${user.email}`);
+      } catch (error) {
+        cleanupResults.push({ id: user.id, email: user.email, status: 'error', error });
+        console.error(`Failed to cleanup user ${user.email}:`, error);
+      }
+    }
+
+    return { success: true, cleanedUp: cleanupResults };
+  } catch (error) {
+    console.error('Error in cleanupOrphanedUsers:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    };
+  }
+}
+
+// Función para limpiar perfiles huérfanos (perfiles en BD sin usuario de Auth)
+export async function cleanupOrphanedProfiles() {
+  try {
+    const { supabase } = await verifySupaAdminPermissions();
+
+    // Obtener todos los perfiles
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, first_name, last_name, role');
+
+    if (!profiles) {
+      return { success: true, cleanedUp: [] };
+    }
+
+    // Verificar cuáles tienen usuario de Auth
+    const cleanupResults = [];
+    
+    for (const profile of profiles) {
+      try {
+        const { data: authUser, error } = await supabase.auth.admin.getUserById(profile.id);
+        
+        // Si no existe en Auth, es un perfil huérfano
+        if (error || !authUser.user) {
+          // Eliminar perfil huérfano
+          const { error: deleteError } = await supabase
+            .from('user_profiles')
+            .delete()
+            .eq('id', profile.id);
+
+          if (deleteError) {
+            cleanupResults.push({ 
+              id: profile.id, 
+              name: `${profile.first_name} ${profile.last_name}`,
+              status: 'error', 
+              error: deleteError.message 
+            });
+          } else {
+            cleanupResults.push({ 
+              id: profile.id, 
+              name: `${profile.first_name} ${profile.last_name}`,
+              status: 'deleted' 
+            });
+            console.log(`Cleaned up orphaned profile: ${profile.first_name} ${profile.last_name} (${profile.id})`);
+          }
+        }
+      } catch (error) {
+        cleanupResults.push({ 
+          id: profile.id, 
+          name: `${profile.first_name} ${profile.last_name}`,
+          status: 'error', 
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    const deletedCount = cleanupResults.filter(r => r.status === 'deleted').length;
+    console.log(`Cleaned up ${deletedCount} orphaned profiles`);
+
+    revalidatePath('/superadmin/users');
+    return { success: true, cleanedUp: cleanupResults };
+  } catch (error) {
+    console.error('Error in cleanupOrphanedProfiles:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido'

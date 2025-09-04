@@ -7,11 +7,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { settings } = useSystemSettings()
 
   useEffect(() => {
+    // Solo aplicar si no hay CSS crítico ya establecido
+    const root = document.documentElement
+    const currentPrimary = getComputedStyle(root).getPropertyValue('--primary')
+    
+    // Si ya hay un valor establecido (por CSS crítico), no hacer nada
+    if (currentPrimary && currentPrimary.trim() !== '') {
+      return
+    }
+    
     if (settings) {
-      // Aplicar colores dinámicos a las variables CSS
-      const root = document.documentElement
-      
-      // Convertir hex a HSL para las variables CSS
+      // Aplicar colores dinámicos a las variables CSS como fallback
       const primaryHSL = hexToHSL(settings.company_theme_primary)
       const secondaryHSL = hexToHSL(settings.company_theme_secondary)
       

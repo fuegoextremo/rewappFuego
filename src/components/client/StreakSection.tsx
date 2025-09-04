@@ -47,6 +47,7 @@ const FALLBACK_IMAGES = {
 export function StreakSection({ userId, currentCount }: Props) {
   const [streakStage, setStreakStage] = useState<StreakStage | null>(null)
   const [loading, setLoading] = useState(true)
+  const [imageLoading, setImageLoading] = useState(true)
   const { settings } = useSystemSettings()
 
   useEffect(() => {
@@ -55,25 +56,7 @@ export function StreakSection({ userId, currentCount }: Props) {
       try {
         const supabase = createClientBrowser()
         
-        // Obtener información de la racha del usuario (incluyendo expiración)
-        const { data: userStreak } = await supabase
-          .from('streaks')
-          .select('current_count, expires_at, last_check_in')
-          .eq('user_id', userId)
-          .single()
-
-        // Verificar si la racha ha expirado
-        const isExpired = userStreak?.expires_at ? 
-          new Date(userStreak.expires_at) < new Date() : false
-
-        // Verificar si han pasado más días del configurado desde el último check-in
-        const breakDaysLimit = parseInt(settings?.streak_break_days || '1')
-        const daysSinceLastCheckin = userStreak?.last_check_in ?
-          Math.floor((new Date().getTime() - new Date(userStreak.last_check_in).getTime()) / (1000 * 60 * 60 * 24)) : 999
-
-        const streakBroken = daysSinceLastCheckin > breakDaysLimit
-
-        // Obtener premios de racha ordenados
+        // Obtener premios de racha ordenados PRIMERO
         const { data: streakPrizes, error } = await supabase
           .from('prizes')
           .select('id, name, description, streak_threshold, image_url, validity_days')
@@ -87,11 +70,29 @@ export function StreakSection({ userId, currentCount }: Props) {
           return
         }
 
-        // Si la racha ha expirado o se rompió, mostrar estado especial
-        if (isExpired || streakBroken) {
+        // Obtener información de la racha del usuario (incluyendo expiración)
+        const { data: userStreak } = await supabase
+          .from('streaks')
+          .select('current_count, expires_at, last_check_in')
+          .eq('user_id', userId)
+          .single()
+
+        // CASO 1: Usuario completamente nuevo (sin registro de racha)
+        if (!userStreak) {
+          const stage = calculateStreakStage(0, streakPrizes || [], settings)
+          setStreakStage(stage)
+          return
+        }
+
+        // Verificar si la racha ha expirado
+        const isExpired = userStreak?.expires_at ? 
+          new Date(userStreak.expires_at) < new Date() : false
+
+        // CASO 2: Racha expirada por ciclo (nuevo periodo)
+        if (isExpired) {
           setStreakStage({
-            image: FALLBACK_IMAGES.streak_expired,
-            stage: isExpired ? "Racha expirada - ¡Comienza de nuevo!" : "Racha perdida - ¡Reinicia!",
+            image: settings?.streak_initial_image || FALLBACK_IMAGES.streak_initial,
+            stage: "¡Nuevo periodo de rachas!",
             progress: 0,
             nextGoal: streakPrizes?.[0]?.streak_threshold || 5,
             nextReward: streakPrizes?.[0]?.name || "Premio sorpresa",
@@ -100,7 +101,27 @@ export function StreakSection({ userId, currentCount }: Props) {
           return
         }
 
-        // Calcular la etapa de racha usando el count real de la base de datos
+        // Verificar si han pasado más días del configurado desde el último check-in
+        const breakDaysLimit = parseInt(settings?.streak_break_days || '1')
+        const daysSinceLastCheckin = userStreak?.last_check_in ?
+          Math.floor((new Date().getTime() - new Date(userStreak.last_check_in).getTime()) / (1000 * 60 * 60 * 24)) : 0
+
+        const streakBroken = daysSinceLastCheckin > breakDaysLimit
+
+        // CASO 3: Racha rota por inactividad
+        if (streakBroken) {
+          setStreakStage({
+            image: FALLBACK_IMAGES.streak_expired,
+            stage: "Racha perdida - ¡Reinicia!",
+            progress: 0,
+            nextGoal: streakPrizes?.[0]?.streak_threshold || 5,
+            nextReward: streakPrizes?.[0]?.name || "Premio sorpresa",
+            canRestart: true
+          })
+          return
+        }
+
+        // CASO 4: Racha activa - calcular la etapa usando el count real de la base de datos
         const actualCount = userStreak?.current_count || currentCount
         const stage = calculateStreakStage(actualCount, streakPrizes || [], settings)
         setStreakStage(stage)
@@ -119,11 +140,16 @@ export function StreakSection({ userId, currentCount }: Props) {
 
   if (loading) {
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white animate-pulse">
-        <div className="space-y-4">
-          <div className="h-4 bg-white/20 rounded w-3/4"></div>
-          <div className="h-20 bg-white/20 rounded-full mx-auto w-20"></div>
-          <div className="h-3 bg-white/20 rounded w-1/2 mx-auto"></div>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white">
+        <div className="animate-pulse space-y-6">
+          <div className="text-center">
+            <div className="h-32 bg-white/10 rounded-xl mx-auto w-full"></div>
+          </div>
+          <div className="space-y-3">
+            <div className="h-8 bg-white/20 rounded-lg mx-auto w-3/4"></div>
+            <div className="h-6 bg-white/15 rounded-lg mx-auto w-1/2"></div>
+          </div>
+          <div className="h-20 bg-white/10 rounded-xl w-full"></div>
         </div>
       </div>
     )
@@ -134,35 +160,38 @@ export function StreakSection({ userId, currentCount }: Props) {
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-6 text-white ${
-      streakStage.stage.includes('expirada') || streakStage.stage.includes('perdida') 
+    <div className={`relative overflow-hidden rounded-2xl text-white ${
+      streakStage.stage.includes('perdida') 
         ? 'bg-gradient-to-br from-gray-600 to-gray-700' 
         : 'bg-gradient-to-br from-gray-900 to-gray-800'
     }`}>
-      {/* Efectos de partículas/fuego en el fondo */}
-      <div className="absolute inset-0 opacity-20">
-        {streakStage.stage.includes('expirada') || streakStage.stage.includes('perdida') ? (
-          <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-gray-400/30 to-transparent"></div>
-        ) : (
-          <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-orange-500/30 to-transparent"></div>
-        )}
-      </div>
 
-      <div className="relative z-10">
-        {/* Imagen/Icono de la racha */}
-        <div className="text-center mb-6">
-          {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
+      {/* Imagen/Icono de la racha - FUERA del contenedor con padding */}
+      <div className="relative z-10 mb-6">
+        {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
+          <div className="relative w-full aspect-square overflow-hidden bg-white/10">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              </div>
+            )}
             <Image 
               src={streakStage.image} 
               alt="Racha" 
-              width={96}
-              height={96}
-              className="w-24 h-24 mx-auto rounded-full object-cover"
+              fill
+              className={`object-cover transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+              sizes="100vw"
+              onLoad={() => setImageLoading(false)}
+              onError={() => setImageLoading(false)}
             />
-          ) : (
-            <div className="text-6xl mb-2">{streakStage.image}</div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="text-6xl text-center p-6">{streakStage.image}</div>
+        )}
+      </div>
+
+      {/* Contenido con padding */}
+      <div className="relative z-10 p-6 pt-0">
 
         {/* Título y descripción */}
         <div className="text-center mb-6">

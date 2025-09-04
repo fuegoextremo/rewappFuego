@@ -5,6 +5,8 @@ import { getAllUsers } from './actions';
 import { createAdminClient } from "@/lib/supabase/admin";
 import UsersTable from '@/components/superadmin/UsersTable';
 import CreateUserButton from '@/components/superadmin/CreateUserButton';
+import CleanupOrphanedUsersButton from '@/components/superadmin/CleanupOrphanedUsersButton';
+import CleanupOrphanedProfilesButton from '@/components/superadmin/CleanupOrphanedProfilesButton';
 
 export const revalidate = 0; // Asegurar que siempre se recarguen los datos
 
@@ -61,7 +63,9 @@ export default async function UsersPage() {
             Administra todos los usuarios del sistema con control total sobre roles y permisos
           </p>
         </div>
-        <CreateUserButton branches={branchesData} />
+        <div className="flex gap-3">
+          <CreateUserButton branches={branchesData} />
+        </div>
       </div>
 
       {/* Nota informativa */}
@@ -149,6 +153,22 @@ export default async function UsersPage() {
         </CardHeader>
         <CardContent>
           <UsersTable users={users} branches={branchesData} />
+        </CardContent>
+      </Card>
+
+      {/* Herramientas de Administración Avanzada */}
+      <Card className="border-orange-200">
+        <CardHeader className="bg-orange-50">
+          <CardTitle className="text-orange-800 text-sm">🔧 Herramientas de Administración Avanzada</CardTitle>
+          <p className="text-xs text-orange-600">
+            Utilizar solo para limpieza de datos inconsistentes o debugging
+          </p>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="flex gap-3">
+            <CleanupOrphanedUsersButton />
+            <CleanupOrphanedProfilesButton />
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -207,6 +207,28 @@ export async function updatePrizeLimits(maxRoulettePrizes: number, maxStreakPriz
       throw new Error('Solo superadmins pueden modificar límites de premios');
     }
 
+    // Obtener el límite general de premios por empresa
+    const { data: generalLimitData } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'max_prizes_per_company')
+      .eq('category', 'prizes')
+      .eq('is_active', true)
+      .single();
+
+    const maxPrizesPerCompany = generalLimitData?.value ? parseInt(generalLimitData.value) : 50;
+
+    // Validar que los límites específicos no excedan el límite general
+    const totalSpecificLimits = maxRoulettePrizes + maxStreakPrizes;
+    
+    if (totalSpecificLimits > maxPrizesPerCompany) {
+      throw new Error(
+        `Los límites específicos (${maxRoulettePrizes} ruleta + ${maxStreakPrizes} racha = ${totalSpecificLimits}) ` +
+        `no pueden exceder el límite general de premios por empresa (${maxPrizesPerCompany}). ` +
+        `Ajusta los límites específicos o contacta al superadmin para aumentar el límite general.`
+      );
+    }
+
     const limitsJson = JSON.stringify({
       max_roulette_prizes: maxRoulettePrizes,
       max_streak_prizes: maxStreakPrizes

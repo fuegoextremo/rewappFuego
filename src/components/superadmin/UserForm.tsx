@@ -51,7 +51,7 @@ export default function UserForm(props: UserFormProps) {
     first_name: "",
     last_name: "",
     phone: "",
-    role: "user",
+    role: "client",
     branch_id: "",
     is_active: true,
   });
@@ -67,7 +67,7 @@ export default function UserForm(props: UserFormProps) {
         first_name: user.first_name || "",
         last_name: user.last_name || "",
         phone: user.phone || "",
-        role: (user.role as CreateUserData['role']) || "user",
+        role: (user.role as CreateUserData['role']) || "client",
         branch_id: user.branch_id || "",
         is_active: user.is_active ?? true,
       });
@@ -78,7 +78,7 @@ export default function UserForm(props: UserFormProps) {
         first_name: "",
         last_name: "",
         phone: "",
-        role: "user",
+        role: "client",
         branch_id: "",
         is_active: true,
       });
@@ -134,7 +134,7 @@ export default function UserForm(props: UserFormProps) {
         first_name: "",
         last_name: "",
         phone: "",
-        role: "user",
+        role: "client",
         branch_id: "",
         is_active: true,
       });
@@ -160,7 +160,7 @@ export default function UserForm(props: UserFormProps) {
         first_name: "",
         last_name: "",
         phone: "",
-        role: "user",
+        role: "client",
         branch_id: "",
         is_active: true,
       });
@@ -267,7 +267,7 @@ export default function UserForm(props: UserFormProps) {
                   <SelectValue placeholder="Seleccionar rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Usuario</SelectItem>
+                  <SelectItem value="client">Cliente</SelectItem>
                   <SelectItem value="verifier">Verificador</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="superadmin">SuperAdministrador</SelectItem>

@@ -131,6 +131,36 @@ export async function updateSystemSettings(updates: SystemSettingsUpdate) {
       }
     }
 
+    // Validación especial para max_prizes_per_company
+    if ('max_prizes_per_company' in updates && updates.max_prizes_per_company !== undefined) {
+      const newGeneralLimit = parseInt(String(updates.max_prizes_per_company));
+      
+      // Validar que el valor sea un número válido
+      if (isNaN(newGeneralLimit) || newGeneralLimit < 1) {
+        throw new Error('El límite general de premios debe ser un número válido mayor a 0');
+      }
+      
+      // Usar la función getPrizeLimits que ya funciona correctamente
+      const { getPrizeLimits } = await import('@/app/admin/settings/actions');
+      const prizeLimitsResult = await getPrizeLimits();
+      
+      let currentRouletteLimit = 0;
+      let currentStreakLimit = 0;
+      
+      if (prizeLimitsResult.success && prizeLimitsResult.data) {
+        currentRouletteLimit = prizeLimitsResult.data.max_roulette_prizes || 0;
+        currentStreakLimit = prizeLimitsResult.data.max_streak_prizes || 0;
+      }
+
+      const totalSpecificLimits = currentRouletteLimit + currentStreakLimit;
+
+      if (totalSpecificLimits > newGeneralLimit) {
+        throw new Error(
+          `El límite general de premios (${newGeneralLimit}) debe ser mayor o igual que la suma de los límites específicos actuales (Ruleta: ${currentRouletteLimit} + Racha: ${currentStreakLimit} = ${totalSpecificLimits})`
+        );
+      }
+    }
+
     // Actualizar cada configuración
     const updatePromises = Object.entries(updates).map(([key, value]) => {
       return supabase

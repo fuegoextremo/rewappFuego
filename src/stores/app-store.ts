@@ -1,53 +1,36 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-// Tipos para el estado global
-export interface UserProfile {
+// Tipos básicos para el estado global
+export interface BasicUserProfile {
   id: string
   email: string
   first_name: string | null
   last_name: string | null
-  phone: string | null
   role: string | null
-  is_active: boolean | null
-  branch_id: string | null
-  created_at: string | null
-  total_checkins?: number
-  available_spins?: number
-  current_streak?: number
-}
-
-export interface CheckinData {
-  id: string
-  user_id: string | null
-  branch_id: string | null
-  created_at: string | null
-  streak_count: number
 }
 
 export interface AppState {
-  // Usuario actual
-  user: UserProfile | null
+  // Auth (crítico)
+  user: BasicUserProfile | null
   isAuthenticated: boolean
   
-  // Datos de la aplicación
-  checkins: CheckinData[]
-  lastCheckin: CheckinData | null
-  
-  // UI Estado
+  // Navegación SPA
   currentView: 'home' | 'profile' | 'coupons' | 'roulette'
-  isLoading: boolean
-  openCheckin: boolean
   
-  // Configuraciones
+  // Configuraciones globales
   settings: Record<string, string>
   
-  // Actions
-  setUser: (user: UserProfile | null) => void
-  setAuthenticated: (isAuth: boolean) => void
-  addCheckin: (checkin: CheckinData) => void
-  updateUserStats: (stats: Partial<UserProfile>) => void
+  // UI básico
+  openCheckin: boolean
+  
+  // Actions simples
+  setUser: (user: BasicUserProfile | null) => void
   setCurrentView: (view: AppState['currentView']) => void
+  setSettings: (settings: Record<string, string>) => void
+  setOpenCheckin: (open: boolean) => void
+  logout: () => void
+  reset: () => void
   setLoading: (loading: boolean) => void
   setSettings: (settings: Record<string, string>) => void
   setOpenCheckin: (open: boolean) => void

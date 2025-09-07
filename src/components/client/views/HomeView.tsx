@@ -12,8 +12,8 @@ export default function HomeView() {
   const user = useUser()
   const settings = useSettings()
 
-  // ✨ Activar realtime para este usuario
-  const { isConnected } = useUserRealtime(user?.id || '')
+  // ✨ Solo obtener el estado de conexión (la conexión es automática)
+  const { isConnected } = useUserRealtime()
 
   if (!user) {
     return (

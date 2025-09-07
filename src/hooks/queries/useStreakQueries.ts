@@ -22,8 +22,9 @@ export function useUserStreak(userId: string) {
       }
     },
     enabled: !!userId,
-    staleTime: 2 * 60 * 1000, // 2 minutos - datos dinámicos
-    gcTime: 10 * 60 * 1000, // Mantener en cache 10 minutos
+    staleTime: 1 * 60 * 1000, // ✨ 1 minuto - datos dinámicos que pueden cambiar con Realtime
+    gcTime: 5 * 60 * 1000,    // ✨ 5 minutos en cache (el Realtime Provider los invalida)
+    refetchOnWindowFocus: false, // ✨ Confiar en Realtime para updates
   })
 }
 
@@ -44,8 +45,9 @@ export function useStreakPrizes() {
       if (error) throw error
       return streakPrizes || []
     },
-    staleTime: 10 * 60 * 1000, // 10 minutos - datos más estáticos
-    gcTime: 30 * 60 * 1000, // Mantener en cache 30 minutos
+    staleTime: 15 * 60 * 1000, // ✨ 15 minutos - premios cambian raramente
+    gcTime: 60 * 60 * 1000,    // ✨ 1 hora en cache - datos semi-estáticos
+    refetchOnWindowFocus: false, // ✨ Cache agresivo para premios
   })
 }
 
@@ -104,9 +106,10 @@ export function useStreakStage(userId: string, settings: any) {
       // Racha activa
       return calculateStreakStage(currentCount, prizes, userSettings)
     },
-    enabled: !!userId, // ✨ Siempre habilitado si tenemos userId
-    staleTime: 1 * 60 * 1000, // 1 minuto
-    gcTime: 5 * 60 * 1000, // 5 minutos en cache
+    enabled: !!userId && !!settings, // ✨ Solo ejecutar si tenemos ambos datos críticos
+    staleTime: 30 * 1000, // ✨ 30 segundos - stage calculado puede cambiar rápido
+    gcTime: 2 * 60 * 1000, // ✨ 2 minutos en cache
+    refetchOnWindowFocus: false, // ✨ Confiar en invalidaciones del Realtime
   })
 }
 

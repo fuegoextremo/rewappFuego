@@ -63,7 +63,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
     const supabase = createClientBrowser()
     
     const channel = supabase
-      .channel('realtime:public:check_ins')
+      .channel('realtime:user:' + userId)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -84,12 +84,57 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
           queryClient.invalidateQueries({ queryKey: ['streak', 'stage'] })
           queryClient.invalidateQueries({ queryKey: ['user', userId, 'stats'] })
           queryClient.invalidateQueries({ queryKey: ['user', 'profile', userId] })
+          queryClient.invalidateQueries({ queryKey: ['user', 'spins', userId] }) // ✨ Giros de ruleta
+          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] }) // ✨ Cupones del usuario
+          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] }) // ✨ Cupones disponibles
           dispatch(loadUserProfile(userId))
           
           // ✨ Event para otros componentes
           window.dispatchEvent(new CustomEvent('user-data-updated', { 
             detail: { userId, type: 'check-in', data: payload } 
           }))
+        }
+      })
+      // 🎟️ Cupones nuevos
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'coupons'
+      }, (payload) => {
+        // ✨ Filtrar - solo cupones del usuario actual
+        if (payload.new && payload.new.user_id === userId) {
+          console.log('🎟️ Nuevo cupón detectado:', payload)
+          
+          toast({
+            title: "🎟️ ¡Nuevo cupón!",
+            description: "Has ganado un nuevo cupón",
+            duration: 4000,
+          })
+
+          // ✨ Invalidar todos los queries de cupones
+          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] })
+          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] })
+          
+          // ✨ Event para otros componentes
+          window.dispatchEvent(new CustomEvent('user-data-updated', { 
+            detail: { userId, type: 'coupon', data: payload } 
+          }))
+        }
+      })
+      // 🎟️ Cupones redimidos
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'coupons'
+      }, (payload) => {
+        // ✨ Filtrar - solo cupones del usuario actual que fueron redimidos
+        if (payload.new && payload.new.user_id === userId && payload.new.is_redeemed && !payload.old.is_redeemed) {
+          console.log('✅ Cupón redimido:', payload)
+          
+          // ✨ Invalidar todos los queries de cupones
+          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] })
+          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] })
+          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'used', userId] })
         }
       })
       .subscribe((status: any) => {

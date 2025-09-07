@@ -22,17 +22,18 @@ type Props = {
 }
 
 export function StreakSection({ userId, currentCount, isLoading: externalLoading }: Props) {
-  const [imageLoading, setImageLoading] = useState(true)
+  const [imageLoading, setImageLoading] = useState(false) // ✨ Optimistic loading - confiamos en browser cache
   const [previousImageUrl, setPreviousImageUrl] = useState<string>('')
-  const { settings } = useSystemSettings()
+  const { data: settings, isLoading: settingsLoading } = useSystemSettings() // ✨ React Query con cache agresivo
   const { data: streakStage, isLoading: stageLoading, error } = useStreakStage(userId, settings)
 
-  // 🎯 ESTÁNDAR MODERNO: Loading inteligente
-  const isLoading = externalLoading || stageLoading
-  const hasData = !!streakStage
-  const shouldShowSkeleton = isLoading || (!hasData && !error)
+  // 🎯 LOADING INTELIGENTE: Solo mostrar skeleton si NO tenemos datos Y estamos cargando
+  const hasSettings = !!settings
+  const hasStreakData = !!streakStage
+  const isActuallyLoading = (settingsLoading && !hasSettings) || (stageLoading && !hasStreakData)
+  const shouldShowSkeleton = isActuallyLoading || (!hasStreakData && !error && !externalLoading)
 
-  // 🎯 Skeleton mientras carga O no hay datos (sin error)
+  // 🎯 Skeleton solo cuando REALMENTE no tenemos datos críticos
   if (shouldShowSkeleton) {
     return (
       <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 p-6">
@@ -75,9 +76,10 @@ export function StreakSection({ userId, currentCount, isLoading: externalLoading
 
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
-  // ✨ Manejar cambio de imagen
+  // ✨ Optimistic image loading - solo mostrar loading para imágenes nuevas
   if (streakStage.image !== previousImageUrl) {
-    setImageLoading(streakStage.image.startsWith('http') || streakStage.image.startsWith('/'))
+    const isNewImage = streakStage.image.startsWith('http') || streakStage.image.startsWith('/')
+    setImageLoading(isNewImage) // Solo loading si es imagen real (no emoji)
     setPreviousImageUrl(streakStage.image)
   }
 

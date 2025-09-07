@@ -1,0 +1,121 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClientBrowser } from '@/lib/supabase/client'
+import { User } from '@supabase/auth-helpers-nextjs'
+
+interface RouteGuardProps {
+  children: React.ReactNode
+  allowedRoles?: string[]
+  redirectTo?: string
+  fallbackComponent?: React.ReactNode
+}
+
+export function RouteGuard({ 
+  children, 
+  allowedRoles = [], 
+  redirectTo = '/login',
+  fallbackComponent = <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+  </div>
+}: RouteGuardProps) {
+  const [user, setUser] = useState<User | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
+  const router = useRouter()
+  const supabase = createClientBrowser()
+
+  useEffect(() => {
+    const checkAuthAndRole = async () => {
+      try {
+        // 1. Verificar autenticación
+        const { data: { session }, error: authError } = await supabase.auth.getSession()
+        
+        if (authError || !session?.user) {
+          console.log('🚫 No hay sesión válida, redirigiendo a login')
+          router.push(redirectTo)
+          return
+        }
+
+        setUser(session.user)
+
+        // 2. Si no se requieren roles específicos, permitir acceso
+        if (allowedRoles.length === 0) {
+          setAuthorized(true)
+          setLoading(false)
+          return
+        }
+
+        // 3. Obtener rol del usuario desde la BD
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+
+        if (profileError) {
+          console.error('❌ Error obteniendo perfil:', profileError)
+          router.push(redirectTo)
+          return
+        }
+
+        const role = profile?.role
+        setUserRole(role)
+
+        // 4. Verificar permisos de rol
+        if (!role || !allowedRoles.includes(role)) {
+          console.log(`🚫 Rol '${role}' no autorizado. Roles permitidos:`, allowedRoles)
+          
+          // Redirigir según el rol del usuario
+          const roleRedirects = {
+            'client': '/client',
+            'verifier': '/admin/dashboard',
+            'manager': '/admin/dashboard',
+            'admin': '/admin/dashboard',
+            'superadmin': '/superadmin/dashboard'
+          }
+          
+          const roleRedirect = roleRedirects[role as keyof typeof roleRedirects] || '/login'
+          router.push(roleRedirect)
+          return
+        }
+
+        // 5. Usuario autorizado
+        console.log(`✅ Usuario autorizado con rol: ${role}`)
+        setAuthorized(true)
+
+      } catch (error) {
+        console.error('❌ Error en verificación de seguridad:', error)
+        router.push(redirectTo)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkAuthAndRole()
+
+    // Escuchar cambios de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        router.push('/login')
+      } else if (event === 'SIGNED_IN') {
+        checkAuthAndRole()
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router, redirectTo, allowedRoles, supabase])
+
+  // Estados de carga y autorización
+  if (loading) {
+    return fallbackComponent
+  }
+
+  if (!authorized) {
+    return null // Se está redirigiendo
+  }
+
+  return <>{children}</>
+}

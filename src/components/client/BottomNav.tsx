@@ -1,5 +1,6 @@
 'use client'
-import { useAppStore, useCurrentView } from '@/stores/app-store'
+import { useCurrentView, useAppDispatch } from '@/store/hooks'
+import { setCurrentView } from '@/store/slices/uiSlice'
 
 const items = [
   { view: 'home', label: 'Inicio', icon: '🏠' },
@@ -10,8 +11,8 @@ const items = [
 ] as const
 
 export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
+  const dispatch = useAppDispatch()
   const currentView = useCurrentView()
-  const setCurrentView = useAppStore((state) => state.setCurrentView)
   
   
   return (
@@ -36,7 +37,7 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setCurrentView(item.view as 'home' | 'profile' | 'coupons' | 'roulette')}
+                  onClick={() => dispatch(setCurrentView(item.view as 'home' | 'profile' | 'coupons' | 'roulette'))}
                   className="w-full flex flex-col items-center py-2 text-xs focus:outline-none"
                 >
                   <span className={`text-base ${active ? 'scale-110' : ''} transition-transform`}>

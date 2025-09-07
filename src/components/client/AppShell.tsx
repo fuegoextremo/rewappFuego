@@ -1,12 +1,11 @@
 'use client'
 
 import { Suspense, lazy, useState, useCallback } from 'react'
-import { useSimpleAppStore, useUser, useCurrentView } from '@/stores/simple-app-store'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuthManager } from '@/hooks/useAuthManager'
+import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
+import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
 import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
-import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
-import { AdminPreviewBanner } from '@/components/shared/AdminPreviewBanner'
 
 // Componentes de las vistas principales con lazy loading
 const HomeView = lazy(() => import('@/components/client/views/HomeView'))
@@ -29,23 +28,26 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  // 🔗 REDUX HOOKS
+  const dispatch = useAppDispatch()
   const user = useUser()
   const currentView = useCurrentView()
-  const openCheckin = useSimpleAppStore((state) => state.openCheckin)
-  const setOpenCheckin = useSimpleAppStore((state) => state.setOpenCheckin)
+  const openCheckin = useOpenCheckin()
   
-  // Pull-to-refresh state
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // 🔐 AUTH MANAGER
+  const { isLoading, isAuthenticated } = useAuthManager()
+  
+  // 🎨 LOCAL STATE
+  const [isRefreshing, setIsRefreshingLocal] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
-  
-  // Usar el hook de autenticación simple
-  const { loading } = useAuth()
 
-  // Pull-to-refresh logic - Super simple
+  // 🔄 Pull-to-refresh logic
   const handleRefresh = useCallback(async () => {
     if (!user?.id || isRefreshing) return
     
-    setIsRefreshing(true)
+    setIsRefreshingLocal(true)
+    dispatch(setRefreshing(true))
+    
     try {
       console.log('🔄 Iniciando pull-to-refresh...')
       
@@ -59,10 +61,11 @@ export function AppShell({ children }: AppShellProps) {
     } catch (error) {
       console.error('❌ Error en pull-to-refresh:', error)
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshingLocal(false)
+      dispatch(setRefreshing(false))
       setPullDistance(0)
     }
-  }, [user?.id, isRefreshing])
+  }, [user?.id, isRefreshing, dispatch])
 
   // Touch handlers for pull-to-refresh
   const handleTouchStart = useCallback(() => {
@@ -91,7 +94,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [pullDistance, isRefreshing, handleRefresh])
 
   // Mostrar loading mientras se verifica la autenticación
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -140,9 +143,6 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900 flex flex-col">
-      {/* Banners de estado */}
-      <AdminPreviewBanner />
-      
       {/* Pull-to-refresh indicator */}
       {pullDistance > 0 && (
         <div 
@@ -167,16 +167,6 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </div>
       )}
-      
-      {/* Header fijo */}
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-100">
-        <div className="px-4 py-3">
-          <h1 className="text-lg font-semibold">Fuego Rewards</h1>
-          <p className="text-xs text-gray-500">
-            {user ? `¡Hola ${user.first_name}!` : '¡Registra tus visitas y participa!'}
-          </p>
-        </div>
-      </header>
 
       {/* Contenido principal - con flex-1 para ocupar espacio disponible */}
       <main 
@@ -194,8 +184,6 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           )}
           
-          {/* Banner de error */}
-          <UnauthorizedBanner />
           {renderCurrentView()}
         </div>
       </main>
@@ -203,11 +191,11 @@ export function AppShell({ children }: AppShellProps) {
       {/* Checkin Sheet */}
       <CheckinSheet 
         open={openCheckin} 
-        onClose={() => setOpenCheckin(false)} 
+        onClose={() => dispatch(setOpenCheckin(false))} 
       />
 
       {/* Bottom Navigation fijo */}
-      <BottomNav onCheckinClick={() => setOpenCheckin(true)} />
+      <BottomNav onCheckinClick={() => dispatch(setOpenCheckin(true))} />
     </div>
   )
 }

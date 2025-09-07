@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckinData } from '@/stores/app-store'
+import { CheckinData } from '@/types/database'
 
 type Props = {
   checkins: CheckinData[]

@@ -1,13 +1,15 @@
-import { useUser, useAppSettings, useSimpleAppStore } from '@/stores/simple-app-store'
+import { useUser, useSettings, useAppDispatch } from '@/store/hooks'
+import { setCurrentView } from '@/store/slices/uiSlice'
 import { StreakSectionWrapper } from '@/components/client/StreakSectionWrapper'
 import { CTAButton } from '@/components/client/CTAButton'
 import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
+import { RecentActivity } from '@/components/client/RecentActivity'
 import Image from 'next/image'
 
 export default function HomeView() {
+  const dispatch = useAppDispatch()
   const user = useUser()
-  const settings = useAppSettings()
-  const setCurrentView = useSimpleAppStore((state) => state.setCurrentView)
+  const settings = useSettings()
 
   if (!user) {
     return (
@@ -20,10 +22,18 @@ export default function HomeView() {
     )
   }
 
+  // Verificar si los datos del usuario están completamente cargados
+  const userDataLoaded = user && typeof user.total_checkins === 'number'
+
   // Generar saludo personalizado
   const userName = user.first_name ? user.first_name : 'Usuario'
   const greeting = `¡Hola ${userName}!`
   const companyName = settings.company_name || 'Fuego Rewards'
+
+  // Estados de datos para mostrar mensajes útiles
+  const hasVisits = (user.total_checkins || 0) > 0
+  const hasSpins = (user.available_spins || 0) > 0
+  const hasStreak = (user.current_streak || 0) > 0
 
   return (
     <div className="space-y-6">      
@@ -43,7 +53,7 @@ export default function HomeView() {
 
       {/* Botón CTA principal */}
       <div 
-        onClick={() => setCurrentView('roulette')}
+        onClick={() => dispatch(setCurrentView('roulette'))}
         className="cursor-pointer"
       >
         <CTAButton>
@@ -51,27 +61,58 @@ export default function HomeView() {
         </CTAButton>
       </div>
 
-      {/* Grid de estadísticas - Simplificado */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      {/* Grid de estadísticas - Con datos reales y estados de carga */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white rounded-lg p-4 shadow-sm border">
-          <div className="text-2xl mb-2">📊</div>
-          <h3 className="font-semibold">Visitas</h3>
-          <p className="text-sm text-gray-600">Cargando...</p>
+          <div className="text-xl mb-1">📊</div>
+          <h3 className="font-semibold text-sm">Visitas</h3>
+          {userDataLoaded ? (
+            <p className="text-xl font-bold text-blue-600">
+              {user.total_checkins || 0}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500">Cargando...</p>
+          )}
+          {userDataLoaded && !hasVisits && (
+            <p className="text-xs text-gray-400">¡Haz tu primera visita!</p>
+          )}
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm border">
-          <div className="text-2xl mb-2">🎯</div>
-          <h3 className="font-semibold">Giros</h3>
-          <p className="text-sm text-gray-600">Cargando...</p>
+          <div className="text-xl mb-1">🎯</div>
+          <h3 className="font-semibold text-sm">Giros</h3>
+          {userDataLoaded ? (
+            <p className="text-xl font-bold text-emerald-600">
+              {user.available_spins || 0}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500">Cargando...</p>
+          )}
+          {userDataLoaded && !hasSpins && (
+            <p className="text-xs text-gray-400">Gana giros visitando</p>
+          )}
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-sm border">
+          <div className="text-xl mb-1">🔥</div>
+          <h3 className="font-semibold text-sm">Racha</h3>
+          {userDataLoaded ? (
+            <p className="text-xl font-bold text-orange-600">
+              {user.current_streak || 0}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500">Cargando...</p>
+          )}
+          {userDataLoaded && !hasStreak && (
+            <p className="text-xs text-gray-400">Inicia tu racha</p>
+          )}
         </div>
       </div>
 
       {/* Sección de racha - Usando componente original que funciona */}
       <StreakSectionWrapper userId={user.id} />
 
-      {/* Actividad reciente - Placeholder */}
-      <div className="bg-white rounded-lg p-4 shadow-sm border">
-        <h3 className="font-semibold mb-3">Actividad Reciente</h3>
-        <p className="text-gray-500 text-sm">Cargando actividad...</p>
+      {/* Actividad reciente - Componente funcional */}
+      <div className="bg-white rounded-lg shadow-sm border">
+        <RecentActivity userId={user.id} />
       </div>
 
       {/* Logo del establecimiento */}

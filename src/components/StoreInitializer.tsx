@@ -1,41 +1,19 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useAppStore } from '@/stores/app-store'
 
+/**
+ * 🔧 INICIALIZADOR DEL STORE REDUX
+ * 
+ * Este componente ya no es necesario con Redux Toolkit y redux-persist
+ * Redux persist maneja automáticamente la hidratación del estado
+ * Se mantiene por compatibilidad con componentes que lo importen
+ */
 export function StoreInitializer() {
   useEffect(() => {
-    // Hidratar el store manualmente al montar
-    const hydrate = () => {
-      try {
-        const stored = localStorage.getItem('fuego-rewards-app')
-        if (stored) {
-          const parsedState = JSON.parse(stored)
-          console.log('🔄 Hydrating store from localStorage:', parsedState)
-          
-          // Restaurar estado de manera segura
-          if (parsedState.state) {
-            const { user, isAuthenticated, currentView, settings } = parsedState.state
-            
-            useAppStore.setState({
-              user: user || null,
-              isAuthenticated: isAuthenticated || false,
-              currentView: currentView || 'home',
-              settings: settings || {},
-            })
-            
-            console.log('✅ Store hydrated successfully')
-          }
-        } else {
-          console.log('ℹ️ No stored state found')
-        }
-      } catch (error) {
-        console.error('❌ Error hydrating store:', error)
-      }
-    }
-
-    hydrate()
+    // Redux persist maneja automáticamente la hidratación
+    console.log('🔄 Redux store initialized with redux-persist')
   }, [])
 
-  return null
+  return null // No necesita renderizar nada
 }

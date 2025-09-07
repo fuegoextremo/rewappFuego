@@ -1,4 +1,4 @@
-import { useUser } from '@/stores/app-store'
+import { useUser } from '@/store/hooks'
 
 export default function RouletteView() {
   const user = useUser()

@@ -2,47 +2,36 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Función para obtener el destino según el rol
-function getRoleDestination(role: string): string {
-  switch (role) {
-    case 'client': return '/client'
-    case 'verifier':
-    case 'manager': 
-    case 'admin': return '/admin/dashboard'
-    case 'superadmin': return '/superadmin/dashboard'
-    default: return '/login'
-  }
-}
+// 📋 CONFIGURACIÓN DE RUTAS
+const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password']
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password']
 
-// Función para verificar acceso a rutas
-function checkAccess(pathname: string, role: string): { allowed: boolean } {
-  // Rutas públicas
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password']
-  if (publicRoutes.includes(pathname)) {
-    return { allowed: true }
-  }
+// 🎯 DESTINOS POR ROL (sin consultas DB en middleware)
+const ROLE_DESTINATIONS = {
+  client: '/client',
+  verifier: '/admin/dashboard',
+  manager: '/admin/dashboard', 
+  admin: '/admin/dashboard',
+  superadmin: '/superadmin/dashboard',
+  default: '/login'
+} as const
 
-  // Rutas con (auth) prefix  
-  if (pathname.startsWith('/(auth)')) {
-    return { allowed: true }
+// 🔐 PERMISOS DE RUTA (verificación básica sin DB)
+function hasRouteAccess(pathname: string, hasValidSession: boolean): boolean {
+  // Rutas públicas - siempre permitidas
+  if (PUBLIC_ROUTES.includes(pathname) || pathname.startsWith('/(auth)')) {
+    return true
   }
 
-  // Rutas de cliente
-  if (pathname.startsWith('/client')) {
-    return { allowed: ['client', 'verifier', 'manager', 'admin', 'superadmin'].includes(role) }
+  // Todas las rutas protegidas requieren sesión válida
+  // La verificación de rol específico se hace en el componente
+  if (pathname.startsWith('/client') || 
+      pathname.startsWith('/admin') || 
+      pathname.startsWith('/superadmin')) {
+    return hasValidSession
   }
 
-  // Rutas de admin
-  if (pathname.startsWith('/admin')) {
-    return { allowed: ['verifier', 'manager', 'admin', 'superadmin'].includes(role) }
-  }
-
-  // Rutas de superadmin
-  if (pathname.startsWith('/superadmin')) {
-    return { allowed: role === 'superadmin' }
-  }
-
-  return { allowed: false }
+  return false
 }
 
 export async function middleware(req: NextRequest) {
@@ -50,77 +39,51 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res })
   const { pathname, searchParams } = req.nextUrl
   
-  // IMPORTANTE: Si es una ruta de logout, NO verificar sesión para evitar loops
+  // 🚪 CASO ESPECIAL: Logout - bypass para evitar loops
   if (searchParams.get('logout') === 'true') {
-    console.log('🚨 Logout detected, bypassing auth checks')
     return res
   }
   
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  // CASO 1: No hay sesión - solo permitir rutas públicas
-  if (!session) {
-    const publicRoutes = ['/', '/login', '/register', '/forgot-password']
-    const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/(auth)')
+  try {
+    // 🔍 VERIFICAR SESIÓN (solo JWT, sin consultas DB)
+    const { data: { session }, error } = await supabase.auth.getSession()
     
-    if (!isPublicRoute) {
-      // Redirigir a login con información del destino original
+    if (error) {
+      console.warn('⚠️ Error verificando sesión:', error.message)
+    }
+
+    const hasValidSession = !!session?.user
+    
+    // 🔐 VERIFICAR ACCESO A RUTA
+    if (!hasRouteAccess(pathname, hasValidSession)) {
       const loginUrl = new URL('/login', req.url)
-      loginUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
-    return res
-  }
-
-  // CASO 2: Hay sesión - verificar que el usuario existe en user_profiles
-  // OPTIMIZACIÓN: Solo verificar perfil para rutas protegidas, no para auth
-  if (!pathname.startsWith('/(auth)') && pathname !== '/login') {
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    // Si el usuario no existe en user_profiles (fue borrado)
-    if (profileError || !profile) {
-      // Limpiar sesión y redirigir a login
-      await supabase.auth.signOut()
-      const loginUrl = new URL('/login', req.url)
-      loginUrl.searchParams.set('error', 'user_deleted')
-      loginUrl.searchParams.set('message', 'Tu cuenta ha sido desactivada. Contacta al administrador.')
-      return NextResponse.redirect(loginUrl)
-    }
-
-    const userRole = profile.role || 'client'
-
-    // CASO 3: Usuario autenticado en página de login - redirigir a su dashboard
-    if (pathname === '/login') {
-      const destination = getRoleDestination(userRole)
-      return NextResponse.redirect(new URL(destination, req.url))
-    }
-
-    // CASO 4: Admin queriendo ver como cliente (modo preview)
-    if (pathname.startsWith('/client') && searchParams.get('admin') === 'true') {
-      if (['admin', 'superadmin', 'manager'].includes(userRole)) {
-        return res // Permitir acceso en modo preview
+      if (pathname !== '/login') {
+        loginUrl.searchParams.set('redirect', pathname)
       }
+      return NextResponse.redirect(loginUrl)
     }
 
-    // CASO 5: Verificar permisos normales
-    const access = checkAccess(pathname, userRole)
-    if (!access.allowed) {
-      // Redirigir a su dashboard correspondiente con error
-      const destination = getRoleDestination(userRole)
-      const redirectUrl = new URL(destination, req.url)
-      redirectUrl.searchParams.set('error', 'unauthorized')
-      redirectUrl.searchParams.set('message', 'No tienes permisos para acceder a esta página')
-      return NextResponse.redirect(redirectUrl)
+    // 🏠 REDIRECCIÓN DESDE LOGIN SI YA ESTÁ AUTENTICADO
+    if (hasValidSession && AUTH_ROUTES.includes(pathname)) {
+      // Usar destino por defecto - la verificación de rol se hace en el componente
+      const defaultDestination = '/client' // Por defecto todos van a client
+      return NextResponse.redirect(new URL(defaultDestination, req.url))
     }
+
+    // ✅ PERMITIR ACCESO
+    return res
+
+  } catch (error) {
+    console.error('❌ Error crítico en middleware:', error)
+    
+    // En caso de error crítico, permitir rutas públicas
+    if (PUBLIC_ROUTES.includes(pathname) || pathname.startsWith('/(auth)')) {
+      return res
+    }
+    
+    // Redirigir a login para rutas protegidas con error
+    return NextResponse.redirect(new URL('/login', req.url))
   }
-
-  return res
 }
 
 export const config = {

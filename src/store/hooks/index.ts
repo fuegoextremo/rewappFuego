@@ -1,0 +1,23 @@
+import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux'
+import type { RootState, AppDispatch } from '../index'
+
+// 🎯 HOOKS TIPADOS
+export const useAppDispatch = () => useDispatch<AppDispatch>()
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+// 🔐 SELECTORES DE AUTH
+export const useAuth = () => useAppSelector(state => state.auth)
+export const useUser = () => useAppSelector(state => state.auth.user)
+export const useIsAuthenticated = () => useAppSelector(state => state.auth.isAuthenticated)
+export const useAuthLoading = () => useAppSelector(state => state.auth.isLoading)
+export const useAuthError = () => useAppSelector(state => state.auth.error)
+
+// 🎨 SELECTORES DE UI
+export const useCurrentView = () => useAppSelector(state => state.ui.currentView)
+export const useOpenCheckin = () => useAppSelector(state => state.ui.openCheckin)
+export const useIsRefreshing = () => useAppSelector(state => state.ui.isRefreshing)
+
+// ⚙️ SELECTORES DE SETTINGS
+export const useSettings = () => useAppSelector(state => state.settings.settings)
+export const useSettingsLoading = () => useAppSelector(state => state.settings.isLoading)
+export const useSetting = (key: string) => useAppSelector(state => state.settings.settings[key])

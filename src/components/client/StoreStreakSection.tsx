@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { useAppSettings } from '@/stores/app-store'
+import { useSettings } from '@/store/hooks'
 import { createClientBrowser } from '@/lib/supabase/client'
 
 type StreakPrize = {
@@ -81,7 +81,7 @@ export function StoreStreakSection({ currentCount, userId }: Props) {
   const [streakStage, setStreakStage] = useState<StreakStage | null>(null)
   const [loading, setLoading] = useState(true)
   const [imageLoading, setImageLoading] = useState(true)
-  const settings = useAppSettings()
+  const settings = useSettings()
 
   useEffect(() => {
     async function loadStreakStage() {

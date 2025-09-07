@@ -644,3 +644,30 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// 🎯 TIPOS ÚTILES PARA LA APLICACIÓN
+export type UserProfile = Tables<'user_profiles'>
+export type CheckIn = Tables<'check_ins'>
+export type Streak = Tables<'streaks'>
+export type Coupon = Tables<'coupons'>
+export type Prize = Tables<'prizes'>
+export type RouletteSpins = Tables<'roulette_spins'>
+export type UserSpins = Tables<'user_spins'>
+export type Branch = Tables<'branches'>
+export type SystemSetting = Tables<'system_settings'>
+
+// 📊 TIPOS COMPUESTOS PARA LA APP
+export type CheckinData = {
+  id: string
+  created_at: string
+  branch_name?: string
+  current_streak?: number
+  streak_count?: number
+  spins_earned?: number
+}
+
+export type UserWithStats = UserProfile & {
+  total_checkins: number
+  current_streak: number
+  available_spins: number
+}

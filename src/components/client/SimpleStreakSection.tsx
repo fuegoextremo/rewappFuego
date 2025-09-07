@@ -1,13 +1,13 @@
 'use client'
 
-import { useAppSettings } from '@/stores/app-store'
+import { useSettings } from '@/store/hooks'
 
 type Props = {
   currentCount: number
 }
 
 export function SimpleStreakSection({ currentCount }: Props) {
-  const settings = useAppSettings()
+  const settings = useSettings()
   
   const primaryColor = settings.company_theme_primary || '#D73527'
   

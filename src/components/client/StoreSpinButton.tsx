@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useAppActions } from '@/hooks/use-app-actions'
-import { useUser } from '@/stores/app-store'
+import { useUser } from '@/store/hooks'
 import ResultSheet from '@/components/client/ResultSheet'
 
 const MIN_SPIN_MS = 1400

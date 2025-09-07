@@ -2,6 +2,7 @@
 import Sidebar from "@/components/admin/Sidebar";
 import SuperAdminBanner from "@/components/admin/SuperAdminBanner";
 import { UnauthorizedBanner } from "@/components/shared/UnauthorizedBanner";
+import { AdminGuard } from "@/components/auth/RoleGuards";
 import { createClientServer } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -39,14 +40,15 @@ export default async function AdminLayout({
   };
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-gray-50">
-      {/* Sidebar - Desktop: sidebar vertical a la izquierda, Mobile: navbar fijo en la parte inferior */}
-      <div className="fixed bottom-0 left-0 right-0 md:static md:w-64 md:flex-none z-50 md:order-1">
-        <Sidebar />
-      </div>
-      
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto md:order-2">
+    <AdminGuard>
+      <div className="flex h-screen flex-col md:flex-row bg-gray-50">
+        {/* Sidebar - Desktop: sidebar vertical a la izquierda, Mobile: navbar fijo en la parte inferior */}
+        <div className="fixed bottom-0 left-0 right-0 md:static md:w-64 md:flex-none z-50 md:order-1">
+          <Sidebar />
+        </div>
+        
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto md:order-2">
         {/* SuperAdmin Banner - Solo móvil */}
         <div className="md:hidden pt-2">
           <SuperAdminBanner userProfile={userProfile} />
@@ -62,5 +64,6 @@ export default async function AdminLayout({
         </div>
       </div>
     </div>
+    </AdminGuard>
   );
 }

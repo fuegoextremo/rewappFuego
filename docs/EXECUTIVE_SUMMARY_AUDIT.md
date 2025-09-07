@@ -76,6 +76,13 @@
 - ~~Implementar APIs~~ → **Conectar APIs funcionando**
 - ~~Crear UX/UI~~ → **Mantener diseño consistente**
 
+### **🆕 NUEVA CAPACIDAD: SUPABASE REALTIME**
+- **Funcionalidad:** Feedback visual instantáneo de check-ins
+- **Beneficio:** Usuario ve cambios en <1 segundo vs 30+ segundos
+- **Costo:** $0 (Free tier - 2M mensajes/mes, 200 conexiones)
+- **Tiempo:** +1 hora de desarrollo
+- **Valor:** Experiencia de usuario significativamente mejorada
+
 ---
 
 ## 📋 PLAN DE ACCIÓN INMEDIATO

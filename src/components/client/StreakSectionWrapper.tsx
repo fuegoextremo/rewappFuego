@@ -32,10 +32,24 @@ export function StreakSectionWrapper({ userId }: StreakSectionWrapperProps) {
 
     loadCurrentCount()
 
-    // Escuchar refresh global
+    // ✨ Escuchar actualizaciones en tiempo real
+    const handleUserDataUpdate = (event: CustomEvent) => {
+      if (event.detail.userId === userId) {
+        console.log('🔄 StreakSectionWrapper: Recargando por actualización realtime')
+        loadCurrentCount()
+      }
+    }
+
+    // Escuchar refresh global (legacy)
     const handleRefresh = () => loadCurrentCount()
+    
+    window.addEventListener('user-data-updated', handleUserDataUpdate as EventListener)
     window.addEventListener('app-refresh', handleRefresh)
-    return () => window.removeEventListener('app-refresh', handleRefresh)
+    
+    return () => {
+      window.removeEventListener('user-data-updated', handleUserDataUpdate as EventListener)
+      window.removeEventListener('app-refresh', handleRefresh)
+    }
   }, [userId])
 
   if (loading) {

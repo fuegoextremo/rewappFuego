@@ -67,7 +67,21 @@ export function RecentActivity({ userId }: Props) {
 
   useEffect(() => {
     loadCheckIns(0)
-  }, [loadCheckIns])
+    
+    // ✨ Escuchar actualizaciones en tiempo real
+    const handleUserDataUpdate = (event: CustomEvent) => {
+      if (event.detail.userId === userId) {
+        console.log('🔄 RecentActivity: Recargando por actualización realtime')
+        loadCheckIns(0) // Recargar desde el principio
+      }
+    }
+    
+    window.addEventListener('user-data-updated', handleUserDataUpdate as EventListener)
+    
+    return () => {
+      window.removeEventListener('user-data-updated', handleUserDataUpdate as EventListener)
+    }
+  }, [loadCheckIns, userId])
 
   function loadMore() {
     if (!loadingMore && hasMore) {

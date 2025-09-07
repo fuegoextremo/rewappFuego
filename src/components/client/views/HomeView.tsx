@@ -4,12 +4,16 @@ import { StreakSectionWrapper } from '@/components/client/StreakSectionWrapper'
 import { CTAButton } from '@/components/client/CTAButton'
 import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
 import { RecentActivity } from '@/components/client/RecentActivity'
+import { useUserRealtime } from '@/hooks/useUserRealtime'
 import Image from 'next/image'
 
 export default function HomeView() {
   const dispatch = useAppDispatch()
   const user = useUser()
   const settings = useSettings()
+
+  // ✨ Activar realtime para este usuario
+  const { isConnected } = useUserRealtime(user?.id || '')
 
   if (!user) {
     return (
@@ -42,6 +46,14 @@ export default function HomeView() {
         <div className="flex items-center justify-center gap-2 mb-2">
           <div className="text-2xl">🔥</div>
           <h1 className="text-2xl font-bold">{companyName}</h1>
+          
+          {/* ✨ Indicador de conexión realtime */}
+          {isConnected && (
+            <div className="ml-2 flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+              En vivo
+            </div>
+          )}
         </div>
         <p className="text-lg font-medium text-gray-800 mb-2">
           {greeting}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -20,85 +20,58 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
   const { toast } = useToast()
   const dispatch = useAppDispatch()
   const user = useUser()
+  
+  // 🎯 Estado mínimo y limpio
   const [isConnected, setIsConnected] = useState(false)
-  const [currentChannel, setCurrentChannel] = useState<any>(null)
-  const [connectedUserId, setConnectedUserId] = useState<string | null>(null)
-  const [connectionTimeoutId, setConnectionTimeoutId] = useState<NodeJS.Timeout | null>(null)
+  const channelRef = useRef<any>(null)
+  const connectedUserIdRef = useRef<string | null>(null)
 
-  // ✨ CONECTAR AUTOMÁTICAMENTE cuando hay un usuario con debounce
+  // ✨ SINGLE useEffect - limpio y optimizado
   useEffect(() => {
-    console.log('🔍 RealtimeProvider useEffect triggered:', {
-      userId: user?.id,
-      connectedUserId,
-      hasChannel: !!currentChannel,
-      userState: user ? 'loaded' : 'null'
-    })
+    const userId = user?.id
 
-    // ✨ Limpiar timeout anterior si existe
-    if (connectionTimeoutId) {
-      clearTimeout(connectionTimeoutId)
-    }
-
-    if (user?.id && user.id !== connectedUserId) {
-      console.log('🎯 Scheduling connection with debounce...')
-      // ✨ Debounce de 100ms para evitar conexiones múltiples durante la carga
-      const timeoutId = setTimeout(() => {
-        console.log('🎯 Executing delayed connection for:', user.id)
-        connectToUser(user.id)
-      }, 100)
-      
-      setConnectionTimeoutId(timeoutId)
-    } else if (!user?.id && currentChannel) {
-      console.log('🔌 User logged out, disconnecting...')
-      disconnectFromRealtime()
-    } else {
-      console.log('⏭️ Skipping connection:', {
-        reason: user?.id === connectedUserId ? 'same user' : 'no user'
-      })
-    }
-
-    return () => {
-      if (connectionTimeoutId) {
-        clearTimeout(connectionTimeoutId)
+    // 🔒 Sin usuario - limpiar todo
+    if (!userId) {
+      if (channelRef.current) {
+        console.log('� Usuario desconectado, limpiando Realtime')
+        const supabase = createClientBrowser()
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+        connectedUserIdRef.current = null
+        setIsConnected(false)
       }
+      return
     }
-  }, [user?.id, connectedUserId])
 
-  const connectToUser = useCallback((userId: string) => {
-    // 🎯 Si ya estamos conectados al mismo usuario, no hacer nada
-    if (connectedUserId === userId && currentChannel) {
+    // ✅ Ya conectado - IDEMPOTENCIA
+    if (connectedUserIdRef.current === userId && channelRef.current) {
       console.log('✅ Realtime ya conectado para usuario:', userId)
       return
     }
 
-    // 🎯 Desconectar conexión anterior si existe
-    if (currentChannel) {
-      console.log('🔄 Cambiando conexión Realtime de', connectedUserId, 'a', userId)
+    // 🔄 Cambio de usuario - limpiar anterior
+    if (channelRef.current && connectedUserIdRef.current !== userId) {
+      console.log('🔄 Cambiando usuario Realtime:', connectedUserIdRef.current, '→', userId)
       const supabase = createClientBrowser()
-      supabase.removeChannel(currentChannel)
-      setCurrentChannel(null)
-      setConnectedUserId(null)
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
       setIsConnected(false)
     }
 
+    // 🚀 Nueva conexión optimizada
     console.log('🚀 Conectando Realtime para usuario:', userId)
     const supabase = createClientBrowser()
     
-    // ✨ CONFIGURACIÓN SIMPLE PARA DIAGNÓSTICO
     const channel = supabase
-      .channel(`user-${userId}-realtime`)
-      
-      // 🎯 Solo escuchar check-ins por ahora (configuración mínima)
+      .channel('realtime:public:check_ins')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'check_ins'
       }, (payload) => {
-        console.log('📨 Evento Realtime recibido:', payload)
-        
-        // ✨ Filtrar en el cliente por seguridad
+        // ✨ Filtrar - solo eventos del usuario actual
         if (payload.new && payload.new.user_id === userId) {
-          console.log('🎉 Nuevo check-in detectado para usuario actual:', payload)
+          console.log('🎉 Check-in detectado:', payload)
           
           toast({
             title: "🎉 ¡Check-in realizado!",
@@ -106,78 +79,49 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
             duration: 3000,
           })
 
-          // ✨ INVALIDAR QUERIES RELEVANTES
+          // ✨ Invalidar queries relevantes
           queryClient.invalidateQueries({ queryKey: ['user', 'streak', userId] })
           queryClient.invalidateQueries({ queryKey: ['streak', 'stage'] })
           queryClient.invalidateQueries({ queryKey: ['user', userId, 'stats'] })
           queryClient.invalidateQueries({ queryKey: ['user', 'profile', userId] })
-          
-          // ✨ ACTUALIZAR REDUX
           dispatch(loadUserProfile(userId))
           
-          // ✨ CUSTOM EVENT para componentes
+          // ✨ Event para otros componentes
           window.dispatchEvent(new CustomEvent('user-data-updated', { 
             detail: { userId, type: 'check-in', data: payload } 
           }))
-        } else {
-          console.log('🔇 Check-in ignorado (no es del usuario actual)')
         }
       })
-      
-      // 🎯 Monitorear estado de conexión
-      .on('system', {}, (status: any) => {
-        console.log('📡 Estado de conexión Realtime:', status)
-        setIsConnected(status.status === 'ok')
-      })
-      
-      .subscribe((status: any, err?: any) => {
-        console.log('🔌 Suscripción Realtime:', status)
-        
-        if (err) {
-          console.error('❌ Error en suscripción:', err)
-        }
+      .subscribe((status: any) => {
+        console.log('🔌 Realtime status:', status)
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Realtime conectado exitosamente para:', userId)
+          console.log('✅ Realtime conectado exitosamente')
           setIsConnected(true)
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error de canal Realtime - Posibles causas:')
-          console.error('   🔐 RLS policies bloqueando la suscripción')
-          console.error('   📊 Tabla no habilitada para Realtime')
-          console.error('   🔑 Permisos insuficientes')
-          console.error('🔍 Detalles:', {
-            channel: `user-${userId}-realtime`,
-            userId,
-            timestamp: new Date().toISOString()
-          })
+          console.error('❌ Error de canal Realtime')
           setIsConnected(false)
         } else if (status === 'CLOSED') {
-          console.log('🔌 Canal cerrado para usuario:', userId)
+          console.log('🔌 Canal Realtime cerrado')
           setIsConnected(false)
         }
       })
 
-    setCurrentChannel(channel)
-    setConnectedUserId(userId)
-  }, [connectedUserId, currentChannel, queryClient, toast, dispatch])
+    // ✅ Guardar referencias
+    channelRef.current = channel
+    connectedUserIdRef.current = userId
 
-  const disconnectFromRealtime = useCallback(() => {
-    if (currentChannel) {
-      console.log('🔌 Desconectando Realtime para usuario:', connectedUserId)
-      const supabase = createClientBrowser()
-      supabase.removeChannel(currentChannel)
-      setCurrentChannel(null)
-      setConnectedUserId(null)
-      setIsConnected(false)
-    }
-  }, [currentChannel, connectedUserId])
-
-  // 🎯 Cleanup global al desmontar el provider
-  useEffect(() => {
+    // 🧹 Cleanup function
     return () => {
-      disconnectFromRealtime()
+      if (channelRef.current) {
+        const supabase = createClientBrowser()
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+        connectedUserIdRef.current = null
+        setIsConnected(false)
+      }
     }
-  }, [disconnectFromRealtime])
+  }, [user?.id, dispatch, queryClient, toast]) // ✨ Dependencias estables
 
   return (
     <RealtimeContext.Provider value={{ isConnected }}>

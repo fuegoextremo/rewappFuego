@@ -18,7 +18,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       
       <ReduxProvider>
         <ClientThemeProvider>
-          <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900">
+          <div className="min-h-dvh bg-white text-gray-900">
             {/* Banners de estado */}
             <AdminPreviewBanner />
             

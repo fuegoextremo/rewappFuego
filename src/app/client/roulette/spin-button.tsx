@@ -6,7 +6,7 @@ import { useSystemSettings } from '@/hooks/use-system-settings'
 import ResultSheet from '@/components/client/ResultSheet'
 import WheelRive, { WheelRiveRef } from '@/components/client/WheelRive'
 
-const RIVE_ANIMATION_DURATION = 5500 // 5.5 segundos como especificaste
+const RIVE_ANIMATION_DURATION = 5000 // 5.5s spin + 1s transition = 6.5s total
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 type SpinResult = { won: boolean; prize_name?: string | null }
@@ -58,12 +58,15 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
         
         if (animationStarted) {
           setSpinning(true)
-          console.log('🎰 Animación RIVE iniciada, esperando', RIVE_ANIMATION_DURATION, 'ms')
+          console.log('🎰 Animación RIVE iniciada:', spinResult.won ? 'GANAR' : 'PERDER')
+          console.log('⏱️ Esperando animación completa:', RIVE_ANIMATION_DURATION, 'ms (5.5s spin + 1s transition)')
           
-          // 3️⃣ Esperar que termine la animación (5.5s)
+          // 3️⃣ Esperar que termine la animación completa (6.5s)
           await delay(RIVE_ANIMATION_DURATION)
           
-          // 4️⃣ Mostrar resultado
+          // 4️⃣ Asegurar que RIVE esté reseteado y mostrar resultado
+          wheelRiveRef.current?.resetSpin()
+          console.log('🎰 Timeout de animación alcanzado, forzando reset y mostrando resultado')
           setResult(spinResult)
           setSpinning(false)
           router.refresh()
@@ -71,12 +74,15 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
           // Fallback si RIVE no funciona
           console.warn('⚠️ No se pudo iniciar animación RIVE, mostrando resultado directo')
           setResult(spinResult)
+          setSpinning(false)
           router.refresh()
         }
       } catch (error) {
         console.error('❌ Error en giro:', error)
         setMsg('Error de red')
         setSpinning(false)
+        // Resetear RIVE en caso de error
+        wheelRiveRef.current?.resetSpin()
       }
     })
   }

@@ -24,7 +24,7 @@ export function RecentActivity({ userId }: Props) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(0)
-  const { settings } = useSystemSettings()
+  const { data: settings } = useSystemSettings()
 
   const ITEMS_PER_PAGE = 10
 

@@ -96,7 +96,7 @@ export function AppShell({ children }: AppShellProps) {
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900 flex items-center justify-center">
+      <div className="min-h-dvh bg-white text-gray-900 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-500 text-sm">Verificando sesión...</p>
@@ -142,7 +142,7 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900 flex flex-col">
+    <div className="min-h-dvh bg-white text-gray-900 flex flex-col">
       {/* Pull-to-refresh indicator */}
       {pullDistance > 0 && (
         <div 

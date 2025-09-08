@@ -57,7 +57,7 @@ export default async function ClassicRoulettePage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-6 max-w-md mx-auto">
+      <div className="p-4 space-y-6">
         <div className="bg-white rounded-lg p-4 text-center">
           <h2 className="text-lg font-bold mb-2">🎰 Ruleta de Premios</h2>
           <p className="text-sm text-gray-600 mb-4">

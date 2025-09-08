@@ -1,9 +1,8 @@
 'use client'
 
 import { Suspense, lazy, useState, useCallback } from 'react'
-import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
+import { useUser, useCurrentView, useOpenCheckin, useAppDispatch, useAuthLoading } from '@/store/hooks'
 import { setOpenCheckin } from '@/store/slices/uiSlice'
-import { useAuthCheck } from '@/hooks/useAuthStore'
 import { ClientGuard } from '@/components/auth/RoleGuards'
 import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
@@ -38,7 +37,7 @@ function SPAContent() {
   const [pullDistance, setPullDistance] = useState(0)
   
   // ✅ USAR SELECTOR INDIVIDUAL para loading
-  const { isLoading } = useAuthCheck()
+  const isLoading = useAuthLoading()
 
   // 🔄 Pull-to-refresh logic (SIMPLIFICADO)
   const handleRefresh = useCallback(async () => {
@@ -92,7 +91,7 @@ function SPAContent() {
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900 flex items-center justify-center">
+      <div className="min-h-dvh bg-white text-gray-900 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-500 text-sm">Verificando sesión...</p>
@@ -138,7 +137,7 @@ function SPAContent() {
   }
 
   return (
-    <div className="mx-auto max-w-sm min-h-dvh bg-white text-gray-900 flex flex-col">
+    <div className="min-h-dvh bg-white text-gray-900 flex flex-col">
       {/* Pull-to-refresh indicator */}
       {pullDistance > 0 && (
         <div 

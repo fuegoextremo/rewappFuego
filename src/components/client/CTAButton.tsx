@@ -19,7 +19,10 @@ export function CTAButton({
   disabled = false,
   loading = false
 }: Props) {
-  const { settings } = useSystemSettings()
+  const { data: settings } = useSystemSettings()
+  
+  // Debug temporal
+  console.log('CTAButton - settings:', settings)
   
   const primaryColor = settings?.company_theme_primary || '#D73527'
   const secondaryColor = settings?.company_theme_secondary || '#F97316'

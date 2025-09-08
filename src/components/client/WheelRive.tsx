@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
+import { useRive, useStateMachineInput, Layout, Fit, Alignment } from '@rive-app/react-canvas';
 
 const ARTBOARD = undefined;       // o 'WheelArtboard' si lo nombraste
 const STATE_MACHINE = 'WheelSM';  // 👈 exacto como en Rive
@@ -13,20 +13,34 @@ type WheelRiveProps = {
 
 export type WheelRiveRef = {
   triggerSpin: (win: boolean) => boolean;
+  resetSpin: () => void;
 }
 
 const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, spinning }, ref) => {
   const { rive, RiveComponent } = useRive({
-    src: '/wheel_v1.riv',         // coloca tu .riv en /public
+    src: '/wheel_v1.riv',
     stateMachines: STATE_MACHINE,
     artboard: ARTBOARD,
     autoplay: true,
+    shouldDisableRiveListeners: false,
+    // 🎨 Configuración de layout para proporción 1200x1000 (6:5)
+    layout: new Layout({
+      fit: Fit.Contain,     // Mantiene la proporción original 6:5, sin distorsión
+      alignment: Alignment.Center  // Centra el contenido
+    })
   });
 
   const spin   = useStateMachineInput(rive, STATE_MACHINE, 'spin');   // Trigger
   const isWin  = useStateMachineInput(rive, STATE_MACHINE, 'isWin');  // Boolean
   const spinningRef = useRef(false);
   const [internalSpinning, setInternalSpinning] = useState(false);
+
+  // 🔄 Función para resetear el estado de giro
+  const resetSpin = () => {
+    console.log('🔄 Reseteando estado de giro RIVE');
+    spinningRef.current = false;
+    setInternalSpinning(false);
+  };
 
   // 🎯 Función para activar el giro
   const triggerSpin = (win: boolean) => {
@@ -45,7 +59,8 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
 
   // Exponer funciones al componente padre
   useImperativeHandle(ref, () => ({
-    triggerSpin
+    triggerSpin,
+    resetSpin
   }), [spin, isWin]);
 
   // Escucha cambios de estado para detectar cuándo vuelve a Idle y terminar el giro
@@ -54,24 +69,68 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
     
     const onStateChange = (event: any) => {
       console.log('🎰 RIVE State Change:', event.data);
-      // Cuando entre a Idle después de Spin*, terminó el giro
-      if (event.data?.name === 'Idle' && spinningRef.current) {
-        console.log('🎰 Animación RIVE completada, volviendo a Idle')
-        spinningRef.current = false;
-        setInternalSpinning(false);
+      
+      // Detectar estados de transición específicos
+      const eventData = Array.isArray(event.data) ? event.data : [event.data];
+      
+      let currentState = null;
+      for (const data of eventData) {
+        if (data?.name || data?.stateName) {
+          currentState = data.name || data.stateName;
+          break;
+        }
+      }
+      
+      if (currentState) {
+        console.log('🎯 Estado actual de RIVE:', currentState);
         
-        // Notificar al componente padre que terminó
-        if (onSpinComplete) {
-          onSpinComplete();
+        // Detectar estados de transición después del spin
+        if ((currentState === 'SpinWinToInitial' || currentState === 'SpinLoseToInitial') && spinningRef.current) {
+          console.log('🔄 Detectado estado de transición:', currentState, '- Esperando regreso a Idle...');
+        }
+        
+        // Solo resetear cuando vuelva a Idle después de las transiciones
+        if (currentState === 'Idle' && spinningRef.current) {
+          console.log('🎰 Animación RIVE completada, volviendo a Idle desde estado de transición');
+          resetSpin();
+          
+          // Notificar al componente padre que terminó
+          if (onSpinComplete) {
+            onSpinComplete();
+          }
         }
       }
     };
 
-    // Usar el event listener correcto de RIVE
+    // Usar múltiples event listeners para capturar el cambio de estado
     try {
-      (rive as any).on('statechange', onStateChange);
+      // Método principal
+      if (typeof (rive as any).on === 'function') {
+        (rive as any).on('statechange', onStateChange);
+      }
+      
+      // Método alternativo usando addEventListener
+      if (typeof (rive as any).addEventListener === 'function') {
+        (rive as any).addEventListener('statechange', onStateChange);
+      }
+      
+      // Listener para el state machine específico
+      const stateMachine = rive.stateMachineInputs(STATE_MACHINE);
+      if (stateMachine) {
+        console.log('📊 Estado inicial del state machine:', stateMachine);
+      }
+      
       return () => {
-        (rive as any).off('statechange', onStateChange);
+        try {
+          if (typeof (rive as any).off === 'function') {
+            (rive as any).off('statechange', onStateChange);
+          }
+          if (typeof (rive as any).removeEventListener === 'function') {
+            (rive as any).removeEventListener('statechange', onStateChange);
+          }
+        } catch (cleanupError) {
+          console.warn('⚠️ Error limpiando listeners de RIVE:', cleanupError);
+        }
       };
     } catch (error) {
       console.warn('⚠️ Error configurando listener de RIVE:', error);
@@ -81,13 +140,18 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
   const isCurrentlySpinning = spinning || internalSpinning;
 
   return (
-    <div className="inline-flex flex-col items-center">
-      <RiveComponent className="w-[340px] h-[340px]" />
+  <div className="w-full">                   {/* Responsivo hasta 384px */}
+    <div className="relative w-full aspect-[5/6]">             {/* Proporción exacta 1200:1000 */}
+      <RiveComponent
+        className="absolute inset-0 w-full h-full"
+      />
+    </div>
       
       {/* 🎯 Estado visual para debug (solo en desarrollo) */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-500 mt-2">
+        <div className="text-xs text-gray-500 mt-2 text-center">
           {isCurrentlySpinning ? '🎰 Girando...' : '⏸️ En reposo'}
+          <div className="text-xs opacity-60">Proporción: 6:5 (1200x1000)</div>
         </div>
       )}
     </div>

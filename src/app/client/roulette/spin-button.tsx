@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import ResultSheet from '@/components/client/ResultSheet'
+import WheelRive, { WheelRiveRef } from '@/components/client/WheelRive'
 
-const MIN_SPIN_MS = 1400
+const RIVE_ANIMATION_DURATION = 5500 // 5.5 segundos como especificaste
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 type SpinResult = { won: boolean; prize_name?: string | null }
@@ -14,8 +15,10 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [pending, start] = useTransition()
   const [msg, setMsg] = useState<string | null>(null)
   const [result, setResult] = useState<SpinResult | null>(null)
-  const { data: settings, isLoading: settingsLoading } = useSystemSettings() // ✨ React Query con cache agresivo
+  const [spinning, setSpinning] = useState(false) // Estado para la animación RIVE
+  const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   const router = useRouter()
+  const wheelRiveRef = useRef<WheelRiveRef>(null)
 
   // ✨ Loading inteligente: solo skeleton si NO tenemos settings Y estamos cargando
   const hasSettings = !!settings
@@ -30,61 +33,97 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   }
 
   // ✨ Usar configuración o fallback elegante
-  const primaryColor = settings?.company_theme_primary || '#10B981' // fallback limpio
+  const primaryColor = settings?.company_theme_primary || '#10B981'
 
+  // 🎰 Nueva lógica integrada con RIVE
   const onSpin = () => {
     setMsg(null)
     setResult(null)
     start(async () => {
-      const t0 = performance.now()
       try {
+        // 1️⃣ Obtener resultado del API primero
         const res = await fetch('/api/roulette', { method: 'POST' })
         const json = await res.json()
-        const elapsed = performance.now() - t0
-        await delay(Math.max(0, MIN_SPIN_MS - elapsed))
 
         if (!res.ok || !json.ok) {
           setMsg(json?.error ?? 'No se pudo girar')
           return
         }
-        const { result } = json as { result: SpinResult }
-        setResult(result)     // <- abrirá el bottom sheet
-        router.refresh()
-      } catch {
-        const elapsed = performance.now() - t0
-        await delay(Math.max(0, MIN_SPIN_MS - elapsed))
+
+        const { result: spinResult } = json as { result: SpinResult }
+        console.log('🎰 Resultado obtenido:', spinResult)
+
+        // 2️⃣ Activar animación RIVE con el resultado
+        const animationStarted = wheelRiveRef.current?.triggerSpin(spinResult.won)
+        
+        if (animationStarted) {
+          setSpinning(true)
+          console.log('🎰 Animación RIVE iniciada, esperando', RIVE_ANIMATION_DURATION, 'ms')
+          
+          // 3️⃣ Esperar que termine la animación (5.5s)
+          await delay(RIVE_ANIMATION_DURATION)
+          
+          // 4️⃣ Mostrar resultado
+          setResult(spinResult)
+          setSpinning(false)
+          router.refresh()
+        } else {
+          // Fallback si RIVE no funciona
+          console.warn('⚠️ No se pudo iniciar animación RIVE, mostrando resultado directo')
+          setResult(spinResult)
+          router.refresh()
+        }
+      } catch (error) {
+        console.error('❌ Error en giro:', error)
         setMsg('Error de red')
+        setSpinning(false)
       }
     })
   }
 
+  // 🎰 Callback cuando RIVE complete (respaldo)
+  const handleRiveComplete = () => {
+    console.log('🎰 RIVE completó animación')
+    // La lógica principal ya maneja el timing, esto es respaldo
+  }
+
   return (
-    <div className="space-y-3">
-      <button
-        onClick={onSpin}
-        disabled={disabled || pending}
-        className="inline-flex h-12 items-center justify-center rounded-xl px-6 text-white font-semibold shadow active:translate-y-[1px] disabled:opacity-40"
-        style={{ backgroundColor: primaryColor }} // ✨ Color personalizado dinámico
-      >
-        {pending ? 'Girando…' : 'Girar ruleta'}
-      </button>
-
-      {pending && (
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-          Girando...
-        </div>
-      )}
-
-      {/* Bottom sheet con el resultado */}
-      <ResultSheet
-        open={!!result}
-        onClose={() => setResult(null)}
-        won={!!result?.won}
-        prizeName={result?.prize_name}
+    <div className="space-y-6">
+      {/* 🎰 Ruleta RIVE */}
+      <WheelRive 
+        ref={wheelRiveRef}
+        spinning={spinning}
+        onSpinComplete={handleRiveComplete}
       />
 
-      {msg && <p className="text-sm text-gray-700">{msg}</p>}
+      {/* 🎯 Botón de girar */}
+      <div className="space-y-3">
+        <button
+          onClick={onSpin}
+          disabled={disabled || pending || spinning}
+          className="inline-flex h-12 items-center justify-center rounded-xl px-6 text-white font-semibold shadow active:translate-y-[1px] disabled:opacity-40"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {spinning ? 'Girando…' : pending ? 'Obteniendo resultado…' : 'Girar ruleta'}
+        </button>
+
+        {(pending || spinning) && (
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+            {spinning ? 'Animación en progreso...' : 'Obteniendo resultado...'}
+          </div>
+        )}
+
+        {/* Bottom sheet con el resultado */}
+        <ResultSheet
+          open={!!result}
+          onClose={() => setResult(null)}
+          won={!!result?.won}
+          prizeName={result?.prize_name}
+        />
+
+        {msg && <p className="text-sm text-gray-700">{msg}</p>}
+      </div>
     </div>
   )
 }

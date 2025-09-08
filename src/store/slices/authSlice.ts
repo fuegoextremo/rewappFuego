@@ -36,6 +36,7 @@ const initialState: AuthState = {
 export const loadUserProfile = createAsyncThunk(
   'auth/loadUserProfile',
   async (userId: string) => {
+    console.log('🔄 loadUserProfile STARTED for userId:', userId);
     const supabase = createClientBrowser()
     
     // 1. Cargar perfil del usuario desde user_profiles
@@ -46,6 +47,7 @@ export const loadUserProfile = createAsyncThunk(
       .single()
     
     if (error) {
+      console.error('❌ loadUserProfile ERROR in user_profiles:', error);
       throw new Error(error.message)
     }
 
@@ -72,6 +74,14 @@ export const loadUserProfile = createAsyncThunk(
     const totalCheckins = checkinData?.length || 0
     const currentStreak = streakData?.current_count || 0
     const availableSpins = spinsData?.available_spins || 0
+    
+    console.log('🔄 loadUserProfile COMPLETED:', { 
+      userId, 
+      totalCheckins, 
+      currentStreak, 
+      availableSpins,
+      spinsData 
+    });
     
     return {
       id: profile.id,
@@ -145,6 +155,13 @@ const authSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null
+    },
+    // 🎰 Action granular para actualizar solo spins via Realtime
+    updateAvailableSpins: (state, action: PayloadAction<number>) => {
+      if (state.user) {
+        state.user.available_spins = action.payload
+        console.log('🎰 Redux: available_spins actualizado a:', action.payload)
+      }
     }
   },
   extraReducers: (builder) => {
@@ -200,7 +217,7 @@ const authSlice = createSlice({
 })
 
 // 📤 EXPORT ACTIONS
-export const { setUser, setLoading, setError, clearError } = authSlice.actions
+export const { setUser, setLoading, setError, clearError, updateAvailableSpins } = authSlice.actions
 
 // 📤 EXPORT REDUCER
 export default authSlice.reducer

@@ -76,7 +76,7 @@ export default function HomeView() {
       {/* Grid de estadísticas - Con datos reales y estados de carga */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white rounded-lg p-4 shadow-sm border">
-          <div className="text-xl mb-1">📊</div>
+          <div className="text-xl mb-1">🏪</div>
           <h3 className="font-semibold text-sm">Visitas</h3>
           {userDataLoaded ? (
             <p className="text-xl font-bold text-blue-600">
@@ -90,7 +90,7 @@ export default function HomeView() {
           )}
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm border">
-          <div className="text-xl mb-1">🎯</div>
+          <div className="text-xl mb-1">🎲</div>
           <h3 className="font-semibold text-sm">Giros</h3>
           {userDataLoaded ? (
             <p className="text-xl font-bold text-emerald-600">

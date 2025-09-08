@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAppDispatch, useUser } from '@/store/hooks'
-import { loadUserProfile } from '@/store/slices/authSlice'
+import { loadUserProfile, updateAvailableSpins } from '@/store/slices/authSlice'
 
 interface RealtimeContextType {
   isConnected: boolean
@@ -135,6 +135,39 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
           queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] })
           queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] })
           queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'used', userId] })
+        }
+      })
+      // 🎰 Cambios en giros de usuario (user_spins)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'user_spins'
+      }, (payload) => {
+        // ✨ Filtrar - solo cambios del usuario actual
+        if (payload.new && payload.new.user_id === userId) {
+          console.log('🎰 Cambio en giros detectado:', payload)
+          
+          const newAvailableSpins = payload.new.available_spins
+          
+          // 🎯 GRANULAR: Actualizar React Query directamente (para RouletteView)
+          queryClient.setQueryData(['user', 'spins', userId], (oldData: any) => {
+            if (oldData) {
+              console.log('🎰 React Query: Actualizando spins de', oldData.available_spins, 'a', newAvailableSpins)
+              return { ...oldData, available_spins: newAvailableSpins }
+            }
+            return oldData
+          })
+          
+          // 🎯 GRANULAR: Actualizar Redux Store directamente (para HomeView)
+          dispatch(updateAvailableSpins(newAvailableSpins))
+          
+          // ✨ Opcional: Invalidar solo stats si es necesario
+          queryClient.invalidateQueries({ queryKey: ['user', 'stats', userId] })
+          
+          // ✨ Event para otros componentes
+          window.dispatchEvent(new CustomEvent('user-data-updated', { 
+            detail: { userId, type: 'spins-updated', data: payload } 
+          }))
         }
       })
       .subscribe((status: any) => {

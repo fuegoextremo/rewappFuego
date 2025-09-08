@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   company_privacy_policy: 'Política de privacidad por definir...',
   streak_initial_image: '/images/streak-start-default.png',
   streak_progress_default: '/images/streak-start-default.png',
-  streak_complete_image: '/images/streak-complete-default.png',
+  streak_complete_image: '🏆', // ✅ Usar emoji como fallback en lugar de imagen faltante
   // Valores por defecto para rachas
   streak_break_days: '12',   // Romper racha después de 12 días sin check-in
   streak_expiry_days: '90',  // Expirar racha después de 90 días totales

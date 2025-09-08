@@ -64,6 +64,12 @@ export function useStreakStage(userId: string, settings: any) {
       const prizes = streakPrizes || []
       const userSettings = settings || {}
       
+      // ✅ SAFETY CHECK: Si no hay prizes cargados, usar array vacío como fallback
+      if (!streakPrizes) {
+        console.warn('⚠️ streakPrizes no está disponible, usando fallback')
+        return calculateStreakStage(currentCount, [], userSettings)
+      }
+      
       const { rawData: userStreak } = streakData || { rawData: null }
       
       // Misma lógica que antes, pero con fallbacks
@@ -106,7 +112,7 @@ export function useStreakStage(userId: string, settings: any) {
       // Racha activa
       return calculateStreakStage(currentCount, prizes, userSettings)
     },
-    enabled: !!userId && !!settings, // ✨ Solo ejecutar si tenemos ambos datos críticos
+    enabled: !!userId && !!settings, // 🧪 TEMPORARY: Revertir para test
     staleTime: 30 * 1000, // ✨ 30 segundos - stage calculado puede cambiar rápido
     gcTime: 2 * 60 * 1000, // ✨ 2 minutos en cache
     refetchOnWindowFocus: false, // ✨ Confiar en invalidaciones del Realtime

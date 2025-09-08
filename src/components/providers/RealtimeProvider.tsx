@@ -63,7 +63,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
     const supabase = createClientBrowser()
     
     const channel = supabase
-      .channel('realtime:user:' + userId)
+      .channel('user-spins-test') // 🔧 El nombre que funcionaba perfectamente
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -143,9 +143,13 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         schema: 'public',
         table: 'user_spins'
       }, (payload) => {
+        console.log('🔔 CUALQUIER cambio en user_spins detectado:', payload)
+        console.log('🔍 Payload.new.user_id:', payload.new?.user_id)
+        console.log('🔍 UserId actual:', userId)
+        
         // ✨ Filtrar - solo cambios del usuario actual
         if (payload.new && payload.new.user_id === userId) {
-          console.log('🎰 Cambio en giros detectado:', payload)
+          console.log('🎰 Cambio en giros detectado para nuestro usuario:', payload)
           
           const newAvailableSpins = payload.new.available_spins
           

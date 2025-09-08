@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, lazy, useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
@@ -40,6 +41,7 @@ export function AppShell({ children }: AppShellProps) {
   // 🎨 LOCAL STATE
   const [isRefreshing, setIsRefreshingLocal] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
+  const [startY, setStartY] = useState<number | null>(null) // 🎯 Trackear inicio del touch
 
   // 🔄 Pull-to-refresh logic
   const handleRefresh = useCallback(async () => {
@@ -67,30 +69,39 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, [user?.id, isRefreshing, dispatch])
 
-  // Touch handlers for pull-to-refresh
-  const handleTouchStart = useCallback(() => {
-    if (window.scrollY > 0) return
-    setPullDistance(0)
-  }, [])
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+  // Touch handlers for pull-to-refresh estilo iPhone
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (window.scrollY > 0 || isRefreshing) return
     
     const touch = e.touches[0]
-    const startY = touch.clientY
-    
-    if (startY > 100) { // Only trigger if pulling from top area
-      const distance = Math.max(0, Math.min(startY - 100, 120))
-      setPullDistance(distance)
-    }
+    setStartY(touch.clientY) // 🎯 Guardamos la posición inicial
+    setPullDistance(0)
   }, [isRefreshing])
 
-  const handleTouchEnd = useCallback(() => {
-    if (pullDistance > 60 && !isRefreshing) {
-      handleRefresh()
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (window.scrollY > 0 || isRefreshing || startY === null) return
+    
+    const touch = e.touches[0]
+    const currentY = touch.clientY
+    const deltaY = currentY - startY // 🎯 Diferencia desde el inicio
+    
+    // Solo activar si jalamos hacia abajo desde el inicio
+    if (deltaY > 0) {
+      const distance = Math.max(0, Math.min(deltaY, 150)) // 🎯 Límite máximo 150px
+      setPullDistance(distance)
     } else {
+      setPullDistance(0) // 🎯 Si jalamos hacia arriba, resetear
+    }
+  }, [isRefreshing, startY])
+
+  const handleTouchEnd = useCallback(() => {
+    if (pullDistance > 80 && !isRefreshing) { // 🎯 Tolerancia aumentada a 80
+      handleRefresh()
+      // 🎯 No reseteamos pullDistance aquí - se resetea en handleRefresh al terminar
+    } else if (!isRefreshing) { // 🎯 Solo resetear si no estamos refrescando
       setPullDistance(0)
     }
+    setStartY(null) // 🎯 Limpiar la posición inicial
   }, [pullDistance, isRefreshing, handleRefresh])
 
   // Mostrar loading mientras se verifica la autenticación
@@ -142,51 +153,133 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-dvh bg-white text-gray-900 flex flex-col">
-      {/* Pull-to-refresh indicator */}
-      {pullDistance > 0 && (
-        <div 
-          className="absolute top-0 left-0 right-0 z-30 flex items-center justify-center bg-blue-50 transition-all duration-200"
-          style={{ 
-            height: `${pullDistance}px`,
-            opacity: pullDistance / 80 
-          }}
-        >
-          <div className="text-center">
-            {pullDistance > 60 ? (
-              <>
-                <div className="text-xl mb-1">🔄</div>
-                <p className="text-xs text-blue-600">Suelta para actualizar</p>
-              </>
-            ) : (
-              <>
-                <div className="text-lg mb-1">⬇️</div>
-                <p className="text-xs text-gray-500">Tira hacia abajo</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+    <motion.div 
+      className="min-h-dvh bg-white text-gray-900 flex flex-col relative overflow-hidden"
+      animate={{ 
+        y: pullDistance * 0.3 // 🎯 Menos movimiento ya que el indicador empuja naturalmente
+      }}
+      transition={{ 
+        type: "tween", 
+        duration: 0.1, // 🎯 Súper rápido para seguir el dedo
+        ease: "linear" // 🎯 Sin easing para movimiento directo
+      }}
+    >
+      {/* 🎯 Pull-to-refresh moderno estilo iPhone - Crea espacio real */}
+      <AnimatePresence>
+        {(pullDistance > 0 || isRefreshing) && ( /* 🎯 Mostrar durante pull O refresh */
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ 
+              height: isRefreshing ? 60 : Math.min(pullDistance, 120), // 🎯 Altura fija durante refresh
+              opacity: isRefreshing ? 1 : Math.min(pullDistance / 80, 1)
+            }}
+            exit={{ height: 0, opacity: 0 }}
+            className="w-full flex items-center justify-center overflow-hidden"
+            style={{ 
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0.8))',
+              backdropFilter: 'blur(10px)',
+              borderBottom: '1px solid rgba(0,0,0,0.05)' // 🎯 Sutil separación
+            }}
+            transition={{ 
+              type: "tween", 
+              duration: isRefreshing ? 0.3 : 0.1, // 🎯 Más suave durante refresh
+              ease: isRefreshing ? "easeOut" : "linear"
+            }}
+          >
+            <div className="text-center py-2"> {/* 🎯 Añadimos padding vertical */}
+              {isRefreshing ? ( /* 🎯 Estado: Refrescando */
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  className="space-y-1"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-6 h-6 mx-auto border-2 border-gray-300 border-t-blue-500 rounded-full"
+                  />
+                  <motion.p 
+                    className="text-xs text-gray-600 font-medium"
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    Actualizando datos...
+                  </motion.p>
+                </motion.div>
+              ) : pullDistance > 80 ? ( /* 🎯 Estado: Listo para refresh */
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  className="space-y-1"
+                >
+                  <motion.div
+                    className="text-xl"
+                    animate={{ 
+                      rotate: [0, 10, -10, 0],
+                      scale: [1, 1.1, 1]
+                    }}
+                    transition={{ 
+                      duration: 0.6, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    🔄
+                  </motion.div>
+                  <p className="text-xs text-blue-600 font-medium">Suelta para actualizar</p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  animate={{ y: Math.sin(Date.now() / 500) * 2 }} // 🎯 Menos movimiento
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="space-y-1" // 🎯 Menos espacio
+                >
+                  <motion.div
+                    className="text-xl" // 🎯 Más pequeño
+                    animate={{ 
+                      scale: [1, 1.05, 1], // 🎯 Menos escalado
+                      rotate: [0, 3, -3, 0] // 🎯 Menos rotación
+                    }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    ⬇️
+                  </motion.div>
+                  <p className="text-xs text-gray-500">Tira hacia abajo</p>
+                </motion.div>
+              )}
+            </div> {/* 🎯 Cerramos el div sin rotación */}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Contenido principal - con flex-1 para ocupar espacio disponible */}
-      <main 
+      {/* Contenido principal con animaciones suaves */}
+      <motion.main 
         className="flex-1 pb-20 overflow-auto"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        animate={{ 
+          scale: isRefreshing ? 0.97 : (pullDistance > 60 ? 0.99 : 1), // 🎯 Escala gradual
+          opacity: pullDistance > 0 ? Math.max(0.85, 1 - pullDistance * 0.002) : 1 // 🎯 Fade gradual
+        }}
+        transition={{ 
+          type: "tween", 
+          duration: 0.15, // 🎯 Rápido pero suave
+          ease: "easeOut"
+        }}
       >
-        <div className="px-4 pt-4">
-          {/* Loading indicator during refresh */}
-          {isRefreshing && (
-            <div className="flex items-center justify-center py-4">
-              <div className="w-6 h-6 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
-              <span className="ml-2 text-sm text-blue-600">Actualizando...</span>
-            </div>
-          )}
+        <motion.div 
+          className="px-4 pt-4"
+          animate={{ 
+            opacity: isRefreshing ? 0.7 : 1
+          }}
+          transition={{ duration: 0.2 }} // 🎯 Más rápido
+        >
+          {/* 🎯 Ya no necesitamos indicador extra - el principal se encarga */}
           
           {renderCurrentView()}
-        </div>
-      </main>
+        </motion.div>
+      </motion.main>
 
       {/* Checkin Sheet */}
       <CheckinSheet 
@@ -196,6 +289,6 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Bottom Navigation fijo */}
       <BottomNav onCheckinClick={() => dispatch(setOpenCheckin(true))} />
-    </div>
+    </motion.div>
   )
 }

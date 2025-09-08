@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, lazy, useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch, useAuthLoading } from '@/store/hooks'
 import { setOpenCheckin } from '@/store/slices/uiSlice'
 import { ClientGuard } from '@/components/auth/RoleGuards'
@@ -137,31 +138,56 @@ function SPAContent() {
   }
 
   return (
-    <div className="min-h-dvh bg-white text-gray-900 flex flex-col">
-      {/* Pull-to-refresh indicator */}
-      {pullDistance > 0 && (
-        <div 
-          className="absolute top-0 left-0 right-0 z-30 flex items-center justify-center bg-blue-50 transition-all duration-200"
-          style={{ 
-            height: `${pullDistance}px`,
-            opacity: pullDistance / 80 
-          }}
-        >
-          <div className="text-center">
-            {pullDistance > 60 ? (
-              <>
-                <div className="text-xl mb-1">🔄</div>
-                <p className="text-xs text-blue-600">Suelta para actualizar</p>
-              </>
-            ) : (
-              <>
-                <div className="text-lg mb-1">⬇️</div>
-                <p className="text-xs text-gray-500">Tira hacia abajo</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+    <motion.div 
+      className="min-h-dvh bg-white text-gray-900 flex flex-col relative overflow-hidden"
+      style={{ y: pullDistance * 0.3 }} // Efecto de arrastrar toda la pantalla
+    >
+      {/* 🎯 Pull-to-refresh moderno estilo iPhone */}
+      <AnimatePresence>
+        {pullDistance > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ 
+              opacity: Math.min(pullDistance / 60, 1),
+              scale: Math.min(0.8 + (pullDistance / 120), 1.2)
+            }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute top-0 left-0 right-0 z-30 flex items-center justify-center"
+            style={{ 
+              height: `${Math.min(pullDistance, 100)}px`,
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0.8))',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
+            <motion.div 
+              className="text-center"
+              animate={{ 
+                rotate: pullDistance > 60 ? 180 : 0,
+              }}
+              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            >
+              {pullDistance > 60 ? (
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  className="space-y-2"
+                >
+                  <div className="w-6 h-6 mx-auto border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin"></div>
+                  <p className="text-xs text-gray-600 font-medium">Suelta para actualizar</p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  animate={{ y: Math.sin(Date.now() / 200) * 2 }}
+                  className="space-y-2"
+                >
+                  <div className="text-2xl">⬇️</div>
+                  <p className="text-xs text-gray-500">Tira hacia abajo</p>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Header fijo */}
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-100">
@@ -180,25 +206,51 @@ function SPAContent() {
         </div>
       </header>
 
-      {/* Contenido principal - con flex-1 para ocupar espacio disponible */}
-      <main 
+      {/* Contenido principal - con animación de refresh moderna */}
+      <motion.main 
         className="flex-1 pb-20 overflow-auto"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        animate={{ 
+          y: isRefreshing ? 10 : 0,
+          scale: isRefreshing ? 0.98 : 1
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <div className="px-4 pt-4">
-          {/* Loading indicator during refresh */}
-          {isRefreshing && (
-            <div className="flex items-center justify-center py-4">
-              <div className="w-6 h-6 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
-              <span className="ml-2 text-sm text-blue-600">Actualizando...</span>
-            </div>
-          )}
+        <motion.div 
+          className="px-4 pt-4"
+          animate={{ opacity: isRefreshing ? 0.7 : 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          {/* 🔄 Loading indicator moderno durante refresh */}
+          <AnimatePresence>
+            {isRefreshing && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex items-center justify-center py-6 mb-4"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full mr-3"
+                />
+                <motion.span 
+                  className="text-sm text-gray-600 font-medium"
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  Actualizando datos...
+                </motion.span>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           {renderCurrentView()}
-        </div>
-      </main>
+        </motion.div>
+      </motion.main>
 
       {/* Checkin Sheet */}
       <CheckinSheet 
@@ -208,7 +260,7 @@ function SPAContent() {
 
       {/* Bottom Navigation fijo */}
       <BottomNav onCheckinClick={() => dispatch(setOpenCheckin(true))} />
-    </div>
+    </motion.div>
   )
 }
 

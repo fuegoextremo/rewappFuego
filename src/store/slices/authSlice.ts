@@ -51,6 +51,10 @@ export const loadUserProfile = createAsyncThunk(
       throw new Error(error.message)
     }
 
+    // 1.1. Obtener email desde auth.users
+    const { data: authUser, error: authError } = await supabase.auth.getUser()
+    const email = authUser?.user?.email || null
+
     // 2. Cargar estadísticas de check_ins (total_checkins)
     const { data: checkinData } = await supabase
       .from('check_ins')
@@ -85,7 +89,7 @@ export const loadUserProfile = createAsyncThunk(
     
     return {
       id: profile.id,
-      email: userId, // El ID es el email en Supabase Auth
+      email: email || 'sin-email@ejemplo.com', // Email real desde auth.users con fallback
       first_name: profile.first_name,
       last_name: profile.last_name,
       role: profile.role,

@@ -130,7 +130,8 @@ export async function getUserStats(userId: string) {
 export async function updateUserProfile(userId: string, updates: Partial<{
   first_name: string
   last_name: string
-  phone: string
+  phone: string | null
+  birth_date: string | null
 }>) {
   const { data, error } = await supabase
     .from('user_profiles')
@@ -142,6 +143,25 @@ export async function updateUserProfile(userId: string, updates: Partial<{
   if (error) {
     console.error('❌ Error updating user profile:', error)
     throw new Error(`Error actualizando perfil: ${error.message}`)
+  }
+
+  return data
+}
+
+export async function deactivateUserAccount(userId: string) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update({ 
+      is_active: false,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('❌ Error deactivating user account:', error)
+    throw new Error(`Error desactivando cuenta: ${error.message}`)
   }
 
   return data

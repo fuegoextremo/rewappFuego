@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getUserProfile, getUserCheckins, getUserStats, updateUserProfile } from '@/lib/api/user'
+import { getUserProfile, getUserCheckins, getUserStats, updateUserProfile, deactivateUserAccount } from '@/lib/api/user'
 import { queryKeys } from '@/lib/queryClient'
+import { useAppDispatch, useUser } from '@/store/hooks'
+import { setUser } from '@/store/slices/authSlice'
 
 // 🎯 HOOKS DE REACT QUERY PARA DATOS DE USUARIO
 
@@ -41,19 +43,44 @@ export function useUpdateUserProfile() {
       updates: Parameters<typeof updateUserProfile>[1] 
     }) => updateUserProfile(userId, updates),
     onSuccess: (data, variables) => {
-      // Invalidar y actualizar cache del perfil
-      queryClient.invalidateQueries({ 
-        queryKey: queryKeys.user.profile(variables.userId) 
-      })
+      console.log('✅ Profile updated successfully:', data)
       
-      // Opcionalmente, actualizar directamente el cache
+      // Actualizar React Query cache
       queryClient.setQueryData(
         queryKeys.user.profile(variables.userId), 
         data
       )
+      
+      // Invalidar cache de datos extendidos para que se recargue
+      queryClient.invalidateQueries({
+        queryKey: ['user', 'extended', variables.userId]
+      })
+      
+      // El Redux store se actualizará desde el componente
+      // que tiene acceso al usuario actual
     },
     onError: (error) => {
       console.error('❌ Error updating profile:', error)
+    }
+  })
+}
+
+// 🗑️ MUTACIÓN PARA DESACTIVAR CUENTA (SOFT DELETE)
+export function useDeactivateAccount() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (userId: string) => deactivateUserAccount(userId),
+    onSuccess: (data, userId) => {
+      // Limpiar cache del usuario
+      queryClient.removeQueries({ 
+        queryKey: ['user', userId] 
+      })
+      
+      console.log('✅ Account deactivated successfully')
+    },
+    onError: (error) => {
+      console.error('❌ Error deactivating account:', error)
     }
   })
 }

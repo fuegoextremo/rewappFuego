@@ -106,3 +106,18 @@
 .ticket-shape::after {
   bottom: -20px;
 }
+
+/* Mejorar renderizado de iconos SVG */
+svg {
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Específicamente para iconos de Lucide */
+[data-lucide] {
+  stroke-width: 2;
+  shape-rendering: geometricPrecision;
+}

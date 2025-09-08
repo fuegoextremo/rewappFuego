@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import Image from 'next/image'
+import BottomSheet from '@/components/ui/BottomSheet'
 
 type Props = {
   open: boolean
@@ -46,24 +47,19 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
     return () => { mounted = false }
   }, [open, couponId])
 
-  if (!open) return null
-
   return (
-    <>
-      <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-x-0 bottom-0 z-[70] mx-auto max-w-sm rounded-t-3xl bg-white p-6 shadow-2xl animate-[slideUp_220ms_ease-out]"
-      >
-        <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-gray-200" />
-        <div className="text-center space-y-1">
+    <BottomSheet
+      isOpen={open}
+      onClose={onClose}
+      title={title}
+    >
+      <div className="px-6 pb-6">
+        <div className="text-center space-y-1 mb-6">
           <p className="text-xs tracking-wider text-gray-500">RECLAMANDO</p>
-          <h3 className="text-2xl font-extrabold">{title}</h3>
           {code && <p className="text-sm text-gray-500">#{code}</p>}
         </div>
 
-        <div className="mt-4 flex justify-center">
+        <div className="flex justify-center mb-6">
           {err ? (
             <p className="text-sm text-red-600">{err}</p>
           ) : img ? (
@@ -83,24 +79,17 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
           )}
         </div>
 
-        <p className="mt-3 text-center text-xs text-gray-600">
+        <p className="text-center text-xs text-gray-600 mb-6">
           Muestra este código QR al mesero de cualquier sucursal para reclamar tu premio.
         </p>
 
         <button
           onClick={onClose}
-          className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 text-gray-800 font-semibold"
+          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 transition-colors"
         >
           Cerrar
         </button>
       </div>
-
-      <style jsx global>{`
-        @keyframes slideUp {
-          from { transform: translateY(16px); opacity: .98 }
-          to   { transform: translateY(0);    opacity: 1 }
-        }
-      `}</style>
-    </>
+    </BottomSheet>
   )
 }

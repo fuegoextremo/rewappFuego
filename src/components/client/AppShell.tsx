@@ -2,6 +2,7 @@
 
 import { Suspense, lazy, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
@@ -34,6 +35,7 @@ export function AppShell({ children }: AppShellProps) {
   const user = useUser()
   const currentView = useCurrentView()
   const openCheckin = useOpenCheckin()
+  const queryClient = useQueryClient()
   
   // 🔐 AUTH MANAGER
   const { isLoading, isAuthenticated } = useAuthManager()
@@ -53,6 +55,14 @@ export function AppShell({ children }: AppShellProps) {
     try {
       console.log('🔄 Iniciando pull-to-refresh...')
       
+      // Invalidar consultas específicas que pueden causar problemas
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['streak'] }),
+        queryClient.invalidateQueries({ queryKey: ['prizes'] }),
+        queryClient.invalidateQueries({ queryKey: ['settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['user'] })
+      ])
+      
       // Disparar evento para que todos los componentes se refresquen
       window.dispatchEvent(new CustomEvent('app-refresh'))
       
@@ -67,7 +77,7 @@ export function AppShell({ children }: AppShellProps) {
       dispatch(setRefreshing(false))
       setPullDistance(0)
     }
-  }, [user?.id, isRefreshing, dispatch])
+  }, [user?.id, isRefreshing, dispatch, queryClient])
 
   // Touch handlers for pull-to-refresh estilo iPhone
   const handleTouchStart = useCallback((e: React.TouchEvent) => {

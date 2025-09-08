@@ -48,6 +48,8 @@ export function useStreakPrizes() {
     staleTime: 15 * 60 * 1000, // ✨ 15 minutos - premios cambian raramente
     gcTime: 60 * 60 * 1000,    // ✨ 1 hora en cache - datos semi-estáticos
     refetchOnWindowFocus: false, // ✨ Cache agresivo para premios
+    retry: 3, // 🔄 Retry básico - 3 intentos automáticos
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // 🔄 1s, 2s, 4s max 5s
   })
 }
 
@@ -64,10 +66,18 @@ export function useStreakStage(userId: string, settings: any) {
       const prizes = streakPrizes || []
       const userSettings = settings || {}
       
-      // ✅ SAFETY CHECK: Si no hay prizes cargados, usar array vacío como fallback
+      // ✅ SAFETY CHECK: Si no hay prizes cargados, devolver estado de error
       if (!streakPrizes) {
         console.warn('⚠️ streakPrizes no está disponible, usando fallback')
-        return calculateStreakStage(currentCount, [], userSettings)
+        return {
+          image: "⚠️",
+          stage: "Datos no disponibles",
+          progress: 0,
+          nextGoal: 0,
+          nextReward: "Recargar página",
+          canRestart: false,
+          error: true
+        }
       }
       
       const { rawData: userStreak } = streakData || { rawData: null }

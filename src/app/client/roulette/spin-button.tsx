@@ -74,24 +74,16 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
           setResult(spinResult)
           setSpinning(false)
           
-          // 🔄 Invalidar queries para actualización en tiempo real
-          if (user?.id) {
-            queryClient.invalidateQueries({ queryKey: ['user', 'spins', user.id] })
-            queryClient.invalidateQueries({ queryKey: ['user', 'stats', user.id] })
-            console.log('🔄 Giros y stats invalidados - actualización en tiempo real')
-          }
+          // ✨ REALTIME PURO: Confiando 100% en RealtimeProvider
+          console.log('✨ Giro completado - Esperando Realtime para actualizar RouletteView y HomeView')
         } else {
           // Fallback si RIVE no funciona
           console.warn('⚠️ No se pudo iniciar animación RIVE, mostrando resultado directo')
           setResult(spinResult)
           setSpinning(false)
           
-          // 🔄 Invalidar queries para actualización en tiempo real (fallback)
-          if (user?.id) {
-            queryClient.invalidateQueries({ queryKey: ['user', 'spins', user.id] })
-            queryClient.invalidateQueries({ queryKey: ['user', 'stats', user.id] })
-            console.log('🔄 Giros y stats invalidados (fallback) - actualización en tiempo real')
-          }
+          // ✨ REALTIME PURO: Confiando 100% en RealtimeProvider (fallback)
+          console.log('✨ Giro completado (fallback) - Esperando Realtime para actualizar todo')
         }
       } catch (error) {
         console.error('❌ Error en giro:', error)

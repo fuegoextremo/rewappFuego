@@ -156,10 +156,13 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
           // 🎯 GRANULAR: Actualizar React Query directamente (para RouletteView)
           queryClient.setQueryData(['user', 'spins', userId], (oldData: any) => {
             if (oldData) {
-              console.log('🎰 React Query: Actualizando spins de', oldData.available_spins, 'a', newAvailableSpins)
-              return { ...oldData, available_spins: newAvailableSpins }
+              console.log('🎰 React Query: Actualizando spins de', oldData.availableSpins, 'a', newAvailableSpins)
+              console.log('🎯 RouletteView será actualizado automáticamente')
+              return { ...oldData, availableSpins: newAvailableSpins } // ✅ camelCase para coincidir con useUserSpins
+            } else {
+              console.warn('⚠️ oldData es undefined - RouletteView puede no tener datos base')
+              return { availableSpins: newAvailableSpins } // ✅ camelCase
             }
-            return oldData
           })
           
           // 🎯 GRANULAR: Actualizar Redux Store directamente (para HomeView)

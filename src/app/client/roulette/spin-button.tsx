@@ -2,6 +2,8 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { useUser } from '@/store/hooks'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import ResultSheet from '@/components/client/ResultSheet'
 import WheelRive, { WheelRiveRef } from '@/components/client/WheelRive'
@@ -18,6 +20,8 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [spinning, setSpinning] = useState(false) // Estado para la animación RIVE
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const user = useUser()
   const wheelRiveRef = useRef<WheelRiveRef>(null)
 
   // ✨ Loading inteligente: solo skeleton si NO tenemos settings Y estamos cargando
@@ -69,13 +73,25 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
           console.log('🎰 Timeout de animación alcanzado, forzando reset y mostrando resultado')
           setResult(spinResult)
           setSpinning(false)
-          router.refresh()
+          
+          // 🔄 Invalidar queries para actualización en tiempo real
+          if (user?.id) {
+            queryClient.invalidateQueries({ queryKey: ['user', 'spins', user.id] })
+            queryClient.invalidateQueries({ queryKey: ['user', 'stats', user.id] })
+            console.log('🔄 Giros y stats invalidados - actualización en tiempo real')
+          }
         } else {
           // Fallback si RIVE no funciona
           console.warn('⚠️ No se pudo iniciar animación RIVE, mostrando resultado directo')
           setResult(spinResult)
           setSpinning(false)
-          router.refresh()
+          
+          // 🔄 Invalidar queries para actualización en tiempo real (fallback)
+          if (user?.id) {
+            queryClient.invalidateQueries({ queryKey: ['user', 'spins', user.id] })
+            queryClient.invalidateQueries({ queryKey: ['user', 'stats', user.id] })
+            console.log('🔄 Giros y stats invalidados (fallback) - actualización en tiempo real')
+          }
         }
       } catch (error) {
         console.error('❌ Error en giro:', error)

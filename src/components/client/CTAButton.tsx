@@ -1,6 +1,6 @@
 'use client'
 
-import { useSystemSettings } from '@/hooks/use-system-settings'
+import { useSettings } from '@/store/hooks'
 
 type Props = {
   onClick?: () => void
@@ -19,13 +19,10 @@ export function CTAButton({
   disabled = false,
   loading = false
 }: Props) {
-  const { data: settings } = useSystemSettings()
+  const settings = useSettings()
   
-  // Debug temporal
-  console.log('CTAButton - settings:', settings)
-  
-  const primaryColor = settings?.company_theme_primary || '#D73527'
-  const secondaryColor = settings?.company_theme_secondary || '#F97316'
+  const primaryColor = settings.company_theme_primary || '#D73527'
+  const secondaryColor = settings.company_theme_secondary || '#F97316'
 
   const sizeClasses = {
     sm: 'px-4 py-2 text-sm',

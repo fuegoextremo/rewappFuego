@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClientBrowser } from '@/lib/supabase/client'
-import { useSystemSettings } from '@/hooks/use-system-settings'
+import { useSettings } from '@/store/hooks'
 
 type CheckIn = {
   id: string
@@ -24,7 +24,7 @@ export function RecentActivity({ userId }: Props) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(0)
-  const { data: settings } = useSystemSettings()
+  const settings = useSettings()
 
   const ITEMS_PER_PAGE = 10
 
@@ -90,7 +90,7 @@ export function RecentActivity({ userId }: Props) {
     }
   }
 
-  const primaryColor = settings?.company_theme_primary || '#D73527'
+  const primaryColor = settings.company_theme_primary || '#D73527'
 
   if (loading) {
     return (

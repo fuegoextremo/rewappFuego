@@ -133,23 +133,44 @@ export class RealtimeManager {
     if (payload.new && payload.new.user_id === this.currentUserId) {
       // ✨ Actualizar Redux directamente - fuente única de verdad
       if (this.reduxDispatch) {
-        import('@/store/slices/authSlice').then(({ 
+        import('@/store/slices/authSlice').then(async ({ 
           addActiveCoupon, 
           prependExpiredCoupon, 
           moveCouponToExpired,
           updateCouponDetails 
         }) => {
-          const coupon = payload.new
+          let coupon = payload.new
           const isExpired = coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()
           
-          if (payload.event === 'INSERT') {
+          // 🎯 Para cupones nuevos, obtener la información completa del premio
+          if (payload.eventType === 'INSERT' && coupon.prize_id) {
+            try {
+              const supabaseClient = (await import('@/lib/supabase/client')).createClientBrowser()
+              const { data: couponWithPrize } = await supabaseClient
+                .from('coupons')
+                .select(`
+                  id, unique_code, expires_at, is_redeemed, redeemed_at, source, created_at,
+                  prizes ( name, image_url )
+                `)
+                .eq('id', coupon.id)
+                .single()
+              
+              if (couponWithPrize) {
+                coupon = couponWithPrize
+              }
+            } catch (error) {
+              console.error('❌ Error al obtener datos del premio:', error)
+            }
+          }
+          
+          if (payload.eventType === 'INSERT') {
             // Cupón nuevo creado
             if (!coupon.is_redeemed && !isExpired) {
               this.reduxDispatch(addActiveCoupon(coupon))
             } else {
               this.reduxDispatch(prependExpiredCoupon(coupon))
             }
-          } else if (payload.event === 'UPDATE') {
+          } else if (payload.eventType === 'UPDATE') {
             // Cupón actualizado
             if (coupon.is_redeemed || isExpired) {
               this.reduxDispatch(moveCouponToExpired(coupon))

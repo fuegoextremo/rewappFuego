@@ -126,7 +126,7 @@ export default function CouponCard({ coupon, isInStack = false, stackIndex = 0, 
   const textColor = getTextColor(primaryColor)
   
   // �🐛 Debug temporal - puedes quitar esto después
-  console.log(`Cupón ${coupon.unique_code}: Variante ${primaryColor} del base ${baseColor} (ID: ${coupon.id.slice(-8)})`)
+  //console.log(`Cupón ${coupon.unique_code}: Variante ${primaryColor} del base ${baseColor} (ID: ${coupon.id.slice(-8)})`)
   
   const now = Date.now()
   const active = !coupon.is_redeemed && (!coupon.expires_at || new Date(coupon.expires_at).getTime() >= now)

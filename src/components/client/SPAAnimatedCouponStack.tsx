@@ -14,6 +14,7 @@ interface SPAAnimatedCouponStackProps {
   hasMore?: boolean
   loading?: boolean
   onLoadMore?: () => void
+  total?: number      // 🆕 Total de cupones
 }
 
 export default function SPAAnimatedCouponStack({ 
@@ -23,7 +24,8 @@ export default function SPAAnimatedCouponStack({
   emptySubMessage = "¡Sigue participando! 🎡",
   hasMore = false,
   loading = false,
-  onLoadMore
+  onLoadMore,
+  total        // 🆕 Recibir total
 }: SPAAnimatedCouponStackProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -78,7 +80,7 @@ export default function SPAAnimatedCouponStack({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {title}
+          {title} ({total ?? coupons.length})
         </motion.h3>
         
         <motion.button
@@ -147,14 +149,14 @@ export default function SPAAnimatedCouponStack({
               })}
               
               {/* Indicador de más cupones */}
-              {coupons.length > 4 && (
+              {(total ?? coupons.length) > 4 && (
                 <motion.div
                   className="absolute top-0 right-2 bg-gray-600 text-white text-xs px-2 py-1 rounded-full font-bold z-50"
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.5, type: "spring" }}
                 >
-                  +{coupons.length - 4}
+                  +{(total ?? coupons.length) - 4}
                 </motion.div>
               )}
               

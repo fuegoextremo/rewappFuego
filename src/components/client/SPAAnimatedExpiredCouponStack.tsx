@@ -12,6 +12,7 @@ interface SPAAnimatedExpiredCouponStackProps {
   hasMore?: boolean
   loading?: boolean
   onLoadMore?: () => void
+  total?: number      // 🆕 Total de cupones
 }
 
 export default function SPAAnimatedExpiredCouponStack({ 
@@ -21,7 +22,8 @@ export default function SPAAnimatedExpiredCouponStack({
   emptySubMessage = "Historial limpio 📋",
   hasMore = false,
   loading = false,
-  onLoadMore
+  onLoadMore,
+  total        // 🆕 Recibir total
 }: SPAAnimatedExpiredCouponStackProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -44,7 +46,7 @@ export default function SPAAnimatedExpiredCouponStack({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {title} ({coupons.length})
+          {title} ({total ?? coupons.length})
         </motion.h3>
         
         <motion.button

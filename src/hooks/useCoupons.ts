@@ -17,12 +17,14 @@ export const useCoupons = () => {
   const dispatch = useAppDispatch()
   const user = useAppSelector(state => state.auth.user)
   const coupons = useAppSelector(state => state.auth.coupons)
-  const { active, expired, hasMoreActive, hasMoreExpired, loadingMore } = coupons || {
+  const { active, expired, hasMoreActive, hasMoreExpired, loadingMore, totalActive, totalExpired } = coupons || {
     active: [],
     expired: [],
     hasMoreActive: false,
     hasMoreExpired: false,
-    loadingMore: false
+    loadingMore: false,
+    totalActive: 0,
+    totalExpired: 0
   }
 
   // 📥 Cargar cupones iniciales (4 activos + 4 expirados para el stack)
@@ -35,6 +37,22 @@ export const useCoupons = () => {
     const now = new Date().toISOString()
 
     try {
+      // 🔢 Obtener totales primero (consultas count)
+      const [{ count: totalActive }, { count: totalExpired }] = await Promise.all([
+        supabase
+          .from('coupons')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_redeemed', false)
+          .or(`expires_at.is.null,expires_at.gte.${now}`),
+        
+        supabase
+          .from('coupons')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .or(`is_redeemed.eq.true,expires_at.lt.${now}`)
+      ])
+
       // Cargar solo 4 cupones activos (stack inicial)
       const { data: activeCoupons } = await supabase
         .from('coupons')
@@ -64,7 +82,9 @@ export const useCoupons = () => {
         active: activeCoupons || [],
         expired: expiredCoupons || [],
         hasMoreActive: (activeCoupons?.length || 0) === 4,
-        hasMoreExpired: (expiredCoupons?.length || 0) === 4
+        hasMoreExpired: (expiredCoupons?.length || 0) === 4,
+        totalActive: totalActive || 0,      // 🆕 Total real de cupones activos
+        totalExpired: totalExpired || 0     // 🆕 Total real de cupones expirados
       }))
 
     } catch (error) {
@@ -140,6 +160,8 @@ export const useCoupons = () => {
     hasMoreActive,
     hasMoreExpired,
     loadingMore,
+    totalActive,      // 🆕 Total de cupones activos
+    totalExpired,     // 🆕 Total de cupones expirados
     
     // 🔧 Acciones
     loadInitialCoupons,

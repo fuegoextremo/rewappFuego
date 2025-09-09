@@ -40,6 +40,8 @@ interface AuthState {
     hasMoreActive: boolean
     hasMoreExpired: boolean
     loadingMore: boolean
+    totalActive: number    // 🆕 Total de cupones activos
+    totalExpired: number   // 🆕 Total de cupones expirados
   }
 }
 
@@ -54,7 +56,9 @@ const initialState: AuthState = {
     expired: [],
     hasMoreActive: false,
     hasMoreExpired: false,
-    loadingMore: false
+    loadingMore: false,
+    totalActive: 0,    // 🆕 Inicial
+    totalExpired: 0    // 🆕 Inicial
   }
 }
 
@@ -194,34 +198,55 @@ const authSlice = createSlice({
     },
     
     // 🎫 REDUCERS PARA CUPONES (Realtime + Paginación)
-    setCoupons: (state, action: PayloadAction<{ active: CouponRow[], expired: CouponRow[], hasMoreActive: boolean, hasMoreExpired: boolean }>) => {
+    setCoupons: (state, action: PayloadAction<{ 
+      active: CouponRow[], 
+      expired: CouponRow[], 
+      hasMoreActive: boolean, 
+      hasMoreExpired: boolean,
+      totalActive: number,      // 🆕 Incluir totales
+      totalExpired: number      // 🆕 Incluir totales
+    }>) => {
       if (!state.coupons) {
         state.coupons = {
           active: [],
           expired: [],
           hasMoreActive: false,
           hasMoreExpired: false,
-          loadingMore: false
+          loadingMore: false,
+          totalActive: 0,
+          totalExpired: 0
         }
       }
       state.coupons.active = action.payload.active
       state.coupons.expired = action.payload.expired
       state.coupons.hasMoreActive = action.payload.hasMoreActive
       state.coupons.hasMoreExpired = action.payload.hasMoreExpired
+      state.coupons.totalActive = action.payload.totalActive      // 🆕 Establecer totales
+      state.coupons.totalExpired = action.payload.totalExpired    // 🆕 Establecer totales
     },
     
     addActiveCoupon: (state, action: PayloadAction<CouponRow>) => {
       state.coupons.active.unshift(action.payload)
+      state.coupons.totalActive += 1
     },
     
     prependExpiredCoupon: (state, action: PayloadAction<CouponRow>) => {
       state.coupons.expired.unshift(action.payload)
+      state.coupons.totalExpired += 1
     },
     
     moveCouponToExpired: (state, action: PayloadAction<CouponRow>) => {
       const couponId = action.payload.id
+      const wasActive = state.coupons.active.some(c => c.id === couponId)
+      
       state.coupons.active = state.coupons.active.filter(c => c.id !== couponId)
       state.coupons.expired.unshift(action.payload)
+      
+      // 🆕 Actualizar contadores
+      if (wasActive) {
+        state.coupons.totalActive -= 1
+        state.coupons.totalExpired += 1
+      }
     },
     
     updateCouponDetails: (state, action: PayloadAction<CouponRow>) => {

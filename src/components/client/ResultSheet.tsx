@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Gift, Trophy } from 'lucide-react'
+import { useAppDispatch } from '@/store/hooks'
+import { setCurrentView } from '@/store/slices/uiSlice'
 
 type ResultSheetProps = {
   open: boolean
@@ -13,6 +14,13 @@ type ResultSheetProps = {
 }
 
 export default function ResultSheet({ open, onClose, won, prizeName }: ResultSheetProps) {
+  const dispatch = useAppDispatch()
+  
+  const handleGoToCoupons = () => {
+    onClose()
+    dispatch(setCurrentView('coupons'))
+  }
+  
   // cerrar con ESC
   useEffect(() => {
     if (!open) return
@@ -116,14 +124,13 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
                     transition={{ delay: 0.6, duration: 0.3 }}
                     className="mt-6 grid gap-3"
                   >
-                    <Link
-                      href="/client/coupons"
+                    <button
+                      onClick={handleGoToCoupons}
                       className="inline-flex h-12 items-center justify-center rounded-xl bg-green-600 px-5 text-white font-semibold shadow hover:bg-green-700 transition-colors active:translate-y-[1px]"
-                      onClick={onClose}
                     >
                       <Gift className="w-5 h-5 mr-2" />
                       Reclamar Premio
-                    </Link>
+                    </button>
                     <button
                       onClick={onClose}
                       className="inline-flex h-12 items-center justify-center rounded-xl bg-gray-100 px-5 text-gray-800 font-semibold hover:bg-gray-200 transition-colors"

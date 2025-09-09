@@ -8,18 +8,18 @@ import { motion } from 'framer-motion'
 
 export default function CouponsView() {
   const user = useUser()
-  const {
-    activeCoupons,
-    expiredCoupons,
-    hasMoreActive,
+  const { 
+    activeCoupons, 
+    expiredCoupons, 
+    hasMoreActive, 
     hasMoreExpired,
     loadingMore,
+    totalActive,      // 🆕 Obtener totales
+    totalExpired,     // 🆕 Obtener totales
     loadInitialCoupons,
     loadMoreActiveCoupons,
     loadMoreExpiredCoupons
-  } = useCoupons()
-
-  // Cargar cupones al montar el componente
+  } = useCoupons()  // Cargar cupones al montar el componente
   useEffect(() => {
     if (user?.id) {
       loadInitialCoupons()
@@ -59,6 +59,7 @@ export default function CouponsView() {
           hasMore={hasMoreActive}
           loading={loadingMore}
           onLoadMore={loadMoreActiveCoupons}
+          total={totalActive}          // 🆕 Pasar total
         />
       </motion.div>
 
@@ -76,6 +77,7 @@ export default function CouponsView() {
           hasMore={hasMoreExpired}
           loading={loadingMore}
           onLoadMore={loadMoreExpiredCoupons}
+          total={totalExpired}         // 🆕 Pasar total
         />
       </motion.div>
 

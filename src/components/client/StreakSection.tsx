@@ -154,7 +154,7 @@ export function StreakSection({ userId, currentCount, isLoading: externalLoading
         )}
 
         {/* Botón de reiniciar si la racha está completa */}
-        {streakStage.canRestart && !(streakStage as any).error && (
+        {streakStage.canRestart && !error && (
           <div className="text-center mt-4">
             <button 
               className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white"
@@ -168,7 +168,7 @@ export function StreakSection({ userId, currentCount, isLoading: externalLoading
         )}
 
         {/* Botón de recargar si hay error de datos */}
-        {(streakStage as any).error && (
+        {error && (
           <div className="text-center mt-4">
             <button 
               onClick={() => window.location.reload()}

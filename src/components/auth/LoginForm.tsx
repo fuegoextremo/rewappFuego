@@ -64,11 +64,12 @@ export default function LoginForm() {
         router.refresh()
       }, 1500)
 
-    } catch (error: any) {
-      setError(error.message || 'Error al iniciar sesión')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al iniciar sesión'
+      setError(errorMessage)
       toast({
         title: "Error al iniciar sesión",
-        description: error.message || 'Verifica tus credenciales e intenta nuevamente',
+        description: errorMessage || 'Verifica tus credenciales e intenta nuevamente',
         variant: "destructive",
         duration: 4000,
       })

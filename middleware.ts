@@ -6,16 +6,6 @@ import type { NextRequest } from 'next/server'
 const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password']
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password']
 
-// 🎯 DESTINOS POR ROL (sin consultas DB en middleware)
-const ROLE_DESTINATIONS = {
-  client: '/client',
-  verifier: '/admin/dashboard',
-  manager: '/admin/dashboard', 
-  admin: '/admin/dashboard',
-  superadmin: '/superadmin/dashboard',
-  default: '/login'
-} as const
-
 // 🔐 PERMISOS DE RUTA (verificación básica sin DB)
 function hasRouteAccess(pathname: string, hasValidSession: boolean): boolean {
   // Rutas públicas - siempre permitidas

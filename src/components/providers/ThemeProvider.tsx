@@ -4,7 +4,7 @@ import { useSystemSettings } from '@/hooks/use-system-settings'
 import { useEffect } from 'react'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { settings } = useSystemSettings()
+  const { data: settings } = useSystemSettings()
 
   useEffect(() => {
     // Solo aplicar si no hay CSS crítico ya establecido

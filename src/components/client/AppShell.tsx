@@ -38,7 +38,7 @@ export function AppShell({ children }: AppShellProps) {
   const queryClient = useQueryClient()
   
   // 🔐 AUTH MANAGER
-  const { isLoading, isAuthenticated } = useAuthManager()
+  const { isLoading } = useAuthManager()
   
   // 🎨 LOCAL STATE
   const [isRefreshing, setIsRefreshingLocal] = useState(false)

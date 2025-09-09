@@ -10,7 +10,7 @@ type StatsCardProps = {
 }
 
 function StatsCard({ title, value, icon, subtitle }: StatsCardProps) {
-  const { settings } = useSystemSettings()
+  const { data: settings } = useSystemSettings()
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
   return (

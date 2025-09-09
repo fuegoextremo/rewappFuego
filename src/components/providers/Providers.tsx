@@ -1,7 +1,7 @@
 'use client'
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { QueryClientProvider } from '@tanstack/react-query'
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools' // Temporalmente comentado
 import { Provider as ReduxProvider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 import { store, persistor } from '@/store'
@@ -24,9 +24,10 @@ export function Providers({ children }: ProvidersProps) {
             <ModalProvider>
               {children}
               {/* React Query DevTools solo en desarrollo */}
-              {process.env.NODE_ENV === 'development' && (
+              {/* Temporalmente comentado mientras se ajusta el singleton */}
+              {/* process.env.NODE_ENV === 'development' && (
                 <ReactQueryDevtools initialIsOpen={false} />
-              )}
+              ) */}
             </ModalProvider>
           </RealtimeInitializer>
         </QueryClientProvider>

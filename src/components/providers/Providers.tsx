@@ -6,26 +6,26 @@ import { Provider as ReduxProvider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 import { store, persistor } from '@/store'
 import { queryClient } from '@/lib/queryClient'
-import { RealtimeProvider } from '@/components/providers/RealtimeProvider'
+import { RealtimeInitializer } from '@/components/providers/RealtimeInitializer'
 import { ReactNode } from 'react'
 
 interface ProvidersProps {
   children: ReactNode
 }
 
-// 🎯 PROVIDER COMBINADO: Redux + React Query + Realtime
+// 🎯 PROVIDER COMBINADO: Redux + React Query + Realtime Singleton
 export function Providers({ children }: ProvidersProps) {
   return (
     <ReduxProvider store={store}>
       <PersistGate loading={<AppLoading />} persistor={persistor}>
         <QueryClientProvider client={queryClient}>
-          <RealtimeProvider>
+          <RealtimeInitializer>
             {children}
             {/* React Query DevTools solo en desarrollo */}
             {process.env.NODE_ENV === 'development' && (
               <ReactQueryDevtools initialIsOpen={false} />
             )}
-          </RealtimeProvider>
+          </RealtimeInitializer>
         </QueryClientProvider>
       </PersistGate>
     </ReduxProvider>

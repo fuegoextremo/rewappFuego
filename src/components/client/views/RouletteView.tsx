@@ -1,20 +1,18 @@
 'use client'
 
-import { useUser } from '@/store/hooks'
-import { useUserSpins, useRoulettePrizes, getRarityFromWeight } from '@/hooks/queries/useRouletteQueries'
-import { useSystemSettings } from '@/hooks/use-system-settings'
+import { useUser, useSettings } from '@/store/hooks'
+import { useRoulettePrizes, getRarityFromWeight } from '@/hooks/queries/useRouletteQueries'
 import SpinButton from '@/app/client/roulette/spin-button'
 
 export default function RouletteView() {
   const user = useUser()
-  const { data: settings, isLoading: settingsLoading } = useSystemSettings()
-  const { data: spinsData, isLoading: spinsLoading } = useUserSpins(user?.id || '')
+  const settings = useSettings()
   const { data: prizes, isLoading: prizesLoading } = useRoulettePrizes()
 
-  // ✨ Loading inteligente
+  // ✨ Loading inteligente - solo necesitamos verificar prizes
   const hasUser = !!user
   const hasSettings = !!settings
-  const isActuallyLoading = (settingsLoading && !hasSettings) || spinsLoading || prizesLoading
+  const isActuallyLoading = prizesLoading
 
   if (!hasUser) {
     return (
@@ -52,7 +50,8 @@ export default function RouletteView() {
     )
   }
 
-  const availableSpins = spinsData?.availableSpins ?? 0
+  // ✨ Datos desde Redux - igual que HomeView
+  const availableSpins = user?.available_spins ?? 0
   const hasSpins = availableSpins > 0
   const primaryColor = settings?.company_theme_primary || '#3B82F6'
 

@@ -1,8 +1,7 @@
-'use client'
+import { redirect } from "next/navigation";
 
-import CouponsView from '@/components/client/CouponsView'
-
+// Redirección automática a la versión clásica
 export default function ClientCouponsPage() {
-  return <CouponsView />
+  redirect('/classicapp/coupons');
 }
 

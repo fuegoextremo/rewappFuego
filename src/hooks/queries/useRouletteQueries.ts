@@ -15,31 +15,7 @@ export type RoulettePrize = {
   is_active: boolean | null
 }
 
-// 🎯 Hook para giros disponibles
-export function useUserSpins(userId: string) {
-  return useQuery({
-    queryKey: ['user', 'spins', userId],
-    queryFn: async () => {
-      const supabase = createClientBrowser()
-      
-      const { data: spinsRow } = await supabase
-        .from('user_spins')
-        .select('available_spins')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      return {
-        availableSpins: spinsRow?.available_spins ?? 0
-      }
-    },
-    enabled: !!userId,
-    staleTime: 1 * 60 * 1000, // ✨ 1 minuto - datos dinámicos que pueden cambiar con Realtime
-    gcTime: 5 * 60 * 1000,    // ✨ 5 minutos en cache
-    refetchOnWindowFocus: false, // ✨ Confiar en Realtime para updates
-  })
-}
-
-// 🏆 Hook para premios de ruleta disponibles
+//  Hook para premios de ruleta disponibles
 export function useRoulettePrizes() {
   return useQuery({
     queryKey: ['roulette', 'prizes'],

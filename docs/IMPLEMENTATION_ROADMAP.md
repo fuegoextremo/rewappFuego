@@ -309,11 +309,11 @@ Diferencias:
 
 ### **Funcionalidad Mínima:**
 1. ✅ Usuario puede autenticarse
-2. [ ] Usuario puede generar QR para check-in
-3. [ ] Verificador puede escanear y procesar check-in
-4. [ ] Usuario ve giros disponibles después del check-in
-5. [ ] Usuario puede girar ruleta y ganar premios
-6. [ ] Usuario puede ver y usar cupones ganados
+2. ✅ Usuario puede generar QR para check-in
+3. ✅ Verificador puede escanear y procesar check-in
+4. ✅ Usuario ve giros disponibles después del check-in
+5. ✅ Usuario puede girar ruleta y ganar premios
+6. ✅ Usuario puede ver y usar cupones ganados
 7. [ ] Usuario puede ver progreso de racha
 8. [ ] Todas las vistas tienen placeholders apropiados
 

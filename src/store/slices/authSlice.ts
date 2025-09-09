@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import { createClientBrowser } from '@/lib/supabase/client'
 
-// 📋 TIPOS BASADOS EN database.ts
+// 📋 TIPOS BASADOS EN LA ESTRUCTURA DE BASE DE DATOS
 export interface User {
   id: string                   // UUID del usuario
   email: string                // Email (viene del auth)
@@ -164,7 +164,6 @@ const authSlice = createSlice({
     updateAvailableSpins: (state, action: PayloadAction<number>) => {
       if (state.user) {
         state.user.available_spins = action.payload
-        console.log('🎰 Redux: available_spins actualizado a:', action.payload)
       }
     }
   },

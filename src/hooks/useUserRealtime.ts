@@ -1,15 +1,26 @@
-import { useContext } from 'react'
-import { RealtimeContext } from '@/components/providers/RealtimeProvider'
+import { useEffect, useState } from 'react'
+import { RealtimeManager } from '@/lib/realtime/RealtimeManager'
 
-// 🎯 Hook simplificado - solo retorna el estado de conexión
+// 🎯 Hook simplificado - solo retorna el estado de conexión del singleton
 export function useUserRealtime() {
-  const context = useContext(RealtimeContext)
+  const [isConnected, setIsConnected] = useState(false)
   
-  if (!context) {
-    throw new Error('useUserRealtime debe usarse dentro de RealtimeProvider')
-  }
+  useEffect(() => {
+    const manager = RealtimeManager.getInstance()
+    setIsConnected(manager.isConnected())
+    
+    // Listener para cambios de estado de conexión
+    const checkConnection = () => {
+      setIsConnected(manager.isConnected())
+    }
+    
+    // Verificar estado cada 5 segundos (opcional)
+    const interval = setInterval(checkConnection, 5000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
-  return context
+  return { isConnected }
 }
 
 // 🎯 Hook para notificaciones globales

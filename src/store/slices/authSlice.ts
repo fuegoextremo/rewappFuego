@@ -17,11 +17,30 @@ export interface User {
   available_spins: number      // available_spins from user_spins
 }
 
+// 🎫 TIPO PARA CUPONES
+export interface CouponRow {
+  id: string
+  unique_code: string | null
+  expires_at: string | null
+  is_redeemed: boolean | null
+  redeemed_at: string | null
+  source: string | null
+  created_at: string | null
+  prizes: { name: string; image_url: string | null } | null
+}
+
 interface AuthState {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
   error: string | null
+  coupons: {
+    active: CouponRow[]
+    expired: CouponRow[]
+    hasMoreActive: boolean
+    hasMoreExpired: boolean
+    loadingMore: boolean
+  }
 }
 
 // 🏁 ESTADO INICIAL
@@ -29,7 +48,14 @@ const initialState: AuthState = {
   user: null,
   isLoading: false,
   isAuthenticated: false,
-  error: null
+  error: null,
+  coupons: {
+    active: [],
+    expired: [],
+    hasMoreActive: false,
+    hasMoreExpired: false,
+    loadingMore: false
+  }
 }
 
 // 🔄 ASYNC THUNKS
@@ -165,6 +191,67 @@ const authSlice = createSlice({
       if (state.user) {
         state.user.available_spins = action.payload
       }
+    },
+    
+    // 🎫 REDUCERS PARA CUPONES (Realtime + Paginación)
+    setCoupons: (state, action: PayloadAction<{ active: CouponRow[], expired: CouponRow[], hasMoreActive: boolean, hasMoreExpired: boolean }>) => {
+      if (!state.coupons) {
+        state.coupons = {
+          active: [],
+          expired: [],
+          hasMoreActive: false,
+          hasMoreExpired: false,
+          loadingMore: false
+        }
+      }
+      state.coupons.active = action.payload.active
+      state.coupons.expired = action.payload.expired
+      state.coupons.hasMoreActive = action.payload.hasMoreActive
+      state.coupons.hasMoreExpired = action.payload.hasMoreExpired
+    },
+    
+    addActiveCoupon: (state, action: PayloadAction<CouponRow>) => {
+      state.coupons.active.unshift(action.payload)
+    },
+    
+    prependExpiredCoupon: (state, action: PayloadAction<CouponRow>) => {
+      state.coupons.expired.unshift(action.payload)
+    },
+    
+    moveCouponToExpired: (state, action: PayloadAction<CouponRow>) => {
+      const couponId = action.payload.id
+      state.coupons.active = state.coupons.active.filter(c => c.id !== couponId)
+      state.coupons.expired.unshift(action.payload)
+    },
+    
+    updateCouponDetails: (state, action: PayloadAction<CouponRow>) => {
+      const coupon = action.payload
+      
+      const activeIndex = state.coupons.active.findIndex(c => c.id === coupon.id)
+      if (activeIndex !== -1) {
+        state.coupons.active[activeIndex] = coupon
+      }
+      
+      const expiredIndex = state.coupons.expired.findIndex(c => c.id === coupon.id)
+      if (expiredIndex !== -1) {
+        state.coupons.expired[expiredIndex] = coupon
+      }
+    },
+    
+    appendExpiredCoupons: (state, action: PayloadAction<{ coupons: CouponRow[], hasMore: boolean }>) => {
+      state.coupons.expired.push(...action.payload.coupons)
+      state.coupons.hasMoreExpired = action.payload.hasMore
+      state.coupons.loadingMore = false
+    },
+    
+    appendActiveCoupons: (state, action: PayloadAction<{ coupons: CouponRow[], hasMore: boolean }>) => {
+      state.coupons.active.push(...action.payload.coupons)
+      state.coupons.hasMoreActive = action.payload.hasMore
+      state.coupons.loadingMore = false
+    },
+    
+    setLoadingMoreCoupons: (state, action: PayloadAction<boolean>) => {
+      state.coupons.loadingMore = action.payload
     }
   },
   extraReducers: (builder) => {
@@ -220,7 +307,21 @@ const authSlice = createSlice({
 })
 
 // 📤 EXPORT ACTIONS
-export const { setUser, setLoading, setError, clearError, updateAvailableSpins } = authSlice.actions
+export const { 
+  setUser, 
+  setLoading, 
+  setError, 
+  clearError, 
+  updateAvailableSpins,
+  setCoupons,
+  addActiveCoupon,
+  prependExpiredCoupon,
+  moveCouponToExpired,
+  updateCouponDetails,
+  appendExpiredCoupons,
+  appendActiveCoupons,
+  setLoadingMoreCoupons
+} = authSlice.actions
 
 // 📤 EXPORT REDUCER
 export default authSlice.reducer

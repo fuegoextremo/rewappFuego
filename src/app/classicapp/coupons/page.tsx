@@ -1,6 +1,7 @@
 import { createClientServer } from '@/lib/supabase/server'
 import { redirect } from "next/navigation";
-import CouponCard from '@/components/client/CouponCard'
+import AnimatedCouponStack from '@/components/client/AnimatedCouponStack'
+import AnimatedExpiredCouponStack from '@/components/client/AnimatedExpiredCouponStack'
 import Link from "next/link";
 
 type CouponRow = {
@@ -71,13 +72,13 @@ export default async function ClassicCouponsPage() {
   const redeemedOrExpired = coupons.filter((c) => !isActive(c))
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
       {/* Header de navegación */}
-      <div className="bg-white shadow-sm p-4">
+      <div className="bg-white p-4 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <Link 
             href="/classicapp" 
-            className="text-blue-600 hover:text-blue-800 flex items-center"
+            className="text-blue-600 hover:text-blue-800 flex items-center transition-colors"
           >
             ← Volver
           </Link>
@@ -86,46 +87,29 @@ export default async function ClassicCouponsPage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-6 max-w-md mx-auto">
-        {/* Activos */}
-        <div className="space-y-3">
-          <h3 className="font-semibold">Cupones Activos</h3>
-          {active.length === 0 ? (
-            <div className="bg-white p-6 rounded-lg text-center">
-              <p className="text-gray-500 mb-2">
-                Aún no tienes cupones activos
-              </p>
-              <p className="text-sm text-gray-400">
-                ¡Sigue participando en la ruleta! 🎡
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {active.map((c) => (
-                <CouponCard key={c.id} coupon={c} />
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="p-4 space-y-8 max-w-md mx-auto w-full overflow-hidden">
+        {/* Cupones Activos */}
+        <AnimatedCouponStack 
+          coupons={active}
+          title="Cupones Activos"
+          emptyMessage="Aún no tienes cupones activos"
+          emptySubMessage="¡Sigue participando en la ruleta! 🎡"
+        />
 
-        {/* Redimidos / Vencidos */}
-        {redeemedOrExpired.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="font-semibold">Historial</h3>
-            <div className="space-y-3">
-              {redeemedOrExpired.map((c) => (
-                <CouponCard key={c.id} coupon={c} />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Cupones Redimidos / Vencidos */}
+        <AnimatedExpiredCouponStack 
+          coupons={redeemedOrExpired}
+          title="Historial"
+          emptyMessage="No tienes cupones en el historial"
+          emptySubMessage="Los cupones usados aparecerán aquí 📋"
+        />
 
         {/* Switch a SPA */}
-        <div className="text-center p-4 bg-orange-50 rounded-lg">
+        <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
           <p className="text-sm text-orange-700 mb-2">¿Prefieres la experiencia SPA?</p>
           <Link 
             href="/client" 
-            className="inline-block px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="inline-block px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
           >
             🚀 Ir a SPA App
           </Link>

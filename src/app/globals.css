@@ -85,7 +85,7 @@
   overflow: visible;
 }
 
-/* Círculos arriba y abajo centrados para efecto de ticket */
+/* Círculos arriba y abajo centrados para efecto de ticket 
 .ticket-shape::before,
 .ticket-shape::after {
   content: '';
@@ -98,6 +98,7 @@
   transform: translateX(-50%);
   z-index: 1;
 }
+*/
 
 .ticket-shape::before {
   top: -20px;

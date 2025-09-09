@@ -1,96 +1,97 @@
 'use client'
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useUser } from '@/store/hooks'
-import { useAvailableCoupons, useUsedCoupons } from '@/hooks/queries/useCouponQueries'
-import CouponCard from '@/components/client/CouponCard'
+import { useCoupons } from '@/hooks/useCoupons'
+import SPAAnimatedCouponStack from '@/components/client/SPAAnimatedCouponStack'
+import SPAAnimatedExpiredCouponStack from '@/components/client/SPAAnimatedExpiredCouponStack'
+import { motion } from 'framer-motion'
 
 export default function CouponsView() {
   const user = useUser()
-  const [activeTab, setActiveTab] = useState<'available' | 'used'>('available')
+  const {
+    activeCoupons,
+    expiredCoupons,
+    hasMoreActive,
+    hasMoreExpired,
+    loadingMore,
+    loadInitialCoupons,
+    loadMoreActiveCoupons,
+    loadMoreExpiredCoupons
+  } = useCoupons()
 
-  // 🎯 React Query hooks con cache optimizado
-  const { data: availableCoupons = [], isLoading: loadingAvailable } = useAvailableCoupons(user?.id || '')
-  const { data: usedCoupons = [], isLoading: loadingUsed } = useUsedCoupons(user?.id || '')
-
-  if (!user) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">Inicia sesión para ver tus cupones</p>
-      </div>
-    )
-  }
-
-  const isLoading = activeTab === 'available' ? loadingAvailable : loadingUsed
-  const currentCoupons = activeTab === 'available' ? availableCoupons : usedCoupons
-  const isEmpty = currentCoupons.length === 0
+  // Cargar cupones al montar el componente
+  useEffect(() => {
+    if (user?.id) {
+      loadInitialCoupons()
+    }
+  }, [user?.id, loadInitialCoupons])
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg border border-gray-200">
-        {/* 📱 Header con tabs */}
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold mb-4">Mis Cupones</h2>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('available')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'available'
-                  ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Disponibles ({availableCoupons.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('used')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'used'
-                  ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Usados ({usedCoupons.length})
-            </button>
-          </div>
-        </div>
+    <motion.div 
+      className="space-y-8 max-w-md mx-auto w-full overflow-hidden p-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Mis Cupones</h1>
+        <p className="text-gray-600 text-sm">
+          Gestiona tus cupones activos y revisa tu historial
+        </p>
+      </motion.div>
 
-        {/* 📦 Content */}
-        <div className="p-6">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-200 rounded-lg h-24" />
-                </div>
-              ))}
-            </div>
-          ) : isEmpty ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">
-                {activeTab === 'available' ? '🎟️' : '📋'}
-              </div>
-              <p className="text-gray-500 mb-2">
-                {activeTab === 'available' 
-                  ? 'No tienes cupones disponibles' 
-                  : 'No has usado ningún cupón aún'
-                }
-              </p>
-              {activeTab === 'available' && (
-                <p className="text-sm text-gray-400">
-                  Realiza check-ins para ganar recompensas
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {currentCoupons.map((coupon) => (
-                <CouponCard key={coupon.id} coupon={coupon} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* Cupones Activos */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <SPAAnimatedCouponStack 
+          coupons={activeCoupons}
+          title="Cupones Activos"
+          emptyMessage="Aún no tienes cupones activos"
+          emptySubMessage="¡Sigue participando en la ruleta! 🎡"
+          hasMore={hasMoreActive}
+          loading={loadingMore}
+          onLoadMore={loadMoreActiveCoupons}
+        />
+      </motion.div>
+
+      {/* Cupones Expirados/Usados */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <SPAAnimatedExpiredCouponStack 
+          coupons={expiredCoupons}
+          title="Historial"
+          emptyMessage="No tienes cupones en el historial"
+          emptySubMessage="Los cupones usados aparecerán aquí 📋"
+          hasMore={hasMoreExpired}
+          loading={loadingMore}
+          onLoadMore={loadMoreExpiredCoupons}
+        />
+      </motion.div>
+
+      {/* Estado de carga inicial */}
+      {!user && (
+        <motion.div
+          className="flex items-center justify-center p-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <div className="flex items-center gap-3 text-gray-500">
+            <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+            <span>Cargando cupones...</span>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
   )
 }

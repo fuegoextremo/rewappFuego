@@ -23,6 +23,7 @@ export function useRealtimeFallback(userId: string) {
     const startPolling = () => {
       pollIntervalRef.current = setInterval(async () => {
         try {
+          const supabase = createClientBrowser()
           const { data: userData } = await supabase
             .from('user_spins')
             .select('available_spins')
@@ -56,6 +57,7 @@ export function useRealtimeFallback(userId: string) {
     // Obtener valor inicial
     const getInitialValue = async () => {
       try {
+        const supabase = createClientBrowser()
         const { data } = await supabase
           .from('user_spins')
           .select('available_spins')

@@ -131,10 +131,33 @@ export class RealtimeManager {
 
   private handleCouponChange(payload: any) {
     if (payload.new && payload.new.user_id === this.currentUserId) {
-      // Invalidar queries de cupones
-      if (this.queryClient) {
-        this.queryClient.invalidateQueries({ queryKey: ['user', 'coupons', this.currentUserId] })
-        this.queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', this.currentUserId] })
+      // ✨ Actualizar Redux directamente - fuente única de verdad
+      if (this.reduxDispatch) {
+        import('@/store/slices/authSlice').then(({ 
+          addActiveCoupon, 
+          prependExpiredCoupon, 
+          moveCouponToExpired,
+          updateCouponDetails 
+        }) => {
+          const coupon = payload.new
+          const isExpired = coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()
+          
+          if (payload.event === 'INSERT') {
+            // Cupón nuevo creado
+            if (!coupon.is_redeemed && !isExpired) {
+              this.reduxDispatch(addActiveCoupon(coupon))
+            } else {
+              this.reduxDispatch(prependExpiredCoupon(coupon))
+            }
+          } else if (payload.event === 'UPDATE') {
+            // Cupón actualizado
+            if (coupon.is_redeemed || isExpired) {
+              this.reduxDispatch(moveCouponToExpired(coupon))
+            } else {
+              this.reduxDispatch(updateCouponDetails(coupon))
+            }
+          }
+        })
       }
 
       this.callbacks.onCouponUpdate?.({

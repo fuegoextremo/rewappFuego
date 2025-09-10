@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rive_streak_animations_plan>
+  <metadata>
+    <title>Animaciones Rive para Rachas - RewardApp</title>
+    <date>2025-09-10</date>
+    <branch>feature/spa-architecture</branch>
+    <status>📋 Plan MVP - Aprovecha infraestructura existente</status>
+    <version>1.0</version>
+    <priority>MEDIA - Post MVP básico</priority>
+  </metadata>
+
+  <overview>
+    <concept>
+      <description>Integrar animaciones Rive en el sistema de rachas existente, aprovechando la infraestructura de premios por threshold que ya permite personalizar imágenes</description>
+      <key_insight>Reutilizar el campo image_url de prizes para soportar archivos .riv además de imágenes normales</key_insight>
+    </concept>
+
+    <current_state>
+      <infrastructure>
+        <item>✅ Sistema de premios por racha con image_url personalizable</item>
+        <item>✅ calculateStreakStageAdvanced() usa currentThreshold?.image_url</item>
+        <item>✅ Admin puede subir imágenes por threshold</item>
+        <item>✅ WheelRive.tsx como referencia de Rive integration</item>
+      </infrastructure>
+      
+      <missing_pieces>
+        <item>❌ Detección de archivos .riv vs imágenes</item>
+        <item>❌ Componente SimpleRiveLoop para rachas</item>
+        <item>❌ Validación de archivos Rive en admin</item>
+      </missing_pieces>
+    </current_state>
+  </overview>
+
+  <implementation_strategy>
+    <approach>
+      <name>Extensión Inteligente del Sistema Existente</name>
+      <description>Aprovechar image_url existente para soportar .riv, manteniendo backward compatibility total</description>
+      
+      <benefits>
+        <benefit>Reutiliza infraestructura probada y funcional</benefit>
+        <benefit>Escalable por threshold (cada premio puede tener su animación)</benefit>
+        <benefit>Backward compatible (imágenes normales siguen funcionando)</benefit>
+        <benefit>Admin-friendly (suben .riv como cualquier imagen)</benefit>
+        <benefit>Performance optimizado (Rive solo se carga cuando necesario)</benefit>
+      </benefits>
+    </approach>
+
+    <mvp_flow>
+      <step order="1">Admin sube archivo .riv en "Premio por Racha" (ej: celebration.riv)</step>
+      <step order="2">calculateStreakStageAdvanced() retorna image_url con la animación</step>
+      <step order="3">UI detecta extensión .riv y renderiza componente Rive</step>
+      <step order="4">Animación se reproduce en loop básico</step>
+      <step order="5">Si no es .riv, funciona como siempre (img normal)</step>
+    </mvp_flow>
+  </implementation_strategy>
+
+  <technical_implementation>
+    <phase number="1" status="🎯 MVP - BÁSICO">
+      <name>Detección y Renderizado Condicional</name>
+      <priority>ALTA</priority>
+      <effort>2-3 horas</effort>
+      
+      <deliverables>
+        <component name="SimpleRiveLoop">
+          <file>src/components/client/SimpleRiveLoop.tsx</file>
+          <description>Componente minimalista para animaciones Rive en loop</description>
+          <features>
+            <feature>Autoplay en loop infinito</feature>
+            <feature>Loading state con fallback</feature>
+            <feature>Error handling graceful</feature>
+            <feature>Responsive sizing</feature>
+          </features>
+        </component>
+
+        <logic_update name="StreakImageRenderer">
+          <file>src/components/client/StreakSection.tsx</file>
+          <description>Lógica condicional para renderizar Rive vs imagen normal</description>
+          <implementation>
+            <code_pattern>
+              {streakStage.image?.endsWith('.riv') ? (
+                &lt;SimpleRiveLoop src={streakStage.image} className="streak-animation" /&gt;
+              ) : (
+                &lt;img src={streakStage.image} alt="Racha" className="streak-image" /&gt;
+              )}
+            </code_pattern>
+          </implementation>
+        </logic_update>
+
+        <utility name="FileTypeDetection">
+          <file>src/lib/utils/fileTypes.ts</file>
+          <methods>
+            <method>isRiveFile(url: string): boolean</method>
+            <method>getFileExtension(url: string): string</method>
+            <method>isValidAnimationFile(url: string): boolean</method>
+          </methods>
+        </utility>
+      </deliverables>
+
+      <technical_specs>
+        <rive_integration>
+          <library>@rive-app/react-canvas (ya instalado)</library>
+          <autoplay>true</autoplay>
+          <loop>true</loop>
+          <fit>cover</fit>
+          <alignment>center</alignment>
+        </rive_integration>
+
+        <fallback_strategy>
+          <on_error>Mostrar emoji o imagen por defecto</on_error>
+          <on_loading>Skeleton o placeholder</on_loading>
+          <no_rive_support>Graceful degradation a imagen</no_rive_support>
+        </fallback_strategy>
+      </technical_specs>
+    </phase>
+
+    <phase number="2" status="🔮 FUTURO - MEJORADO">
+      <name>Animaciones Inteligentes y Interactivas</name>
+      <priority>MEDIA</priority>
+      <effort>1-2 días</effort>
+      
+      <deliverables>
+        <enhanced_component name="SmartRiveStreak">
+          <features>
+            <feature>Progreso dinámico (barra que se llena según current_count/threshold)</feature>
+            <feature>Triggers por eventos (celebración al completar)</feature>
+            <feature>Estados múltiples en una sola animación</feature>
+            <feature>Transiciones suaves entre estados</feature>
+          </features>
+        </enhanced_component>
+
+        <admin_enhancements>
+          <file_validation>Validar que archivos .riv son válidos antes de subir</file_validation>
+          <preview_functionality>Preview de animaciones en admin</preview_functionality>
+          <animation_library>Galería de animaciones predefinidas</animation_library>
+        </admin_enhancements>
+      </deliverables>
+    </phase>
+
+    <phase number="3" status="🌟 FUTURO - AVANZADO">
+      <name>Sistema Completo de Animaciones</name>
+      <priority>BAJA</priority>
+      <effort>3-5 días</effort>
+      
+      <deliverables>
+        <custom_animations>
+          <personalized_by_user>Animaciones que cambian según el usuario</personalized_by_user>
+          <seasonal_themes>Temas estacionales o eventos especiales</seasonal_themes>
+          <achievement_specific>Animaciones únicas por logros específicos</achievement_specific>
+        </custom_animations>
+
+        <performance_optimization>
+          <lazy_loading>Cargar animaciones solo cuando son visibles</lazy_loading>
+          <caching_strategy>Cache inteligente de archivos .riv</caching_strategy>
+          <mobile_optimization>Optimizaciones específicas para móviles</mobile_optimization>
+        </performance_optimization>
+      </deliverables>
+    </phase>
+  </technical_implementation>
+
+  <animation_catalog>
+    <by_streak_state>
+      <initial_state>
+        <description>Usuario sin visitas o racha nueva</description>
+        <suggested_animations>
+          <animation>🔥 Fuego que se enciende gradualmente</animation>
+          <animation>✨ Chispas que aparecen y desaparecen</animation>
+          <animation>🌱 Semilla que germina</animation>
+        </suggested_animations>
+      </initial_state>
+
+      <progress_state>
+        <description>Usuario en progreso hacia siguiente threshold</description>
+        <suggested_animations>
+          <animation>🚀 Cohete volando con trail de estrellas</animation>
+          <animation>⚡ Rayos de energía pulsando</animation>
+          <animation>🏃 Figura corriendo con partículas</animation>
+        </suggested_animations>
+      </progress_state>
+
+      <completion_state>
+        <description>Usuario alcanza threshold específico</description>
+        <suggested_animations>
+          <animation>🏆 Trofeo con confetti cayendo</animation>
+          <animation>💎 Gema brillando con destellos</animation>
+          <animation>🎉 Explosión de celebración</animation>
+        </suggested_animations>
+      </completion_state>
+
+      <broken_state>
+        <description>Racha perdida por inactividad</description>
+        <suggested_animations>
+          <animation>💔 Corazón que se rompe</animation>
+          <animation>🌙 Fuego que se apaga lentamente</animation>
+          <animation>😴 Personaje durmiendo</animation>
+        </suggested_animations>
+      </broken_state>
+
+      <expired_state>
+        <description>Nueva temporada de rachas</description>
+        <suggested_animations>
+          <animation>🔄 Círculo renovándose</animation>
+          <animation>🌅 Amanecer con rayos de sol</animation>
+          <animation>🆕 Badge de "NEW" pulsando</animation>
+        </suggested_animations>
+      </expired_state>
+    </by_streak_state>
+
+    <by_threshold_level>
+      <beginner_5_visits>
+        <theme>Iniciación y motivación</theme>
+        <style>Simple y energizante</style>
+        <colors>Verde y amarillo</colors>
+      </beginner_5_visits>
+
+      <intermediate_10_visits>
+        <theme>Progreso y momentum</theme>
+        <style>Dinámico con movimiento</style>
+        <colors>Azul y naranja</colors>
+      </intermediate_10_visits>
+
+      <advanced_20_visits>
+        <theme>Maestría y celebración</theme>
+        <style>Épico con efectos especiales</style>
+        <colors>Dorado y púrpura</colors>
+      </advanced_20_visits>
+    </by_threshold_level>
+  </animation_catalog>
+
+  <implementation_details>
+    <file_structure>
+      <new_files>
+        <file>src/components/client/SimpleRiveLoop.tsx</file>
+        <file>src/lib/utils/fileTypes.ts</file>
+        <file>docs/PLAN_RIVE_STREAK_ANIMATIONS.xml</file>
+      </new_files>
+
+      <modified_files>
+        <file>src/components/client/StreakSection.tsx</file>
+        <file>src/lib/services/streaks.ts (minor)</file>
+      </modified_files>
+
+      <assets_directory>
+        <path>public/animations/streaks/</path>
+        <organization>
+          <by_threshold>5-visits/, 10-visits/, 20-visits/</by_threshold>
+          <by_state>initial/, progress/, complete/, broken/, expired/</by_state>
+        </organization>
+      </assets_directory>
+    </file_structure>
+
+    <backward_compatibility>
+      <existing_images>Todas las imágenes actuales siguen funcionando</existing_images>
+      <fallback_behavior>Si Rive falla, degrada gracefully a imagen</fallback_behavior>
+      <performance_impact>Mínimo - Rive solo se carga cuando detecta .riv</performance_impact>
+    </backward_compatibility>
+
+    <admin_considerations>
+      <file_upload>
+        <validation>Verificar que archivos .riv son válidos</validation>
+        <size_limits>Limitar tamaño de archivos Rive (max 1-2MB)</size_limits>
+        <format_support>Soportar .riv nativo de Rive Editor</format_support>
+      </file_upload>
+
+      <user_experience>
+        <preview>Mostrar preview de animación en formulario de premio</preview>
+        <fallback_image>Permitir imagen de respaldo por si Rive falla</fallback_image>
+        <documentation>Guía simple de cómo crear/subir animaciones</documentation>
+      </user_experience>
+    </admin_considerations>
+  </implementation_details>
+
+  <success_metrics>
+    <mvp_phase>
+      <metric>Detección automática de archivos .riv funciona 100%</metric>
+      <metric>Animaciones se reproducen en loop sin problemas</metric>
+      <metric>Fallback a imágenes funciona cuando Rive falla</metric>
+      <metric>No hay degradación de performance perceptible</metric>
+      <metric>Backward compatibility total con sistema actual</metric>
+    </mvp_phase>
+
+    <enhanced_phase>
+      <metric>Progreso dinámico refleja current_count real</metric>
+      <metric>Triggers de celebración funcionan al completar racha</metric>
+      <metric>Admin puede subir y previsualizar animaciones</metric>
+      <metric>Transiciones suaves entre estados</metric>
+    </enhanced_phase>
+  </success_metrics>
+
+  <risks_and_mitigations>
+    <technical_risks>
+      <risk>
+        <description>Archivos Rive corruptos o incompatibles</description>
+        <mitigation>Validación robusta y fallback automático a imagen</mitigation>
+      </risk>
+      
+      <risk>
+        <description>Performance en dispositivos móviles de gama baja</description>
+        <mitigation>Lazy loading y configuración opcional para deshabilitar</mitigation>
+      </risk>
+      
+      <risk>
+        <description>Aumento significativo en bundle size</description>
+        <mitigation>Dynamic imports y code splitting para Rive components</mitigation>
+      </risk>
+    </technical_risks>
+
+    <ux_risks>
+      <risk>
+        <description>Animaciones distractoras o molestas</description>
+        <mitigation>Diseño sutil, configuración de preferencias usuario</mitigation>
+      </risk>
+      
+      <risk>
+        <description>Confusión en admin sobre formatos soportados</description>
+        <mitigation>UI clara con ejemplos y validación en tiempo real</mitigation>
+      </risk>
+    </ux_risks>
+  </risks_and_mitigations>
+
+  <future_extensions>
+    <interactive_animations>
+      <tap_to_celebrate>Usuario puede tocar animación para trigger especial</tap_to_celebrate>
+      <progress_gestures>Swipe para ver progreso detallado</progress_gestures>
+      <personalization>Usuario elige su estilo de animación favorito</personalization>
+    </interactive_animations>
+
+    <social_features>
+      <share_achievements>Compartir animación de logro en redes sociales</share_achievements>
+      <community_animations>Galería comunitaria de animaciones custom</community_animations>
+      <contests>Concursos de diseño de animaciones</contests>
+    </social_features>
+
+    <gamification_advanced>
+      <animation_unlocks>Desbloquear nuevas animaciones por logros</animation_unlocks>
+      <seasonal_events>Animaciones especiales por temporadas</seasonal_events>
+      <rare_animations>Animaciones ultra-raras por achievements especiales</rare_animations>
+    </gamification_advanced>
+  </future_extensions>
+
+  <conclusion>
+    <approach_strength>
+      <point>Aprovecha infraestructura existente de manera inteligente</point>
+      <point>Escalable y extensible sin complejidad adicional</point>
+      <point>Mantiene simplicidad del MVP mientras prepara futuro avanzado</point>
+      <point>Riesgo técnico mínimo por reutilizar patterns probados</point>
+    </approach_strength>
+
+    <next_steps>
+      <immediate>Crear SimpleRiveLoop component básico</immediate>
+      <short_term>Implementar detección condicional en StreakSection</short_term>
+      <medium_term>Validación y preview en admin</medium_term>
+      <long_term>Sistema completo de animaciones interactivas</long_term>
+    </next_steps>
+
+    <recommendation>
+      <priority>MEDIA - Implementar después de completar MVP básico de diseño</priority>
+      <effort>BAJO para MVP, escalable a MEDIO/ALTO para features avanzadas</effort>
+      <impact>ALTO - Feature diferenciadora que mejora significativamente UX</impact>
+      <feasibility>ALTA - Aprovecha todo lo que ya funciona</feasibility>
+    </recommendation>
+  </conclusion>
+</rive_streak_animations_plan>

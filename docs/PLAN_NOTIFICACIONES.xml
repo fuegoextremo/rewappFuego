@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<notification_system_plan>
+  <metadata>
+    <title>Sistema Integral de Notificaciones - RewardApp</title>
+    <date>2025-09-10</date>
+    <branch>feature/spa-architecture</branch>
+    <status>📋 Documentación completa - Lista para implementar</status>
+    <version>1.0</version>
+  </metadata>
+
+  <objectives>
+    <primary>
+      <item>Notificaciones Toast en tiempo real para acciones del usuario</item>
+      <item>Base preparada para WhatsApp (APAGADA inicialmente)</item>
+      <item>Sistema unificado que funcione con Realtime existente</item>
+      <item>Arquitectura limpia y escalable</item>
+    </primary>
+    <secondary>
+      <item>Configuración por usuario (futuro)</item>
+      <item>Templates personalizables (futuro)</item>
+      <item>Analytics de notificaciones (futuro)</item>
+    </secondary>
+  </objectives>
+
+  <architecture>
+    <flow>
+      <step order="1">📱 ACCIÓN DEL USUARIO</step>
+      <step order="2">🗄️ PROCESO EN BD (process_checkin, grant_manual_coupon, etc)</step>
+      <step order="3">⚡ REALTIME EVENT (ya funciona)</step>
+      <step order="4">🎭 NOTIFICATION MANAGER (NUEVO)</step>
+      <step order="5a">📱 Toast UI Notification (ACTIVO)</step>
+      <step order="5b">📲 WhatsApp Notification (BASE PREPARADA - APAGADA)</step>
+    </flow>
+
+    <strategy>
+      <realtime_notifications>
+        <description>Para usuarios conectados - Feedback inmediato</description>
+        <use_cases>
+          <case>Check-ins exitosos</case>
+          <case>Cupones por racha automática</case>
+          <case>Racha completada</case>
+        </use_cases>
+      </realtime_notifications>
+      
+      <server_notifications>
+        <description>Para acciones de admin - Garantizar entrega</description>
+        <use_cases>
+          <case>Regalos de admin (cupones)</case>
+          <case>Giros otorgados por admin</case>
+          <case>Eventos importantes (racha completada)</case>
+        </use_cases>
+      </server_notifications>
+    </strategy>
+  </architecture>
+
+  <implementation_phases>
+    <phase number="1" status="🎯 MVP - IMPLEMENTAR AHORA">
+      <name>Sistema Base de Toasts</name>
+      <priority>ALTA</priority>
+      <description>Implementar toasts con RealtimeManager existente</description>
+      
+      <deliverables>
+        <item>NotificationService básico (solo toasts)</item>
+        <item>Integración con RealtimeManager</item>
+        <item>Toasts para check-ins, cupones, rachas</item>
+        <item>Base de WhatsApp preparada pero APAGADA</item>
+      </deliverables>
+
+      <technical_details>
+        <notification_service>
+          <file>src/lib/services/notifications.ts</file>
+          <methods>
+            <method>showSuccess(message: string, duration?: number)</method>
+            <method>showWarning(message: string, duration?: number)</method>
+            <method>showError(message: string, duration?: number)</method>
+            <method>sendWhatsApp(userId: string, template: string, data: any) // PREPARADO - APAGADO</method>
+          </methods>
+        </notification_service>
+
+        <realtime_integration>
+          <file>src/lib/realtime/RealtimeManager.ts</file>
+          <modifications>
+            <handleCheckinChange>Agregar toast "¡Check-in exitoso! +1 giro"</handleCheckinChange>
+            <handleCouponChange>Agregar toast "🎫 ¡Cupón obtenido por racha de X visitas!"</handleCouponChange>
+            <handleStreakChange>Agregar toast "🏆 ¡Felicidades! Completaste tu racha"</handleStreakChange>
+          </modifications>
+        </realtime_integration>
+
+        <toast_messages>
+          <checkin_success>"¡Check-in exitoso! +{spins} giro{s}"</checkin_success>
+          <coupon_streak>"🎫 ¡Cupón obtenido por racha de {threshold} visitas!"</coupon_streak>
+          <streak_completed>"🏆 ¡Felicidades! Completaste tu racha"</streak_completed>
+          <coupon_manual>"🎁 ¡Recibiste un premio: {prize_name}!"</coupon_manual>
+          <spins_granted>"🎯 +{spins} giros otorgados por el administrador"</spins_granted>
+        </toast_messages>
+      </technical_details>
+    </phase>
+
+    <phase number="2" status="🔮 FUTURO - BASE PREPARADA">
+      <name>Sistema WhatsApp</name>
+      <priority>MEDIA</priority>
+      <description>Activar y configurar notificaciones WhatsApp</description>
+      
+      <deliverables>
+        <item>API endpoint /api/notifications/whatsapp</item>
+        <item>Integración con WhatsApp Business API</item>
+        <item>Templates configurables</item>
+        <item>Activación del sistema WhatsApp</item>
+      </deliverables>
+
+      <technical_details>
+        <api_endpoint>
+          <file>src/app/api/notifications/route.ts</file>
+          <methods>
+            <POST>Enviar notificación WhatsApp + Toast si usuario conectado</POST>
+          </methods>
+        </api_endpoint>
+
+        <whatsapp_integration>
+          <file>src/lib/services/whatsapp.ts</file>
+          <features>
+            <official_api>WhatsApp Business API oficial</official_api>
+            <templates>Templates en español (es_MX)</templates>
+            <retry_logic>Backoff para 429/5xx (3 intentos)</retry_logic>
+            <error_handling>Logging rico de errores</error_handling>
+          </features>
+        </whatsapp_integration>
+
+        <templates>
+          <regalo_admin>
+            <name>regalo_admin</name>
+            <parameters>
+              <param>nombre_usuario</param>
+              <param>nombre_premio</param>
+              <param>fecha_expiracion</param>
+            </parameters>
+          </regalo_admin>
+          
+          <giros_admin>
+            <name>giros_admin</name>
+            <parameters>
+              <param>nombre_usuario</param>
+              <param>cantidad_giros</param>
+            </parameters>
+          </giros_admin>
+          
+          <racha_completada>
+            <name>racha_completada</name>
+            <parameters>
+              <param>nombre_usuario</param>
+              <param>numero_racha</param>
+              <param>total_completadas</param>
+            </parameters>
+          </racha_completada>
+        </templates>
+      </technical_details>
+    </phase>
+
+    <phase number="3" status="🌟 FUTURO - AVANZADO">
+      <name>Configuración Avanzada</name>
+      <priority>BAJA</priority>
+      <description>Preferencias de usuario y features avanzadas</description>
+      
+      <deliverables>
+        <item>Tabla user_notification_preferences</item>
+        <item>UI para configurar notificaciones</item>
+        <item>Analytics de notificaciones</item>
+        <item>Templates personalizables desde admin</item>
+      </deliverables>
+
+      <technical_details>
+        <database>
+          <table name="user_notification_preferences">
+            <column name="user_id" type="UUID PRIMARY KEY" ref="user_profiles(id)"/>
+            <column name="whatsapp_enabled" type="BOOLEAN DEFAULT true"/>
+            <column name="toast_enabled" type="BOOLEAN DEFAULT true"/>
+            <column name="created_at" type="TIMESTAMP DEFAULT NOW()"/>
+            <column name="updated_at" type="TIMESTAMP DEFAULT NOW()"/>
+          </table>
+        </database>
+
+        <admin_features>
+          <template_editor>Editor de templates WhatsApp</template_editor>
+          <notification_logs>Historial de notificaciones enviadas</notification_logs>
+          <analytics>Métricas de entrega y engagement</analytics>
+        </admin_features>
+      </technical_details>
+    </phase>
+  </implementation_phases>
+
+  <notification_catalog>
+    <category name="user_actions" trigger="realtime">
+      <notification type="checkin_success">
+        <message>"¡Check-in exitoso! +{spins} giro{s}"</message>
+        <toast enabled="true"/>
+        <whatsapp enabled="false" template="none"/>
+      </notification>
+      
+      <notification type="coupon_streak">
+        <message>"🎫 ¡Cupón obtenido por racha de {threshold} visitas!"</message>
+        <toast enabled="true"/>
+        <whatsapp enabled="false" template="racha_completada"/>
+      </notification>
+      
+      <notification type="streak_completed">
+        <message>"🏆 ¡Felicidades! Completaste tu racha"</message>
+        <toast enabled="true"/>
+        <whatsapp enabled="false" template="racha_completada"/>
+      </notification>
+    </category>
+
+    <category name="admin_actions" trigger="server_direct">
+      <notification type="manual_coupon">
+        <message>"🎁 ¡Recibiste un premio: {prize_name}!"</message>
+        <toast enabled="true"/>
+        <whatsapp enabled="false" template="regalo_admin"/>
+      </notification>
+      
+      <notification type="manual_spins">
+        <message>"🎯 +{spins} giros otorgados por el administrador"</message>
+        <toast enabled="true"/>
+        <whatsapp enabled="false" template="giros_admin"/>
+      </notification>
+    </category>
+  </notification_catalog>
+
+  <technical_considerations>
+    <toast_system>
+      <library>React Hot Toast (ya instalado)</library>
+      <positioning>top-right</positioning>
+      <duration>4000ms default</duration>
+      <styling>Consistente con design system</styling>
+    </toast_system>
+
+    <whatsapp_base>
+      <api>WhatsApp Business API oficial</api>
+      <authentication>Bearer token</authentication>
+      <rate_limiting>Respeta límites 429</rate_limiting>
+      <retry_strategy>Exponential backoff (2s, 4s)</retry_strategy>
+      <error_handling>Logging estructurado</error_handling>
+    </whatsapp_base>
+
+    <integration_points>
+      <realtime_manager>Toasts inmediatos para acciones usuario</realtime_manager>
+      <api_routes>WhatsApp + Toast para acciones admin</api_routes>
+      <admin_functions>grant_manual_coupon, grant_spins, etc</admin_functions>
+    </integration_points>
+  </technical_considerations>
+
+  <success_metrics>
+    <phase_1>
+      <metric>Toasts aparecen en &lt;500ms después de acción</metric>
+      <metric>100% de check-ins muestran toast success</metric>
+      <metric>Cupones automáticos generan toast inmediato</metric>
+      <metric>Base WhatsApp preparada sin errores</metric>
+    </phase_1>
+    
+    <phase_2>
+      <metric>WhatsApp entregado en &lt;10s</metric>
+      <metric>&gt;95% tasa de entrega WhatsApp</metric>
+      <metric>Retry logic funciona en 429/5xx</metric>
+    </phase_2>
+  </success_metrics>
+
+  <migration_strategy>
+    <current_state>
+      <realtime_manager>Funcional para check-ins, cupones, rachas</realtime_manager>
+      <toast_system>React Hot Toast disponible</toast_system>
+      <admin_functions>grant_manual_coupon, etc funcionando</admin_functions>
+    </current_state>
+
+    <implementation_order>
+      <step order="1">Crear NotificationService con toasts</step>
+      <step order="2">Integrar en RealtimeManager existente</step>
+      <step order="3">Preparar base WhatsApp (APAGADA)</step>
+      <step order="4">Testing completo de toasts</step>
+      <step order="5">Commit y documentar resultados</step>
+    </implementation_order>
+  </migration_strategy>
+
+  <future_extensions>
+    <push_notifications>Notificaciones push para móvil</push_notifications>
+    <email_notifications>Emails para eventos importantes</email_notifications>
+    <sms_fallback>SMS como fallback de WhatsApp</sms_fallback>
+    <notification_center>Centro de notificaciones in-app</notification_center>
+    <scheduled_notifications>Recordatorios programados</scheduled_notifications>
+  </future_extensions>
+</notification_system_plan>

@@ -3,6 +3,8 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { AppDispatch } from '@/store'
 import type { CouponRow } from '@/store/slices/authSlice'
+// 🔔 NUEVO: Importar NotificationService de forma SEGURA
+import NotificationService from '@/lib/services/notifications'
 
 // 🎯 Tipos para los datos específicos
 interface CheckinData {
@@ -59,6 +61,7 @@ export class RealtimeManager {
   private queryClient: QueryClient | null = null
   private reduxDispatch: AppDispatch | null = null
   private isConfigured: boolean = false
+  private recentCheckinTimestamp: number | null = null // 🔔 NUEVO: Para detectar giros de admin vs check-in
 
   private constructor() {
     // Cliente Supabase compartido - usa el mismo que el resto de la app
@@ -148,6 +151,7 @@ export class RealtimeManager {
   private handleUserSpinsChange(payload: RealtimePayload) {
     if (payload.new && payload.new.user_id === this.currentUserId) {
       const newSpins = payload.new.available_spins as number
+      const oldSpins = (payload.old?.available_spins as number) || 0
       
       // ✨ Actualizar solo Redux - fuente única de verdad
       if (this.reduxDispatch) {
@@ -155,6 +159,26 @@ export class RealtimeManager {
         import('@/store/slices/authSlice').then(({ updateAvailableSpins }) => {
           this.reduxDispatch!(updateAvailableSpins(newSpins))
         })
+      }
+
+      // 🔔 NUEVO: Notificación de giros otorgados por admin
+      try {
+        // Si hay un aumento de giros y NO es de check-in reciente
+        if (payload.eventType === 'UPDATE' && newSpins > oldSpins) {
+          const spinsAdded = newSpins - oldSpins
+          
+          // Usar timeout para evitar conflicto con notificación de check-in
+          setTimeout(() => {
+            // Solo mostrar si no hubo check-in muy reciente (detectar admin)
+            if (!this.recentCheckinTimestamp || Date.now() - this.recentCheckinTimestamp > 2000) {
+              NotificationService.notifyManualSpins(spinsAdded)
+              console.log('🔔 RealtimeManager: ✅ Toast giros de ADMIN mostrado')
+            }
+          }, 1000) // Delay para evitar solapamiento
+        }
+      } catch (error) {
+        console.warn('🔔 RealtimeManager: Error en toast giros admin:', error)
+        // NO ROMPE NADA - continúa normalmente
       }
 
       // Callback opcional
@@ -169,6 +193,9 @@ export class RealtimeManager {
     console.log('🔍 RealtimeManager: handleCheckinChange llamado con:', payload)
     if (payload.new && payload.new.user_id === this.currentUserId) {
       console.log('🔥 RealtimeManager: Checkin payload completo:', payload.new)
+      
+      // 🔔 NUEVO: Marcar timestamp de check-in para diferenciar de giros de admin
+      this.recentCheckinTimestamp = Date.now()
       
       // ✨ Actualización granular - solo Redux como fuente única de verdad
       if (this.reduxDispatch) {
@@ -211,6 +238,16 @@ export class RealtimeManager {
         userId: this.currentUserId!,
         checkinData: payload.new as unknown as CheckinData
       })
+
+      // 🔔 NUEVO: Notificación de check-in exitoso (SEGURO - al final)
+      try {
+        const spinsEarned = (payload.new?.spins_earned as number) || 1
+        NotificationService.notifyCheckinSuccess(spinsEarned)
+        console.log('🔔 RealtimeManager: ✅ Toast check-in mostrado')
+      } catch (error) {
+        console.warn('🔔 RealtimeManager: Error en toast check-in:', error)
+        // NO ROMPE NADA - continúa normalmente
+      }
     }
   }
 
@@ -244,6 +281,19 @@ export class RealtimeManager {
         userId: this.currentUserId!,
         streakData: payload.new as unknown as StreakData
       })
+
+      // 🔔 NUEVO: Notificación de racha completada (SEGURO - al final)
+      try {
+        const isJustCompleted = payload.new?.is_just_completed as boolean
+        if (isJustCompleted) {
+          const completedCount = (payload.new?.completed_count as number) || 1
+          NotificationService.notifyStreakCompleted(completedCount)
+          console.log('🔔 RealtimeManager: ✅ Toast racha completada mostrado')
+        }
+      } catch (error) {
+        console.warn('🔔 RealtimeManager: Error en toast racha:', error)
+        // NO ROMPE NADA - continúa normalmente
+      }
     }
   }
 
@@ -305,6 +355,11 @@ export class RealtimeManager {
         userId: this.currentUserId!,
         couponData: payload.new as unknown as CouponData
       })
+
+      // 🔔 MEJORADO: Notificación de cupón obtenido con datos reales
+      this.handleCouponNotification(payload).catch(error => {
+        console.warn('🔔 RealtimeManager: Error en handleCouponNotification:', error)
+      })
     }
   }
 
@@ -324,6 +379,62 @@ export class RealtimeManager {
   // Status
   isConnected(): boolean {
     return this.channel !== null && this.currentUserId !== null
+  }
+
+  // 🔔 HELPER: Manejo de notificaciones de cupones
+  private async handleCouponNotification(payload: RealtimePayload) {
+    try {
+      if (payload.eventType === 'INSERT') {
+        const coupon = payload.new as Record<string, unknown>
+        const source = coupon.source as string
+        const prizeId = coupon.prize_id as string
+        
+        // Obtener información del premio desde Supabase
+        const prizeInfo = await this.getPrizeInfoForCoupon(prizeId)
+        
+        // Notificación específica según el tipo de cupón
+        if (source === 'streak') {
+          const threshold = prizeInfo?.streak_threshold || 5 // Fallback
+          const prizeName = prizeInfo?.name
+          NotificationService.notifyCouponByStreak(threshold, prizeName)
+          console.log('🔔 RealtimeManager: ✅ Toast cupón por RACHA mostrado')
+        } else if (source === 'manual') {
+          const prizeName = prizeInfo?.name || 'Premio especial'
+          NotificationService.notifyManualCoupon(prizeName)
+          console.log('🔔 RealtimeManager: ✅ Toast cupón MANUAL mostrado')
+        } else {
+          // Fallback para otros tipos
+          const prizeName = prizeInfo?.name || 'Premio sorpresa'
+          NotificationService.notifyManualCoupon(prizeName)
+          console.log('🔔 RealtimeManager: ✅ Toast cupón genérico mostrado')
+        }
+      }
+    } catch (error) {
+      console.warn('🔔 RealtimeManager: Error en toast cupón:', error)
+      // NO ROMPE NADA - continúa normalmente
+    }
+  }
+
+  // 🔔 HELPER: Obtener información del premio
+  private async getPrizeInfoForCoupon(prizeId: string): Promise<{ name: string; streak_threshold?: number | null } | null> {
+    try {
+      const supabase = createClientBrowser()
+      const { data: prize, error } = await supabase
+        .from('prizes')
+        .select('name, streak_threshold')
+        .eq('id', prizeId)
+        .single()
+
+      if (error) {
+        console.warn('🔔 RealtimeManager: Error obteniendo premio:', error)
+        return null
+      }
+
+      return prize
+    } catch (error) {
+      console.warn('🔔 RealtimeManager: Error en getPrizeInfoForCoupon:', error)
+      return null
+    }
   }
 
   getCurrentUserId(): string | null {

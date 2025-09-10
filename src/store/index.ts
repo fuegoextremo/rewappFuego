@@ -8,7 +8,7 @@ import settingsSlice from './slices/settingsSlice'
 
 // 🎯 CONFIGURACIÓN DE PERSISTENCIA
 const persistConfig = {
-  key: 'fuego-rewards',
+  key: 'fuego-rewards-v2', // 🔥 CAMBIADO: Nueva key para reset de estado con nuevos campos
   storage,
   whitelist: ['auth', 'settings'], // Solo persistir auth y settings
   blacklist: ['ui'] // No persistir estado de UI

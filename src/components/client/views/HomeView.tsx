@@ -89,6 +89,7 @@ export default function HomeView() {
             <p className="text-xs text-gray-400">¡Haz tu primera visita!</p>
           )}
         </div>
+        
         <div className="bg-white rounded-lg p-4 shadow-sm border">
           <div className="text-xl mb-1">🎲</div>
           <h3 className="font-semibold text-sm">Giros</h3>
@@ -103,6 +104,7 @@ export default function HomeView() {
             <p className="text-xs text-gray-400">Gana giros visitando</p>
           )}
         </div>
+        
         <div className="bg-white rounded-lg p-4 shadow-sm border">
           <div className="text-xl mb-1">🔥</div>
           <h3 className="font-semibold text-sm">Racha</h3>
@@ -120,11 +122,16 @@ export default function HomeView() {
       </div>
 
       {/* Sección de racha - Usando componente original que funciona */}
-      <StreakSectionWrapper userId={user.id} />
+      <StreakSectionWrapper />
 
       {/* Actividad reciente - Componente funcional */}
       <div className="bg-white rounded-lg shadow-sm border">
-        <RecentActivity userId={user.id} />
+        <div className="p-4 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900">Actividad reciente</h3>
+        </div>
+        <div className="p-4">
+          <RecentActivity userId={user.id} />
+        </div>
       </div>
 
       {/* Logo del establecimiento */}

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import { useSystemSettings } from '@/hooks/use-system-settings'
-import { useStreakStage } from '@/hooks/queries/useStreakQueries'
+import { createClientBrowser } from '@/lib/supabase/client'
 
 export type StreakStage = {
   image: string
@@ -16,25 +16,128 @@ export type StreakStage = {
 }
 
 type Props = {
-  userId: string
   currentCount: number
   isLoading?: boolean
 }
 
-export function StreakSection({ userId, currentCount, isLoading: externalLoading }: Props) {
-  const [imageLoading, setImageLoading] = useState(false) // ✨ Optimistic loading - confiamos en browser cache
+interface StreakPrize {
+  id: string
+  name: string
+  streak_threshold: number | null
+  image_url: string | null
+}
+
+interface SystemSettings {
+  streak_initial_image?: string
+  streak_progress_image?: string
+  streak_complete_image?: string
+  company_theme_primary?: string
+}
+
+// ✨ Función para calcular el stage basado en el currentCount y premios
+function calculateStreakStage(currentCount: number, prizes: StreakPrize[], settings: SystemSettings | undefined): StreakStage {
+  const defaultImages = {
+    initial: "🔥",
+    progress: "🚀", 
+    complete: "🏆"
+  }
+
+  // Filtrar premios válidos (con threshold no nulo)
+  const validPrizes = prizes.filter(p => p.streak_threshold !== null && p.streak_threshold > 0)
+    .sort((a, b) => (a.streak_threshold || 0) - (b.streak_threshold || 0))
+
+  if (currentCount === 0) {
+    return {
+      image: settings?.streak_initial_image || defaultImages.initial,
+      stage: "¡Comienza tu racha!",
+      progress: 0,
+      nextGoal: validPrizes[0]?.streak_threshold || 3,
+      nextReward: validPrizes[0]?.name || "Premio sorpresa"
+    }
+  }
+
+  // Encontrar siguiente premio
+  const nextPrize = validPrizes.find(p => (p.streak_threshold || 0) > currentCount)
+  
+  if (!nextPrize) {
+    return {
+      image: settings?.streak_complete_image || defaultImages.complete,
+      stage: "¡Racha completa!",
+      progress: 100,
+      isCompleted: true
+    }
+  }
+
+  // Calcular progreso
+  const previousThreshold = validPrizes
+    .filter(p => (p.streak_threshold || 0) <= currentCount)
+    .sort((a, b) => (b.streak_threshold || 0) - (a.streak_threshold || 0))[0]?.streak_threshold || 0
+
+  const nextThreshold = nextPrize.streak_threshold || 0
+  const progress = ((currentCount - previousThreshold) / (nextThreshold - previousThreshold)) * 100
+
+  return {
+    image: settings?.streak_progress_image || defaultImages.progress,
+    stage: `¡Vas por buen camino!`,
+    progress: Math.min(progress, 100),
+    nextGoal: nextThreshold,
+    nextReward: nextPrize.name
+  }
+}
+
+export function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
+  const [imageLoading, setImageLoading] = useState(false)
   const [previousImageUrl, setPreviousImageUrl] = useState<string>('')
-  const { data: settings, isLoading: settingsLoading } = useSystemSettings() // ✨ React Query con cache agresivo
-  const { data: streakStage, isLoading: stageLoading, error } = useStreakStage(userId, settings)
+  const [streakPrizes, setStreakPrizes] = useState<StreakPrize[]>([])
+  const [prizesLoading, setPrizesLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const { data: settings, isLoading: settingsLoading } = useSystemSettings()
 
-  // 🎯 LOADING INTELIGENTE: Solo mostrar skeleton si NO tenemos datos Y estamos cargando
-  const hasSettings = !!settings
-  const hasStreakData = !!streakStage
-  const isActuallyLoading = (settingsLoading && !hasSettings) || (stageLoading && !hasStreakData)
-  const shouldShowSkeleton = isActuallyLoading || (!hasStreakData && !error && !externalLoading)
+  // ✨ Cargar premios de racha una sola vez (datos semi-estáticos)
+  useEffect(() => {
+    let isMounted = true
+    
+    async function loadPrizes() {
+      try {
+        const supabase = createClientBrowser()
+        const { data: prizes, error: prizesError } = await supabase
+          .from('prizes')
+          .select('id, name, streak_threshold, image_url')
+          .eq('type', 'streak')
+          .eq('is_active', true)
+          .order('streak_threshold', { ascending: true })
 
-  // 🎯 Skeleton solo cuando REALMENTE no tenemos datos críticos
-  if (shouldShowSkeleton) {
+        if (prizesError) throw prizesError
+        
+        if (isMounted) {
+          setStreakPrizes(prizes || [])
+          setPrizesLoading(false)
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Error loading prizes')
+          setPrizesLoading(false)
+        }
+      }
+    }
+
+    loadPrizes()
+    return () => { isMounted = false }
+  }, [])
+
+  // ✨ Calcular el stage reactivamente cuando cambian los datos
+  const streakStage = useMemo(() => {
+    if (streakPrizes.length > 0 && settings) {
+      return calculateStreakStage(currentCount, streakPrizes, settings)
+    }
+    return null
+  }, [currentCount, streakPrizes, settings]) // 🎯 Se recalcula cuando currentCount cambia
+
+  // Loading states
+  const isLoading = externalLoading || settingsLoading || prizesLoading
+  
+  if (isLoading) {
     return (
       <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 p-6">
         <div className="animate-pulse space-y-6">

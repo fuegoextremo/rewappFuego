@@ -1,7 +1,25 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
 
-// 🎯 Hook optimizado para datos de racha con cache persistente
+// 🎯 Interfaces para tipado correcto
+interface StreakPrize {
+  id: string
+  name: string
+  description: string | null
+  streak_threshold: number | null
+  image_url: string | null
+  validity_days: number | null
+}
+
+interface SystemSettings {
+  streak_initial_image?: string
+  streak_progress_image?: string
+  streak_complete_image?: string
+  streak_progress_default?: string
+  streak_break_days?: string
+}
+
+// 🎯 Hook optimizado para datos de racha con cache reactivo
 export function useUserStreak(userId: string) {
   return useQuery({
     queryKey: ['user', 'streak', userId],
@@ -22,9 +40,10 @@ export function useUserStreak(userId: string) {
       }
     },
     enabled: !!userId,
-    staleTime: 1 * 60 * 1000, // ✨ 1 minuto - datos dinámicos que pueden cambiar con Realtime
-    gcTime: 5 * 60 * 1000,    // ✨ 5 minutos en cache (el Realtime Provider los invalida)
-    refetchOnWindowFocus: false, // ✨ Confiar en Realtime para updates
+    staleTime: 30 * 1000,         // ✨ 30 segundos - más reactivo para datos dinámicos
+    gcTime: 2 * 60 * 1000,        // ✨ 2 minutos en cache - el Realtime los invalida rápido
+    refetchOnWindowFocus: false,   // ✨ Confiar en Realtime para updates
+    refetchOnMount: 'always',      // ✨ Siempre refetch al montar para datos frescos
   })
 }
 
@@ -54,9 +73,9 @@ export function useStreakPrizes() {
 }
 
 // 🎯 NUEVO: Hook para el stage calculado (con cache)
-export function useStreakStage(userId: string, settings: any) {
-  const { data: streakData, isLoading: streakLoading } = useUserStreak(userId)
-  const { data: streakPrizes, isLoading: prizesLoading } = useStreakPrizes()
+export function useStreakStage(userId: string, settings: SystemSettings | undefined) {
+  const { data: streakData } = useUserStreak(userId)
+  const { data: streakPrizes } = useStreakPrizes()
   
   return useQuery({
     queryKey: ['streak', 'stage', userId, streakData?.currentCount, settings?.streak_break_days],
@@ -130,7 +149,7 @@ export function useStreakStage(userId: string, settings: any) {
 }
 
 // Helper function movida aquí
-function calculateStreakStage(currentCount: number, streakPrizes: any[], settings: any) {
+function calculateStreakStage(currentCount: number, streakPrizes: StreakPrize[], settings: SystemSettings | undefined) {
   const FALLBACK_IMAGES = {
     streak_initial: "🔥", 
     streak_progress: "🚀", 
@@ -150,12 +169,12 @@ function calculateStreakStage(currentCount: number, streakPrizes: any[], setting
     }
   }
 
-  const currentThreshold = validPrizes.findLast((p: any) => p.streak_threshold <= currentCount)
-  const nextThreshold = validPrizes.find((p: any) => p.streak_threshold > currentCount)
+  const currentThreshold = validPrizes.findLast((p: StreakPrize) => (p.streak_threshold || 0) <= currentCount)
+  const nextThreshold = validPrizes.find((p: StreakPrize) => (p.streak_threshold || 0) > currentCount)
 
   if (nextThreshold) {
     const baseProgress = currentThreshold?.streak_threshold || 0
-    const progressRange = nextThreshold.streak_threshold - baseProgress
+    const progressRange = (nextThreshold.streak_threshold || 0) - baseProgress
     const currentProgress = currentCount - baseProgress
     const progressPercentage = (currentProgress / progressRange) * 100
 
@@ -165,7 +184,7 @@ function calculateStreakStage(currentCount: number, streakPrizes: any[], setting
              FALLBACK_IMAGES.streak_progress,
       stage: `Racha activa: ${currentCount} visitas`,
       progress: Math.min(progressPercentage, 100),
-      nextGoal: nextThreshold.streak_threshold,
+      nextGoal: nextThreshold.streak_threshold || 0,
       nextReward: nextThreshold.name
     }
   }

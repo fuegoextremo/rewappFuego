@@ -1,101 +1,31 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { createClientBrowser } from '@/lib/supabase/client'
 import { useSettings } from '@/store/hooks'
-
-type CheckIn = {
-  id: string
-  check_in_date: string | null
-  spins_earned: number | null
-  created_at: string | null
-  branches?: {
-    name: string
-  } | null
-}
+import { useRecentActivityRedux } from '@/hooks/useReduxStreaks'
+import { formatCheckInDateTime, type CheckIn } from '@/hooks/queries/useRecentActivity'
 
 type Props = {
   userId: string
 }
 
 export function RecentActivity({ userId }: Props) {
-  const [checkIns, setCheckIns] = useState<CheckIn[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [page, setPage] = useState(0)
+  const { data: checkIns = [], isLoading, error } = useRecentActivityRedux(userId)
   const settings = useSettings()
 
-  const ITEMS_PER_PAGE = 10
-
-  const loadCheckIns = useCallback(async (pageNumber: number) => {
-    const supabase = createClientBrowser()
-    
-    const { data, error } = await supabase
-      .from('check_ins')
-      .select(`
-        id,
-        check_in_date,
-        spins_earned,
-        created_at,
-        branches (
-          name
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .range(pageNumber * ITEMS_PER_PAGE, (pageNumber + 1) * ITEMS_PER_PAGE - 1)
-
-    if (error) {
-      console.error('Error cargando check-ins:', error)
-      setLoading(false)
-      setLoadingMore(false)
-      return
-    }
-
-    if (pageNumber === 0) {
-      setCheckIns(data || [])
-      setLoading(false)
-    } else {
-      setCheckIns(prev => [...prev, ...(data || [])])
-      setLoadingMore(false)
-    }
-
-    setHasMore((data?.length || 0) === ITEMS_PER_PAGE)
-    setPage(pageNumber)
-  }, [userId])
-
-  useEffect(() => {
-    loadCheckIns(0)
-    
-    // ✨ Escuchar actualizaciones en tiempo real
-    const handleUserDataUpdate = (event: CustomEvent) => {
-      if (event.detail.userId === userId) {
-        console.log('🔄 RecentActivity: Recargando por actualización realtime')
-        loadCheckIns(0) // Recargar desde el principio
-      }
-    }
-    
-    window.addEventListener('user-data-updated', handleUserDataUpdate as EventListener)
-    
-    return () => {
-      window.removeEventListener('user-data-updated', handleUserDataUpdate as EventListener)
-    }
-  }, [loadCheckIns, userId])
-
-  function loadMore() {
-    if (!loadingMore && hasMore) {
-      setLoadingMore(true)
-      loadCheckIns(page + 1)
-    }
-  }
+  // 🔍 Debug logging
+  console.log('🔍 RecentActivity render:', { 
+    userId, 
+    checkInsCount: checkIns.length, 
+    isLoading, 
+    error,
+    latestCheckIn: checkIns[0]?.created_at
+  })
 
   const primaryColor = settings.company_theme_primary || '#D73527'
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-3">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Actividad reciente</h3>
         {[...Array(3)].map((_, i) => (
           <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 animate-pulse">
             <div className="flex justify-between items-center">
@@ -107,6 +37,18 @@ export function RecentActivity({ userId }: Props) {
             </div>
           </div>
         ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-6xl mb-4">⚠️</div>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">Error cargando actividad</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          No pudimos cargar tu actividad reciente. Intenta recargar la página.
+        </p>
       </div>
     )
   }
@@ -125,18 +67,13 @@ export function RecentActivity({ userId }: Props) {
   }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Actividad reciente</h3>
-      
-      {checkIns.map((checkIn) => (
+    <div className="space-y-3">      
+      {checkIns.map((checkIn: CheckIn) => (
         <div key={checkIn.id} className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex justify-between items-center">
             <div>
               <div className="font-medium text-gray-900">
-                {checkIn.check_in_date ? new Date(checkIn.check_in_date).toLocaleDateString('es-ES', {
-                  day: 'numeric',
-                  month: 'short'
-                }) : 'Fecha no disponible'}
+                {formatCheckInDateTime(checkIn.created_at, checkIn.check_in_date)}
               </div>
               <div className="text-sm text-gray-500">
                 {checkIn.branches?.name || 'Sucursal'}
@@ -154,16 +91,6 @@ export function RecentActivity({ userId }: Props) {
           </div>
         </div>
       ))}
-
-      {hasMore && (
-        <button
-          onClick={loadMore}
-          disabled={loadingMore}
-          className="w-full py-3 text-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
-        >
-          {loadingMore ? 'Cargando...' : 'Ver más actividad'}
-        </button>
-      )}
     </div>
   )
 }

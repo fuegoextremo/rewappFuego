@@ -69,8 +69,8 @@ export default function CheckinSettingsCard({
         throw new Error('Los puntos por check-in deben estar entre 0 y 1000');
       }
 
-      if (maxCheckins < 1 || maxCheckins > 10) {
-        throw new Error('El límite de check-ins debe estar entre 1 y 10 por día');
+      if (maxCheckins < 1 || maxCheckins > 100) {
+        throw new Error('El límite de check-ins debe estar entre 1 y 100 por día');
       }
 
       if (streakBreakDays < 1 || streakBreakDays > 365) {
@@ -192,14 +192,14 @@ export default function CheckinSettingsCard({
               id="max_checkins"
               type="number"
               min="1"
-              max="10"
+              max="100"
               value={formData.max_checkins_per_day}
               onChange={(e) => handleInputChange('max_checkins_per_day', e.target.value)}
               className="border-indigo-200 focus:border-indigo-400"
               disabled={isLoading}
             />
             <p className="text-xs text-gray-500">
-              Máximo número de check-ins que puede hacer un usuario por día (1-10)
+              Máximo número de check-ins que puede hacer un usuario por día (1-100)
             </p>
           </div>
 

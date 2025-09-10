@@ -35,7 +35,7 @@ export function useRealtimeFallback(userId: string) {
               console.log('🔄 FALLBACK: Cambio detectado en spins:', lastSpinsRef.current, '->', userData.available_spins)
               
               // Actualizar React Query
-              queryClient.setQueryData(['user', 'spins', userId], (oldData: any) => {
+              queryClient.setQueryData(['user', 'spins', userId], (oldData: unknown) => {
                 if (oldData) {
                   return { ...oldData, availableSpins: userData.available_spins }
                 }
@@ -47,7 +47,7 @@ export function useRealtimeFallback(userId: string) {
             }
           }
           
-          lastSpinsRef.current = userData?.available_spins
+          lastSpinsRef.current = userData?.available_spins || 0
         } catch (error) {
           console.error('❌ Error en fallback polling:', error)
         }
@@ -64,7 +64,7 @@ export function useRealtimeFallback(userId: string) {
           .eq('user_id', userId)
           .single()
         
-        lastSpinsRef.current = data?.available_spins
+        lastSpinsRef.current = data?.available_spins || 0
         console.log('🚨 FALLBACK ACTIVADO - Valor inicial:', lastSpinsRef.current)
       } catch (error) {
         console.error('❌ Error obteniendo valor inicial:', error)

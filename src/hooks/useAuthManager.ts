@@ -2,7 +2,16 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useAppDispatch, useAuth } from '@/store/hooks'
-import { loadUserProfile, setUser, setLoading, logout as logoutAction } from '@/store/slices/authSlice'
+import { 
+  loadUserProfile, 
+  setUser, 
+  setLoading, 
+  logout as logoutAction,
+  // 🔥 NUEVOS: Cargar datos que estaban en React Query
+  loadRecentActivity,
+  loadStreakPrizes,
+  loadUserStreakData
+} from '@/store/slices/authSlice'
 import { loadSettings } from '@/store/slices/settingsSlice'
 
 // 🔗 HOOK PRINCIPAL DE AUTENTICACIÓN
@@ -27,6 +36,11 @@ export function useAuthManager() {
               dispatch(loadUserProfile(session.user.id))
               // Cargar configuraciones
               dispatch(loadSettings())
+              
+              // 🔥 NUEVOS: Cargar datos que estaban en React Query
+              dispatch(loadRecentActivity(session.user.id))
+              dispatch(loadStreakPrizes()) // Solo una vez, no depende del usuario
+              dispatch(loadUserStreakData(session.user.id))
             }
             break
             
@@ -34,6 +48,12 @@ export function useAuthManager() {
             if (session?.user && !user) {
               // Solo cargar si no hay usuario en store
               dispatch(loadUserProfile(session.user.id))
+              dispatch(loadSettings())
+              
+              // 🔥 NUEVOS: También cargar estos datos
+              dispatch(loadRecentActivity(session.user.id))
+              dispatch(loadStreakPrizes())
+              dispatch(loadUserStreakData(session.user.id))
             }
             break
             

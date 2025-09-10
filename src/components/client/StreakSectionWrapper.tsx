@@ -1,18 +1,14 @@
 import React from 'react'
 import { StreakSection } from './StreakSection'
-import { useUserStreak } from '@/hooks/queries/useStreakQueries'
+import { useUser } from '@/store/hooks'
 
-interface StreakSectionWrapperProps {
-  userId: string
-}
+export function StreakSectionWrapper() {
+  const user = useUser()
 
-export function StreakSectionWrapper({ userId }: StreakSectionWrapperProps) {
-  const { data: streakData, isLoading } = useUserStreak(userId)
-
-  // ✨ Solo un loading state, manejado por el componente hijo
+  // ✨ Solo usar Redux como fuente única de verdad
+  // El Realtime Manager ya actualiza Redux automáticamente
   return <StreakSection 
-    userId={userId} 
-    currentCount={streakData?.currentCount || 0}
-    isLoading={isLoading}
+    currentCount={user?.current_streak || 0}
+    isLoading={!user} // Loading si no hay datos de usuario
   />
 }

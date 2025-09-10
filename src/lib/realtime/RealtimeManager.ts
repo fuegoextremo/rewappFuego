@@ -18,6 +18,8 @@ interface StreakData {
   id: string
   user_id: string
   current_count: number
+  completed_count: number      // 🆕 Contador de rachas completadas
+  is_just_completed: boolean   // 🆕 Flag para UI "recién completada"
   expires_at: string | null
   last_check_in: string | null
 }
@@ -224,9 +226,11 @@ export class RealtimeManager {
             this.reduxDispatch!(updateCurrentStreak(streakCount))
             console.log('🔥 RealtimeManager: ✅ Actualizando current_streak:', streakCount)
             
-            // 🔥 NUEVO: También actualizar streakData completo
+            // 🔥 ACTUALIZADO: Incluir todos los campos nuevos
             const streakData = {
               current_count: streakCount,
+              completed_count: (payload.new?.completed_count as number) || 0,
+              is_just_completed: (payload.new?.is_just_completed as boolean) || false,
               expires_at: payload.new?.expires_at as string | null,
               last_check_in: payload.new?.last_check_in as string | null
             }

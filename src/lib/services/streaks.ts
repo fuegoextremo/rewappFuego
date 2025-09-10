@@ -27,7 +27,8 @@ const FALLBACK_IMAGES = {
   streak_initial: "🔥", // Emoji como fallback
   streak_progress: "🚀", 
   streak_complete: "🏆",
-  streak_expired: "😴" // Para rachas expiradas
+  streak_broken: "😴",   // Para rachas rotas
+  streak_expired: "�"   // Para rachas expiradas (nueva temporada)
 }// Para uso en Server Components
 export async function getStreakStage(userId: string, currentCount: number): Promise<StreakStage> {
   const supabase = createClientServer()
@@ -304,3 +305,85 @@ function getDefaultStreakStage(currentCount: number): StreakStage {
     nextGoal: Math.ceil(currentCount / 5) * 5
   }
 }
+
+// 🆕 NUEVA FUNCIÓN AVANZADA PARA RACHAS COMPLETADAS
+export type AdvancedStreakStage = StreakStage & {
+  showCompletedBadge?: boolean
+  seasonsCompleted?: number
+  canRestart?: boolean
+  isCompleted?: boolean
+  isJustCompleted?: boolean
+}
+
+interface UserStreakData {
+  current_count: number
+  completed_count: number
+  is_just_completed: boolean
+  expires_at: string | null
+  last_check_in: string | null
+}
+
+function calculateDaysDifference(dateString: string | null): number {
+  if (!dateString) return Infinity
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - date.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays
+}
+
+export function calculateStreakStageAdvanced(
+  streakData: UserStreakData,
+  streakPrizes: StreakPrize[],
+  settings: SystemSettings
+): AdvancedStreakStage {
+  
+  // PRIORIDAD 1: Racha recién completada
+  if (streakData.is_just_completed) {
+    return {
+      image: settings.streak_complete_image || FALLBACK_IMAGES.streak_complete,
+      stage: `¡Racha completada! (${streakData.completed_count} total)`,
+      progress: 100,
+      isCompleted: true,
+      isJustCompleted: true,
+      showCompletedBadge: true,
+      seasonsCompleted: streakData.completed_count
+    }
+  }
+  
+  // PRIORIDAD 2: Racha expirada (temporada)
+  const isExpired = streakData.expires_at && new Date(streakData.expires_at) < new Date()
+  if (isExpired) {
+    return {
+      image: settings.streak_expired_image || FALLBACK_IMAGES.streak_expired,
+      stage: "¡Nueva temporada de rachas!",
+      progress: 0,
+      canRestart: true,
+      seasonsCompleted: streakData.completed_count
+    }
+  }
+  
+  // PRIORIDAD 3: Racha rota por inactividad
+  const daysSinceLastCheckin = calculateDaysDifference(streakData.last_check_in)
+  const breakDaysLimit = parseInt(settings.streak_break_days || '1')
+  
+  if (daysSinceLastCheckin > breakDaysLimit) {
+    return {
+      image: settings.streak_broken_image || FALLBACK_IMAGES.streak_broken,
+      stage: "Racha perdida - ¡Reinicia!",
+      progress: 0,
+      canRestart: true,
+      seasonsCompleted: streakData.completed_count
+    }
+  }
+  
+  // PRIORIDAD 4: Racha activa normal
+  const activeStage = calculateStreakStage(streakData.current_count, streakPrizes, settings)
+  
+  return {
+    ...activeStage,
+    seasonsCompleted: streakData.completed_count
+  }
+}
+
+export { calculateStreakStage }

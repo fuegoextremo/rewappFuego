@@ -28,6 +28,8 @@ export function useUserStreakRedux(userId: string) {
   return {
     data: streakData ? {
       currentCount: streakData.current_count,
+      completedCount: streakData.completed_count,        // 🆕 Contador de completadas
+      isJustCompleted: streakData.is_just_completed,     // 🆕 Flag temporal UI
       expiresAt: streakData.expires_at,
       lastCheckIn: streakData.last_check_in,
       rawData: streakData

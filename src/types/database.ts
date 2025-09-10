@@ -293,33 +293,39 @@ export type Database = {
       }
       streaks: {
         Row: {
+          completed_count: number | null
           created_at: string | null
           current_count: number | null
           expires_at: string | null
           id: string
           is_completed: boolean | null
+          is_just_completed: boolean | null
           last_check_in: string | null
           max_count: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          completed_count?: number | null
           created_at?: string | null
           current_count?: number | null
           expires_at?: string | null
           id?: string
           is_completed?: boolean | null
+          is_just_completed?: boolean | null
           last_check_in?: string | null
           max_count?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          completed_count?: number | null
           created_at?: string | null
           current_count?: number | null
           expires_at?: string | null
           id?: string
           is_completed?: boolean | null
+          is_just_completed?: boolean | null
           last_check_in?: string | null
           max_count?: number | null
           updated_at?: string | null

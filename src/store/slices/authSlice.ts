@@ -19,6 +19,8 @@ export interface User {
   // 🔥 NUEVOS: Datos detallados de streak (para eliminar React Query)
   streakData?: {
     current_count: number
+    completed_count: number        // 🆕 Contador de rachas completadas
+    is_just_completed: boolean     // 🆕 Flag para mostrar "recién completada"
     expires_at: string | null
     last_check_in: string | null
   }
@@ -261,7 +263,7 @@ export const loadUserStreakData = createAsyncThunk(
     
     const { data, error } = await supabase
       .from('streaks')
-      .select('current_count, expires_at, last_check_in')
+      .select('current_count, completed_count, is_just_completed, expires_at, last_check_in')
       .eq('user_id', userId)
       .single()
 
@@ -269,9 +271,11 @@ export const loadUserStreakData = createAsyncThunk(
       throw new Error(error.message)
     }
     
-    // Asegurar que current_count sea número, no null
+    // Asegurar que los campos sean del tipo correcto, no null
     return {
       current_count: data?.current_count || 0,
+      completed_count: data?.completed_count || 0,
+      is_just_completed: data?.is_just_completed || false,
       expires_at: data?.expires_at || null,
       last_check_in: data?.last_check_in || null
     }
@@ -431,7 +435,13 @@ const authSlice = createSlice({
     },
     
     // User Streak Data Actions
-    setUserStreakData: (state, action: PayloadAction<{ current_count: number, expires_at: string | null, last_check_in: string | null }>) => {
+    setUserStreakData: (state, action: PayloadAction<{ 
+      current_count: number, 
+      completed_count: number, 
+      is_just_completed: boolean, 
+      expires_at: string | null, 
+      last_check_in: string | null 
+    }>) => {
       if (state.user) {
         state.user.streakData = action.payload
         // También mantener current_streak sincronizado
@@ -439,7 +449,13 @@ const authSlice = createSlice({
       }
     },
     
-    updateUserStreakData: (state, action: PayloadAction<Partial<{ current_count: number, expires_at: string | null, last_check_in: string | null }>>) => {
+    updateUserStreakData: (state, action: PayloadAction<Partial<{ 
+      current_count: number, 
+      completed_count: number, 
+      is_just_completed: boolean, 
+      expires_at: string | null, 
+      last_check_in: string | null 
+    }>>) => {
       if (state.user?.streakData) {
         state.user.streakData = { ...state.user.streakData, ...action.payload }
         // Sincronizar current_streak si se actualiza

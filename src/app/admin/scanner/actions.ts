@@ -97,7 +97,7 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       return { success: false, message: "Este cupón ha expirado." };
     }
 
-    // Marcar cupón como redimido
+    // Marcar cupón como redimido (stock ya fue descontado al generar el cupón)
     const { error: updateError } = await supabase
       .from('coupons')
       .update({
@@ -111,7 +111,17 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       return { success: false, message: `Error al redimir cupón: ${updateError.message}` };
     }
 
-    return { success: true, message: "Cupón redimido exitosamente." };
+    // Obtener información del premio para el mensaje
+    const { data: couponInfo } = await supabase
+      .from('coupons')
+      .select(`
+        prizes (name, type)
+      `)
+      .eq('id', payload.c)
+      .single();
+
+    const prizeName = couponInfo?.prizes?.name || 'Premio';
+    return { success: true, message: `Cupón "${prizeName}" redimido exitosamente.` };
 
   } catch (error) {
     console.error('Error in redeemCoupon:', error);

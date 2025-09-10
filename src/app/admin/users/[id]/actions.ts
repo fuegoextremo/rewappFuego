@@ -82,28 +82,51 @@ export async function grantCoupon(userId: string, prizeId: string, validityDays?
     }
 
     const supabase = createAdminClient();
-    console.log('Calling RPC grant_coupon_to_user');
+    console.log('Calling RPC grant_manual_coupon with inventory control');
 
-    const { data, error } = await supabase.rpc('grant_coupon_to_user', {
-      p_user_id: userId,
-      p_prize_id: prizeId,
-      p_validity_days: validityDays
-    });
+    try {
+      // Llamar a la nueva función con control de inventario usando postgrest
+      const { data, error } = await supabase.rpc('grant_manual_coupon' as any, {
+        p_user_id: userId,
+        p_prize_id: prizeId,
+        p_validity_days: validityDays || 30
+      });
 
-    if (error) {
-      console.error('RPC error:', error);
+      if (error) {
+        console.error('RPC error:', error);
+        return {
+          error: `Error al otorgar el cupón: ${error.message}`,
+        };
+      }
+
+      // Verificar la respuesta de la nueva función
+      console.log('Raw response from grant_manual_coupon:', data);
+      
+      if (data && (data as any).success) {
+        const responseData = data as any;
+        
+        console.log('Coupon granted successfully with inventory control:', responseData);
+        revalidatePath(`/admin/users/${userId}`);
+
+        return {
+          message: `Cupón otorgado con éxito (${responseData.stock_affected ? 'stock descontado' : 'stock ilimitado'}).`,
+          data: {
+            unique_code: responseData.unique_code,
+            id: responseData.coupon_id,
+            expires_at: responseData.expires_at
+          }
+        };
+      } else {
+        return {
+          error: "Error al generar el cupón con control de inventario",
+        };
+      }
+    } catch (rpcError: any) {
+      console.error('Exception calling grant_manual_coupon:', rpcError);
       return {
-        error: `Error al otorgar el cupón: ${error.message}`,
+        error: `Error de inventario: ${rpcError.message || 'Sin stock disponible'}`,
       };
     }
-
-    console.log('Coupon granted successfully:', data);
-    revalidatePath(`/admin/users/${userId}`);
-
-    return {
-      message: "Cupón otorgado con éxito.",
-      data
-    };
   } catch (error) {
     console.error('Unexpected error in grantCoupon:', error);
     return {

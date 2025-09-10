@@ -42,8 +42,6 @@ const ProviderIcon = ({ provider }: { provider: string | undefined }) => {
 
 const RoleBadge = ({ role }: { role: string | null }) => {
   switch (role) {
-    case 'superadmin':
-      return <Badge variant="destructive" className="text-xs">SuperAdmin</Badge>;
     case 'admin':
       return <Badge variant="default" className="text-xs bg-purple-600">Admin</Badge>;
     case 'verifier':

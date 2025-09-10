@@ -18,14 +18,15 @@ export default async function Page() {
   // 1. Fetch all authentication users
   const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
 
-  // 2. Fetch all user profiles with counts
+  // 2. Fetch all user profiles with counts (excluding superadmins)
   const { data: profiles, error: profilesError } = await supabase
     .from("user_profiles")
     .select(`
       *,
       check_ins!check_ins_user_id_fkey ( count ),
       coupons!coupons_user_id_fkey ( count )
-    `);
+    `)
+    .neq('role', 'superadmin');
 
   if (authError || profilesError) {
     return (
@@ -38,7 +39,7 @@ export default async function Page() {
     );
   }
 
-  // 3. Merge the data
+  // 3. Merge the data (only regular users, superadmins excluded)
   const usersWithDetails: UserWithDetails[] = profiles!.map(profile => {
     const authUser = authUsers.find(u => u.id === profile.id);
     return {
@@ -65,7 +66,7 @@ export default async function Page() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
-          <p className="text-gray-600">Administra usuarios, perfiles y actividad del sistema</p>
+          <p className="text-gray-600">Administra usuarios del sistema (clientes, verificadores y admins)</p>
         </div>
       </div>
 

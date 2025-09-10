@@ -5,9 +5,10 @@ import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import PrizesTable from "@/components/admin/PrizesTable";
 import PrizeForm from "@/components/admin/PrizeForm";
+import StockRecoveryManager from "@/components/admin/StockRecoveryManager";
 import Breadcrumbs from "@/components/shared/Breadcrumbs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Target } from "lucide-react";
+import { Trophy, Target, Package } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -144,7 +145,7 @@ export default function PrizesClient({
 
       {/* Tabs */}
       <Tabs defaultValue="roulette" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="roulette" className="flex items-center gap-2">
             <Trophy className="w-4 h-4" />
             Premios de Ruleta
@@ -152,6 +153,10 @@ export default function PrizesClient({
           <TabsTrigger value="streak" className="flex items-center gap-2">
             <Target className="w-4 h-4" />
             Premios por Racha
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            Gestión de Stock
           </TabsTrigger>
         </TabsList>
         
@@ -215,6 +220,17 @@ export default function PrizesClient({
             showFields={["streak_threshold"]}
             hideFields={["weight", "inventory_count"]}
           />
+        </TabsContent>
+
+        <TabsContent value="inventory" className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold text-gray-900">Gestión de Inventario</h2>
+            <p className="text-sm text-gray-600">
+              Administra el stock de premios y recupera inventario de cupones expirados
+            </p>
+          </div>
+          
+          <StockRecoveryManager />
         </TabsContent>
       </Tabs>
 

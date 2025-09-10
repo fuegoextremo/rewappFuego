@@ -390,15 +390,15 @@ export default function PrizeForm({ open, onOpenChange, onSubmit, prize }: Prize
                     <Label htmlFor="image">Imagen personalizada</Label>
                     <Input
                       id="image"
-                      type="url"
-                      placeholder="https://ejemplo.com/imagen.jpg"
+                      type="text"
+                      placeholder="/images/racha.png o https://ejemplo.com/imagen.jpg"
                       value={formData.image_url ?? ""}
                       onChange={(e) =>
                         setFormData({ ...formData, image_url: e.target.value })
                       }
                     />
                     <div className="text-xs text-gray-500">
-                      Si no se especifica, se usa la imagen por defecto
+                      Acepta URLs completas o rutas locales (/images/..., /animations/...)
                     </div>
                   </div>
                 </div>

@@ -29,7 +29,7 @@ interface StreakPrize {
 
 interface SystemSettings {
   streak_initial_image?: string
-  streak_progress_image?: string
+  streak_progress_default?: string
   streak_complete_image?: string
   company_theme_primary?: string
 }
@@ -47,12 +47,29 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
     .sort((a, b) => (a.streak_threshold || 0) - (b.streak_threshold || 0))
 
   if (currentCount === 0) {
+    // 🎯 Buscar el próximo objetivo (premio activo) con imagen disponible
+    const firstPrize = validPrizes[0]
+    
+    // Si el primer premio no tiene imagen, buscar el siguiente con imagen
+    let imageToUse = firstPrize?.image_url && firstPrize.image_url.trim() !== '' 
+      ? firstPrize.image_url 
+      : null
+    
+    // Si el primer premio no tiene imagen, buscar el siguiente premio con imagen
+    if (!imageToUse) {
+      const nextPrizeWithImage = validPrizes.find(p => p.image_url && p.image_url.trim() !== '')
+      imageToUse = nextPrizeWithImage?.image_url || null
+    }
+    
+    // Fallback final a configuración o emoji
+    const image = imageToUse || settings?.streak_initial_image || defaultImages.initial
+    
     return {
-      image: settings?.streak_initial_image || defaultImages.initial,
+      image,
       stage: "¡Comienza tu racha!",
       progress: 0,
-      nextGoal: validPrizes[0]?.streak_threshold || 3,
-      nextReward: validPrizes[0]?.name || "Premio sorpresa"
+      nextGoal: firstPrize?.streak_threshold || 3,
+      nextReward: firstPrize?.name || "Premio sorpresa"
     }
   }
 
@@ -76,8 +93,18 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
   const nextThreshold = nextPrize.streak_threshold || 0
   const progress = ((currentCount - previousThreshold) / (nextThreshold - previousThreshold)) * 100
 
+  // 🎯 Encontrar el último premio alcanzado para mostrar su imagen
+  const lastAchievedPrize = validPrizes
+    .filter(p => (p.streak_threshold || 0) <= currentCount)
+    .sort((a, b) => (b.streak_threshold || 0) - (a.streak_threshold || 0))[0]
+
+  // 🎯 Usar imagen del último premio alcanzado (si tiene), sino imagen de progreso por defecto
+  const image = (lastAchievedPrize?.image_url && lastAchievedPrize.image_url.trim() !== '') 
+    ? lastAchievedPrize.image_url 
+    : settings?.streak_progress_default || defaultImages.progress
+
   return {
-    image: settings?.streak_progress_image || defaultImages.progress,
+    image,
     stage: `¡Vas por buen camino!`,
     progress: Math.min(progress, 100),
     nextGoal: nextThreshold,
@@ -209,7 +236,10 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
               className={`object-cover transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
               sizes="(max-width: 768px) 100vw, 50vw"
               onLoad={() => setImageLoading(false)}
-              onError={() => setImageLoading(false)}
+              onError={() => {
+                console.error('❌ Error loading image:', streakStage.image);
+                setImageLoading(false);
+              }}
               priority={true}
             />
           </div>

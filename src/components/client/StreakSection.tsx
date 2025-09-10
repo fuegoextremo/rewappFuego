@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { createClientBrowser } from '@/lib/supabase/client'
+import { isRiveFile } from '@/lib/utils/fileTypes'
+import SimpleRiveLoop from './SimpleRiveLoop'
 
 export type StreakStage = {
   image: string
@@ -222,28 +224,45 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
 
       {/* Imagen/Icono de la racha */}
       <div className="relative z-10 mb-6">
+        {/* 🎯 Detección automática: Rive vs Imagen normal */}
         {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
-          <div className="relative w-full aspect-square overflow-hidden bg-gray-50">
-            {imageLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+          <>
+            {isRiveFile(streakStage.image) ? (
+              // 🎭 Renderizar animación Rive
+              <SimpleRiveLoop 
+                src={streakStage.image} 
+                className="w-full aspect-square rounded-xl overflow-hidden bg-gray-50"
+                onError={(src: string) => {
+                  console.error('❌ Error loading Rive animation:', src);
+                  setImageLoading(false);
+                }}
+              />
+            ) : (
+              // 🖼️ Renderizar imagen normal
+              <div className="relative w-full aspect-square overflow-hidden bg-gray-50">
+                {imageLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                    <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                  </div>
+                )}
+                <Image 
+                  src={streakStage.image} 
+                  alt="Racha" 
+                  fill
+                  className={`object-cover transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => {
+                    console.error('❌ Error loading image:', streakStage.image);
+                    setImageLoading(false);
+                  }}
+                  priority={true}
+                />
               </div>
             )}
-            <Image 
-              src={streakStage.image} 
-              alt="Racha" 
-              fill
-              className={`object-cover transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-              sizes="(max-width: 768px) 100vw, 50vw"
-              onLoad={() => setImageLoading(false)}
-              onError={() => {
-                console.error('❌ Error loading image:', streakStage.image);
-                setImageLoading(false);
-              }}
-              priority={true}
-            />
-          </div>
+          </>
         ) : (
+          // 😀 Emoji fallback
           <div className="text-6xl text-center p-6 bg-gray-50">{streakStage.image}</div>
         )}
       </div>

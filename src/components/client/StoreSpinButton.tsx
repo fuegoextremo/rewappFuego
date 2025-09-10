@@ -62,7 +62,7 @@ export default function StoreSpinButton({ disabled }: { disabled: boolean }) {
             Girando...
           </>
         ) : (
-          '🎰 Girar Ruleta'
+          'Girar Ruleta'
         )}
       </button>
 

@@ -108,17 +108,23 @@
   bottom: -20px;
 }
 
-/* Mejorar renderizado de iconos SVG */
+/* Mejorar renderizado de iconos SVG - Suave y antialiased */
 svg {
   shape-rendering: geometricPrecision;
-  text-rendering: geometricPrecision;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: crisp-edges;
+  text-rendering: optimizeLegibility;
+  image-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Específicamente para iconos de Lucide */
+/* Específicamente para iconos de Lucide - Renderizado suave */
 [data-lucide] {
   stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   shape-rendering: geometricPrecision;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  fill: none;
 }

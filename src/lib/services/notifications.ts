@@ -144,6 +144,14 @@ export class NotificationService {
   }
 
   /**
+   * Notificación: Cupón ganado en la ruleta
+   */
+  static notifyRoulettePrize(prizeName: string) {
+    const message = `🎲 ¡Ganaste en la ruleta: ${prizeName}!`
+    this.showSuccess(message, 5000, "🎲 Premio de Ruleta")
+  }
+
+  /**
    * Notificación: Giros otorgados por admin
    */
   static notifyManualSpins(spins: number) {

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
-import { useUser } from '@/store/hooks'
+// import { useRouter } from 'next/navigation'
+// import { useQueryClient } from '@tanstack/react-query'
+// import { useUser } from '@/store/hooks'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import ResultSheet from '@/components/client/ResultSheet'
 import WheelRive, { WheelRiveRef } from '@/components/client/WheelRive'
@@ -19,9 +19,9 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [result, setResult] = useState<SpinResult | null>(null)
   const [spinning, setSpinning] = useState(false) // Estado para la animación RIVE
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const user = useUser()
+  // const router = useRouter()
+  // const queryClient = useQueryClient()
+  // const user = useUser()
   const wheelRiveRef = useRef<WheelRiveRef>(null)
 
   // ✨ Loading inteligente: solo skeleton si NO tenemos settings Y estamos cargando
@@ -102,42 +102,48 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 🎰 Ruleta RIVE */}
+    <div className="relative">
+      {/* 🎰 Ruleta RIVE como fondo */}
       <WheelRive 
         ref={wheelRiveRef}
         spinning={spinning}
         onSpinComplete={handleRiveComplete}
       />
 
-      {/* 🎯 Botón de girar */}
-      <div className="space-y-3">
-        <button
-          onClick={onSpin}
-          disabled={disabled || pending || spinning}
-          className="inline-flex h-12 items-center justify-center rounded-xl px-6 text-white font-semibold shadow active:translate-y-[1px] disabled:opacity-40"
-          style={{ backgroundColor: primaryColor }}
-        >
-          {spinning ? 'Girando…' : pending ? 'Obteniendo resultado…' : 'Girar ruleta'}
-        </button>
-
-        {(pending || spinning) && (
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-            {spinning ? 'Animación en progreso...' : 'Obteniendo resultado...'}
-          </div>
-        )}
-
-        {/* Bottom sheet con el resultado */}
-        <ResultSheet
-          open={!!result}
-          onClose={() => setResult(null)}
-          won={!!result?.won}
-          prizeName={result?.prize_name}
-        />
-
-        {msg && <p className="text-sm text-gray-700">{msg}</p>}
+      {/* 🎯 Botón circular centrado encima de la ruleta */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {/* Ajuste vertical proporcional para compensar la proporción 5:6 de la ruleta */}
+        <div className="transform" style={{ transform: 'translateY(32%)' }}>
+          <button
+            onClick={onSpin}
+            disabled={disabled || pending || spinning}
+            className="w-[20vw] h-[20vw] rounded-full text-white font-bold text-sm shadow-lg active:scale-95 transition-transform disabled:scale-100 flex items-center justify-center"
+            style={{ 
+              backgroundColor: primaryColor,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <span className="leading-tight text-center text-lg">
+              {spinning ? 'GIRANDO' : pending ? 'CARGANDO' : 'GIRAR'}
+            </span>
+          </button>
+        </div>
       </div>
+
+      {/* Bottom sheet con el resultado */}
+      <ResultSheet
+        open={!!result}
+        onClose={() => setResult(null)}
+        won={!!result?.won}
+        prizeName={result?.prize_name}
+      />
+
+      {/* Mensaje de error (si existe) */}
+      {msg && (
+        <div className="mt-4 text-center">
+          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2 inline-block">{msg}</p>
+        </div>
+      )}
     </div>
   )
 }

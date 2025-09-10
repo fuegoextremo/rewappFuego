@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useRive, useStateMachineInput, Layout, Fit, Alignment } from '@rive-app/react-canvas';
 
 const ARTBOARD = undefined;       // o 'WheelArtboard' si lo nombraste
@@ -16,7 +16,7 @@ export type WheelRiveRef = {
   resetSpin: () => void;
 }
 
-const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, spinning }, ref) => {
+const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* spinning */ }, ref) => {
   const { rive, RiveComponent } = useRive({
     src: '/wheel_v1.riv',
     stateMachines: STATE_MACHINE,
@@ -33,26 +33,26 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
   const spin   = useStateMachineInput(rive, STATE_MACHINE, 'spin');   // Trigger
   const isWin  = useStateMachineInput(rive, STATE_MACHINE, 'isWin');  // Boolean
   const spinningRef = useRef(false);
-  const [internalSpinning, setInternalSpinning] = useState(false);
+  // const [internalSpinning, setInternalSpinning] = useState(false); // Para debug UI
 
   // 🔄 Función para resetear el estado de giro
   const resetSpin = () => {
-    console.log('🔄 Reseteando estado de giro RIVE');
+    // console.log('🔄 Reseteando estado de giro RIVE');
     spinningRef.current = false;
-    setInternalSpinning(false);
+    // setInternalSpinning(false); // Para debug UI
   };
 
   // 🎯 Función para activar el giro
   const triggerSpin = (win: boolean) => {
     if (!spin || !isWin || spinningRef.current) {
-      console.warn('⚠️ No se puede girar: spin, isWin o ya girando', { spin: !!spin, isWin: !!isWin, spinning: spinningRef.current });
+      // console.warn('⚠️ No se puede girar: spin, isWin o ya girando', { spin: !!spin, isWin: !!isWin, spinning: spinningRef.current });
       return false;
     }
     
-    console.log('🎰 Iniciando animación RIVE:', win ? 'GANAR' : 'PERDER');
+    // console.log('🎰 Iniciando animación RIVE:', win ? 'GANAR' : 'PERDER');
     isWin.value = win;
     spinningRef.current = true;
-    setInternalSpinning(true);
+    // setInternalSpinning(true); // Para debug UI
     spin.fire();
     return true;
   };
@@ -68,7 +68,7 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
     if (!rive) return;
     
     const onStateChange = (event: any) => {
-      console.log('🎰 RIVE State Change:', event.data);
+      // console.log('🎰 RIVE State Change:', event.data);
       
       // Detectar estados de transición específicos
       const eventData = Array.isArray(event.data) ? event.data : [event.data];
@@ -82,16 +82,16 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
       }
       
       if (currentState) {
-        console.log('🎯 Estado actual de RIVE:', currentState);
+        // console.log('🎯 Estado actual de RIVE:', currentState);
         
         // Detectar estados de transición después del spin
         if ((currentState === 'SpinWinToInitial' || currentState === 'SpinLoseToInitial') && spinningRef.current) {
-          console.log('🔄 Detectado estado de transición:', currentState, '- Esperando regreso a Idle...');
+          // console.log('🔄 Detectado estado de transición:', currentState, '- Esperando regreso a Idle...');
         }
         
         // Solo resetear cuando vuelva a Idle después de las transiciones
         if (currentState === 'Idle' && spinningRef.current) {
-          console.log('🎰 Animación RIVE completada, volviendo a Idle desde estado de transición');
+          // console.log('🎰 Animación RIVE completada, volviendo a Idle desde estado de transición');
           resetSpin();
           
           // Notificar al componente padre que terminó
@@ -117,7 +117,7 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
       // Listener para el state machine específico
       const stateMachine = rive.stateMachineInputs(STATE_MACHINE);
       if (stateMachine) {
-        console.log('📊 Estado inicial del state machine:', stateMachine);
+        // console.log('📊 Estado inicial del state machine:', stateMachine);
       }
       
       return () => {
@@ -128,16 +128,16 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
           if (typeof (rive as any).removeEventListener === 'function') {
             (rive as any).removeEventListener('statechange', onStateChange);
           }
-        } catch (cleanupError) {
-          console.warn('⚠️ Error limpiando listeners de RIVE:', cleanupError);
+        } catch {
+          // console.warn('⚠️ Error limpiando listeners de RIVE:', cleanupError);
         }
       };
-    } catch (error) {
-      console.warn('⚠️ Error configurando listener de RIVE:', error);
+    } catch {
+      // console.warn('⚠️ Error configurando listener de RIVE:', error);
     }
   }, [rive, onSpinComplete]);
 
-  const isCurrentlySpinning = spinning || internalSpinning;
+  // const isCurrentlySpinning = spinning || internalSpinning; // Para debug UI
 
   return (
   <div className="w-full">                   {/* Responsivo hasta 384px */}
@@ -148,12 +148,12 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete, sp
     </div>
       
       {/* 🎯 Estado visual para debug (solo en desarrollo) */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* {process.env.NODE_ENV === 'development' && (
         <div className="text-xs text-gray-500 mt-2 text-center">
           {isCurrentlySpinning ? '🎰 Girando...' : '⏸️ En reposo'}
           <div className="text-xs opacity-60">Proporción: 6:5 (1200x1000)</div>
         </div>
-      )}
+      )} */}
     </div>
   );
 });

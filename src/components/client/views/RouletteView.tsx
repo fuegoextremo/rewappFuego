@@ -11,7 +11,7 @@ export default function RouletteView() {
 
   // ✨ Loading inteligente - solo necesitamos verificar prizes
   const hasUser = !!user
-  const hasSettings = !!settings
+  // const hasSettings = !!settings // No se usa actualmente
   const isActuallyLoading = prizesLoading
 
   if (!hasUser) {
@@ -58,18 +58,19 @@ export default function RouletteView() {
   return (
     <div className="space-y-6">
       {/* 🎰 Sección principal de ruleta */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold mb-4 text-center">🎰 Ruleta de Premios</h2>
+      <div className="p-6">
+        <h2 className="text-3xl font-semibold mb-4 text-center">Gira la ruleta</h2>
         
         <div className="text-center space-y-4">
-          <div>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-lg text-gray-600">Tienes</span>
             <div 
-              className="text-4xl font-bold mb-1"
-              style={{ color: primaryColor }}
+              className="inline-block px-4 py-2 rounded-xl text-2xl font-bold text-white"
+              style={{ backgroundColor: primaryColor }}
             >
               {availableSpins}
             </div>
-            <div className="text-sm text-gray-500">Giros disponibles</div>
+            <span className="text-lg text-gray-600">oportunidades</span>
           </div>
           
           <SpinButton disabled={!hasSpins} />

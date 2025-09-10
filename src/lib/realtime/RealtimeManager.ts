@@ -402,6 +402,10 @@ export class RealtimeManager {
           const prizeName = prizeInfo?.name || 'Premio especial'
           NotificationService.notifyManualCoupon(prizeName)
           console.log('🔔 RealtimeManager: ✅ Toast cupón MANUAL mostrado')
+        } else if (source === 'roulette') {
+          const prizeName = prizeInfo?.name || 'Premio de ruleta'
+          NotificationService.notifyRoulettePrize(prizeName)
+          console.log('🔔 RealtimeManager: ✅ Toast cupón por RULETA mostrado')
         } else {
           // Fallback para otros tipos
           const prizeName = prizeInfo?.name || 'Premio sorpresa'

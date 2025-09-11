@@ -30,7 +30,7 @@ export default function CouponsView() {
 
   return (
     <motion.div 
-      className="space-y-8 max-w-md mx-auto w-full overflow-hidden p-4"
+      className="space-y-8 max-w-md mx-auto w-full overflow-hidden px-4"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -40,6 +40,7 @@ export default function CouponsView() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="text-center"
       >
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Mis Cupones</h1>
         <p className="text-gray-600 text-sm">
@@ -112,6 +113,18 @@ export default function CouponsView() {
           </div>
         </div>
       )}
+
+      {/* Banner inferior - Sin padding para pegarlo al bottom nav */}
+      <div className="w-full">
+        <Image 
+          src="/images/banner_inferior.png"
+          alt="Banner inferior"
+          width={400}
+          height={200}
+          className="w-full h-auto object-cover"
+          priority={false}
+        />
+      </div>
     </motion.div>
   )
 }

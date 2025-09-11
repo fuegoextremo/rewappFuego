@@ -2,6 +2,7 @@
 
 'use client'
 
+import { useEffect } from 'react'
 import UserQR from './UserQR'
 import BottomSheet from '@/components/ui/BottomSheet'
 
@@ -12,6 +13,22 @@ export default function CheckinSheet({
   open: boolean
   onClose: () => void
 }) {
+  // 🎯 Escuchar cuando se realiza un check-in exitoso para cerrar automáticamente
+  useEffect(() => {
+    if (!open) return
+
+    const handleCheckinSuccess = () => {
+      console.log('🎉 CheckinSheet: Check-in exitoso detectado, cerrando automáticamente')
+      onClose() // Cerrar inmediatamente junto con el toast
+    }
+
+    // Escuchar el evento específico de check-in exitoso
+    window.addEventListener('checkin-success', handleCheckinSuccess)
+
+    return () => {
+      window.removeEventListener('checkin-success', handleCheckinSuccess)
+    }
+  }, [open, onClose])
   return (
     <BottomSheet
       isOpen={open}

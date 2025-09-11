@@ -139,7 +139,7 @@ export default function ProfileView() {
       </div>
 
       {/* Content */}
-      <div className="max-w-md mx-auto p-6 space-y-6">
+      <div className="max-w-md mx-auto px-4 space-y-6">
         {/* Botón principal de edición */}
         <button
           onClick={() => setActiveSheet('edit')}
@@ -210,6 +210,18 @@ export default function ProfileView() {
             </div>
           </div>
         )}
+
+        {/* Banner inferior - Sin padding para pegarlo al bottom nav */}
+        <div className="w-full">
+          <Image 
+            src="/images/banner_inferior.png"
+            alt="Banner inferior"
+            width={400}
+            height={200}
+            className="w-full h-auto object-cover"
+            priority={false}
+          />
+        </div>
       </div>
 
       {/* Bottom Sheets */}

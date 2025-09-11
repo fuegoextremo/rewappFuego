@@ -57,7 +57,7 @@ export default function SPAAnimatedExpiredCouponStack({
           transition={{ delay: 0.2 }}
           whileTap={{ scale: 0.95 }}
         >
-          {isExpanded ? '📚 Apilar' : '📋 Ver historial'}
+          {isExpanded ? 'Apilar' : 'Ver historial'}
         </motion.button>
       </div>
       

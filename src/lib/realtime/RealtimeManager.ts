@@ -242,8 +242,11 @@ export class RealtimeManager {
       // 🔔 NUEVO: Notificación de check-in exitoso (SEGURO - al final)
       try {
         const spinsEarned = (payload.new?.spins_earned as number) || 1
-        NotificationService.notifyCheckinSuccess(spinsEarned)
-        console.log('🔔 RealtimeManager: ✅ Toast check-in mostrado')
+        NotificationService.notifyCheckinSuccess(spinsEarned, () => {
+          // Disparar evento para cerrar CheckinSheet
+          window.dispatchEvent(new CustomEvent('checkin-success'))
+        })
+        console.log('🔔 RealtimeManager: ✅ Toast check-in mostrado + evento para cerrar sheet')
       } catch (error) {
         console.warn('🔔 RealtimeManager: Error en toast check-in:', error)
         // NO ROMPE NADA - continúa normalmente
@@ -404,8 +407,11 @@ export class RealtimeManager {
           console.log('🔔 RealtimeManager: ✅ Toast cupón MANUAL mostrado')
         } else if (source === 'roulette') {
           const prizeName = prizeInfo?.name || 'Premio de ruleta'
-          NotificationService.notifyRoulettePrize(prizeName)
-          console.log('🔔 RealtimeManager: ⏳ Toast cupón por RULETA programado (con delay de 5.5s)')
+          NotificationService.notifyRoulettePrize(prizeName, () => {
+            // Disparar evento para cerrar RedeemSheet
+            window.dispatchEvent(new CustomEvent('redemption-success'))
+          })
+          console.log('🔔 RealtimeManager: ⏳ Toast cupón por RULETA programado (con delay de 5.5s) + evento para cerrar sheet')
         } else {
           // Fallback para otros tipos
           const prizeName = prizeInfo?.name || 'Premio sorpresa'

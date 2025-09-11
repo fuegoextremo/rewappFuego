@@ -48,6 +48,36 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
     return () => { mounted = false }
   }, [open, couponId])
 
+  // 🎯 Escuchar cuando el cupón es redimido exitosamente para cerrar automáticamente
+  useEffect(() => {
+    if (!open || !couponId) return
+
+    const handleUserDataUpdate = (event: CustomEvent) => {
+      const { type, data } = event.detail
+      
+      // Si es un cupón que fue redimido y es el cupón que estamos mostrando
+      if (type === 'coupon' && data?.new?.id === couponId && data?.new?.is_redeemed && !data?.old?.is_redeemed) {
+        console.log('🎉 RedeemSheet: Cupón redimido exitosamente, cerrando automáticamente')
+        onClose() // Cerrar inmediatamente junto con el toast
+      }
+    }
+
+    const handleRedemptionSuccess = () => {
+      console.log('🎉 RedeemSheet: Premio de ruleta detectado, cerrando automáticamente')
+      onClose() // Cerrar inmediatamente junto con el toast
+    }
+
+    // Escuchar el evento personalizado que ya dispara RealtimeProvider
+    window.addEventListener('user-data-updated', handleUserDataUpdate as EventListener)
+    // Escuchar evento específico de premio de ruleta
+    window.addEventListener('redemption-success', handleRedemptionSuccess)
+
+    return () => {
+      window.removeEventListener('user-data-updated', handleUserDataUpdate as EventListener)
+      window.removeEventListener('redemption-success', handleRedemptionSuccess)
+    }
+  }, [open, couponId, onClose])
+
   return (
     <BottomSheet
       isOpen={open}

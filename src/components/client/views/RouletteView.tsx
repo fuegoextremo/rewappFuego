@@ -152,6 +152,18 @@ export default function RouletteView() {
           </div>
         </div>
       )}
+
+      {/* Banner inferior - Sin padding para pegarlo al bottom nav */}
+      <div className="w-full">
+        <Image 
+          src="/images/banner_inferior.png"
+          alt="Banner inferior"
+          width={400}
+          height={200}
+          className="w-full h-auto object-cover"
+          priority={false}
+        />
+      </div>
     </div>
   )
 }

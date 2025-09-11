@@ -148,7 +148,7 @@ export default function HomeView() {
       {/* Logo del establecimiento */}
       {settings.company_logo_url && (
         <div className="text-center py-6">
-          <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+          <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden bg-gray-100 flex items-center justify-center p-2">
             <Image 
               src={settings.company_logo_url} 
               alt={companyName}
@@ -160,6 +160,18 @@ export default function HomeView() {
           </div>
         </div>
       )}
+
+      {/* Banner inferior - Sin padding para pegarlo al bottom nav */}
+      <div className="w-full">
+        <Image 
+          src="/images/banner_inferior.png"
+          alt="Banner inferior"
+          width={400}
+          height={200}
+          className="w-full h-auto object-cover"
+          priority={false}
+        />
+      </div>
     </div>
   )
 }

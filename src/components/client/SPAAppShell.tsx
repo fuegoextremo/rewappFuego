@@ -208,7 +208,7 @@ function SPAContent() {
 
       {/* Contenido principal - con animación de refresh moderna */}
       <motion.main 
-        className="flex-1 pb-20 overflow-auto"
+        className="flex-1 overflow-auto"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

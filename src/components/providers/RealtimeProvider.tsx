@@ -153,6 +153,11 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
           queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] })
           queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] })
           queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'used', userId] })
+          
+          // ✨ Event para otros componentes (como RedeemSheet)
+          window.dispatchEvent(new CustomEvent('user-data-updated', { 
+            detail: { userId, type: 'coupon', data: payload } 
+          }))
         }
       })
       // 🎰 Cambios en giros de usuario (user_spins)

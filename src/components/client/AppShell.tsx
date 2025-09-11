@@ -264,7 +264,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Contenido principal con animaciones suaves */}
       <motion.main 
-        className="flex-1 pb-20 overflow-auto"
+        className="flex-1 overflow-auto"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

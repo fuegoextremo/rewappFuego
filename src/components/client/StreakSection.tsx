@@ -217,6 +217,7 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
             {isRiveFile(streakStage.image) ? (
               // 🎭 Renderizar animación Rive
               <SimpleRiveLoop 
+                key={streakStage.image} // ✨ FORZAR RE-MOUNT cuando cambia la animación
                 src={streakStage.image} 
                 className="w-full aspect-square rounded-xl overflow-hidden bg-gray-50"
                 onError={(src: string) => {
@@ -265,7 +266,7 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
             <p className={`text-sm ${
               streakStage.stage.includes('perdida') ? 'text-gray-500' : 'text-gray-600'
             }`}>
-              Próximo premio: <span className="font-semibold text-blue-600">{streakStage.nextReward}</span>
+              Próximo premio: <span style={{color:primaryColor}} className="font-semibold">{streakStage.nextReward}</span>
             </p>
           )}
         </div>

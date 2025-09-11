@@ -1,5 +1,5 @@
 'use client'
-import { useCurrentView, useAppDispatch } from '@/store/hooks'
+import { useCurrentView, useAppDispatch, useUser } from '@/store/hooks'
 import { useSettings } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
 import { Home, FerrisWheel, QrCode, Ticket, User } from 'lucide-react'
@@ -16,8 +16,10 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
   const dispatch = useAppDispatch()
   const currentView = useCurrentView()
   const settings = useSettings()
+  const user = useUser()
   
   const primaryColor = settings.company_theme_primary || '#D73527'
+  const availableSpins = user?.available_spins ?? 0
   
   
   return (
@@ -40,7 +42,7 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
                     className="w-10 h-10 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: primaryColor }}
                   >
-                    <item.icon className="w-5 h-5 text-white antialiased" style={{ shapeRendering: 'geometricPrecision' }} />
+                    <item.icon className="w-6 h-6 text-white antialiased" style={{ shapeRendering: 'geometricPrecision' }} />
                   </div>
                 </button>
               ) : (
@@ -49,8 +51,31 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
                   onClick={() => dispatch(setCurrentView(item.view as 'home' | 'profile' | 'coupons' | 'roulette'))}
                   className="w-full flex flex-col items-center py-3 text-xs focus:outline-none"
                 >
-                  <item.icon className={`w-5 h-5 ${active ? 'scale-110 text-blue-600' : 'text-gray-700'} transition-all antialiased`} style={{ shapeRendering: 'geometricPrecision' }} />
-                  <span className={`${active ? 'text-blue-600 font-medium' : 'text-gray-700'} transition-colors`}>
+                  <div className="relative">
+                    <item.icon 
+                      className={`w-6 h-6 ${active ? 'scale-110' : ''} transition-all antialiased`} 
+                      style={{ 
+                        shapeRendering: 'geometricPrecision',
+                        color: active ? primaryColor : '#374151'
+                      }} 
+                    />
+                    {/* Badge de giros disponibles solo para ruleta */}
+                    {item.view === 'roulette' && availableSpins > 0 && (
+                      <div 
+                        className="absolute -top-1 -right-1 text-white text-[10px] rounded-full min-w-[16px] h-[16px] flex items-center justify-center font-bold shadow-lg"
+                        style={{ 
+                          backgroundColor: primaryColor,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'
+                        }}
+                      >
+                        {availableSpins > 99 ? '99+' : availableSpins}
+                      </div>
+                    )}
+                  </div>
+                  <span 
+                    className={`mt-1 ${active ? 'font-medium' : ''} transition-colors`}
+                    style={{ color: active ? primaryColor : '#374151' }}
+                  >
                     {item.label}
                   </span>
                 </button>

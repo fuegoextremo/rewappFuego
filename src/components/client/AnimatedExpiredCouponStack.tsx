@@ -25,12 +25,44 @@ export default function AnimatedExpiredCouponStack({
   coupons, 
   title = "Cupones usados/vencidos",
   emptyMessage = "No tienes cupones usados",
-  emptySubMessage = "Historial limpio 📋"
+  emptySubMessage = "Historial limpio"
 }: AnimatedExpiredCouponStackProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   if (coupons.length === 0) {
-    return null // No mostrar nada si no hay cupones caducados
+    return (
+      <motion.div 
+        className="space-y-3"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3 className="font-medium text-gray-500 text-sm">{title}</h3>
+        <motion.div 
+          className="bg-gray-50 p-6 rounded-xl text-center border border-gray-100"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <motion.p 
+            className="text-gray-400 mb-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            {emptyMessage}
+          </motion.p>
+          <motion.p 
+            className="text-xs text-gray-400"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            {emptySubMessage}
+          </motion.p>
+        </motion.div>
+      </motion.div>
+    )
   }
 
   return (
@@ -59,7 +91,7 @@ export default function AnimatedExpiredCouponStack({
           transition={{ delay: 0.2 }}
           whileTap={{ scale: 0.95 }}
         >
-          {isExpanded ? '📚 Apilar' : '📋 Ver historial'}
+          {isExpanded ? 'Apilar' : 'Ver historial'}
         </motion.button>
       </div>
       

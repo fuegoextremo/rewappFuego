@@ -207,7 +207,7 @@ export default function RegisterForm() {
                 id="firstName"
                 type="text"
                 placeholder="Tu nombre"
-                className={`pl-10 ${errors.firstName ? 'border-red-500' : ''}`}
+                className={`pl-12 h-12 rounded-lg ${errors.firstName ? 'border-red-500' : ''}`}
                 {...register('firstName')}
               />
             </div>
@@ -228,7 +228,7 @@ export default function RegisterForm() {
                 id="lastName"
                 type="text"
                 placeholder="Tu apellido"
-                className={`pl-10 ${errors.lastName ? 'border-red-500' : ''}`}
+                className={`pl-12 h-12 rounded-lg ${errors.lastName ? 'border-red-500' : ''}`}
                 {...register('lastName')}
               />
             </div>
@@ -251,7 +251,7 @@ export default function RegisterForm() {
               id="email"
               type="email"
               placeholder="tu@email.com"
-              className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
+              className={`pl-12 h-12 rounded-lg ${errors.email ? 'border-red-500' : ''}`}
               {...register('email')}
             />
           </div>
@@ -302,7 +302,7 @@ export default function RegisterForm() {
             <Input
               id="birthDate"
               type="date"
-              className={`pl-10 ${errors.birthDate ? 'border-red-500' : ''}`}
+              className={`pl-12 h-12 rounded-lg ${errors.birthDate ? 'border-red-500' : ''}`}
               {...register('birthDate')}
             />
           </div>
@@ -324,7 +324,7 @@ export default function RegisterForm() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
+              className={`pl-12 pr-12 h-12 rounded-lg ${errors.password ? 'border-red-500' : ''}`}
               {...register('password')}
             />
             <button
@@ -357,7 +357,7 @@ export default function RegisterForm() {
               id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+              className={`pl-12 pr-12 h-12 rounded-lg ${errors.confirmPassword ? 'border-red-500' : ''}`}
               {...register('confirmPassword')}
             />
             <button
@@ -422,7 +422,7 @@ export default function RegisterForm() {
         {/* Submit Button */}
         <Button
           type="submit"
-          className="w-full"
+          className="w-full py-6 font-medium rounded-xl"
           disabled={isLoading || !isValid || !watchTerms}
           style={{
             backgroundColor: primaryColor,

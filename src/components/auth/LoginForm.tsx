@@ -143,7 +143,7 @@ export default function LoginForm() {
             type="email"
             autoComplete="email"
             {...register('email')}
-            className="mt-1"
+            className="mt-1 py-3 px-4 h-12 rounded-lg"
             placeholder="tu@ejemplo.com"
           />
           {errors.email && (
@@ -160,7 +160,7 @@ export default function LoginForm() {
             type="password"
             autoComplete="current-password"
             {...register('password')}
-            className="mt-1"
+            className="mt-1 py-3 px-4 h-12 rounded-lg"
             placeholder="••••••••"
           />
           {errors.password && (
@@ -180,7 +180,7 @@ export default function LoginForm() {
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3 text-white transition-colors"
+          className="w-full py-6 font-medium text-white transition-colors rounded-xl"
           style={{ backgroundColor: primaryColor }}
         >
           {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}

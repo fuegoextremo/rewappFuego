@@ -38,7 +38,7 @@ export function AuthLayout({
         {/* Logo y branding */}
         <div className="flex flex-col items-center mb-8">
           {logoUrl ? (
-            <div className="mb-4 w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200 p-2">
+            <div className="mb-4 w-40 h-40 rounded-3xl overflow-hidden bg-gray-100 flex items-center justify-center p-2">
               <Image
                 src={logoUrl}
                 alt={`Logo ${companyName}`}
@@ -69,7 +69,7 @@ export function AuthLayout({
         </div>
 
         {/* Contenido del formulario */}
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-white py-8 px-4 rounded-xl sm:px-10">
           {children}
         </div>
 

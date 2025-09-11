@@ -1,10 +1,11 @@
 /**
  * 🔗 SOCIAL AUTH BUTTON
  * Botón reutilizable para autenticación social (Google, Facebook)
- * Preparado para OAuth pero manejable sin claves configuradas
+ * Con diseño oficial de marcas y logos SVG
  */
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 // import { createClientBrowser } from '@/lib/supabase/client' // Se usará cuando tengas las claves OAuth
@@ -23,17 +24,21 @@ export function SocialButton({ provider, disabled = false, className = '' }: Soc
   const providerConfig = {
     google: {
       name: 'Google',
-      icon: '🔍', // Usaremos emoji por ahora, después puede ser un icon component
-      bgColor: 'bg-white border border-gray-300',
+      icon: '/images/google_icon.svg',
+      bgColor: 'bg-gray-50 border border-gray-300',
       textColor: 'text-gray-700',
-      hoverColor: 'hover:bg-gray-50'
+      hoverColor: 'hover:bg-gray-100',
+      text: 'Inicia sesión con Google',
+      customBg: undefined as string | undefined
     },
     facebook: {
       name: 'Facebook',
-      icon: '📘',
-      bgColor: 'bg-blue-600',
-      textColor: 'text-white',
-      hoverColor: 'hover:bg-blue-700'
+      icon: '/images/facebook-logo.svg',
+      bgColor: 'border-0',
+      textColor: 'text-white hover:text-white',
+      hoverColor: 'hover:bg-blue-700',
+      text: 'Inicia sesión con Facebook',
+      customBg: '#1877f2' as string | undefined
     }
   }
 
@@ -84,17 +89,25 @@ export function SocialButton({ provider, disabled = false, className = '' }: Soc
       onClick={handleSocialAuth}
       disabled={disabled || isLoading}
       className={`
-        w-full flex items-center justify-center gap-3 py-3
+        w-full flex items-center justify-center gap-3 py-6 font-medium
         ${config.bgColor} ${config.textColor} ${config.hoverColor}
-        border-gray-300 transition-colors
+        transition-all duration-200 relative overflow-hidden
+        rounded-xl
         ${className}
       `}
+      style={config.customBg ? { backgroundColor: config.customBg } : undefined}
     >
-      <span className="text-lg">{config.icon}</span>
+      <Image 
+        src={config.icon} 
+        alt={`${config.name} logo`}
+        width={20}
+        height={20}
+        className="flex-shrink-0"
+      />
       {isLoading ? (
         <span>Conectando...</span>
       ) : (
-        <span>Continuar con {config.name}</span>
+        <span>{config.text}</span>
       )}
     </Button>
   )

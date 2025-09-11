@@ -153,11 +153,14 @@ export class RealtimeManager {
       const newSpins = payload.new.available_spins as number
       const oldSpins = (payload.old?.available_spins as number) || 0
       
-      // ✨ Actualizar solo Redux - fuente única de verdad
+      console.log('🎰 RealtimeManager: user_spins cambió:', { oldSpins, newSpins, diff: newSpins - oldSpins })
+      
+      // ✨ Actualizar solo Redux - fuente única de verdad para giros
       if (this.reduxDispatch) {
         // Importamos dinámicamente para evitar dependencias circulares
         import('@/store/slices/authSlice').then(({ updateAvailableSpins }) => {
           this.reduxDispatch!(updateAvailableSpins(newSpins))
+          console.log('🔥 RealtimeManager: ✅ Giros actualizados a:', newSpins)
         })
       }
 
@@ -201,18 +204,14 @@ export class RealtimeManager {
       if (this.reduxDispatch) {
         import('@/store/slices/authSlice').then(({ 
           incrementTotalCheckins, 
-          addAvailableSpins,
           prependRecentActivity
         }) => {
           // Incrementar visitas totales
           this.reduxDispatch!(incrementTotalCheckins())
           console.log('🔥 RealtimeManager: ✅ Incrementando total_checkins')
           
-          // Si el checkin otorga giros, agregarlos
-          if (payload.new?.spins_earned && (payload.new.spins_earned as number) > 0) {
-            this.reduxDispatch!(addAvailableSpins(payload.new.spins_earned as number))
-            console.log('🔥 RealtimeManager: ✅ Agregando giros:', payload.new.spins_earned)
-          }
+          // 🔄 NUEVO: Los giros se actualizan solo via user_spins (evita race condition)
+          console.log('🔥 RealtimeManager: ⏸️ Giros se actualizarán via evento user_spins')
           
           // 🔥 NUEVO: Agregar el check-in a recentActivity en Redux
           const newCheckin = {

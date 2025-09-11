@@ -16,12 +16,22 @@ export function useUserStreakRedux(userId: string) {
   const dispatch = useAppDispatch()
   const user = useSelector((state: RootState) => state.auth.user)
   
-  // Cargar datos si no están presentes
+  // 🔍 Debug logging
+  console.log('🔍 useUserStreakRedux:', { 
+    userId, 
+    hasStreakData: !!user?.streakData,
+    userIdMatch: user?.id === userId
+  })
+  
+  // Cargar datos si:
+  // 1. Hay userId
+  // 2. NO hay datos de streak O el usuario cambió (para evitar datos cached)
   useEffect(() => {
-    if (userId && (!user?.streakData)) {
+    if (userId && (!user?.streakData || user.id !== userId)) {
+      console.log('🔄 Dispatching loadUserStreakData for userId:', userId)
       dispatch(loadUserStreakData(userId))
     }
-  }, [userId, user?.streakData, dispatch])
+  }, [userId, user?.streakData, user?.id, dispatch])
   
   const streakData = user?.streakData
   
@@ -63,12 +73,25 @@ export function useRecentActivityRedux(userId: string) {
   const dispatch = useAppDispatch()
   const { recentActivity, recentActivityLoading, recentActivityError, recentActivityLoaded } = useSelector((state: RootState) => state.auth)
   
-  // Cargar actividad si no se ha cargado antes
+  // 🔍 Debug logging mejorado
+  console.log('🔍 useRecentActivityRedux:', { 
+    userId, 
+    recentActivityLoaded, 
+    recentActivityLoading,
+    dataCount: recentActivity.length,
+    shouldLoad: userId && (!recentActivityLoaded || recentActivity.length === 0) && !recentActivityLoading
+  })
+  
+  // Cargar actividad si:
+  // 1. Hay userId
+  // 2. NO se ha cargado antes O no hay datos (para nuevo usuario)
+  // 3. NO se está cargando actualmente
   useEffect(() => {
-    if (userId && !recentActivityLoaded && !recentActivityLoading) {
+    if (userId && (!recentActivityLoaded || recentActivity.length === 0) && !recentActivityLoading) {
+      console.log('🔄 Dispatching loadRecentActivity for userId:', userId)
       dispatch(loadRecentActivity(userId))
     }
-  }, [userId, recentActivityLoaded, recentActivityLoading, dispatch])
+  }, [userId, recentActivityLoaded, recentActivityLoading, recentActivity.length, dispatch])
   
   return {
     data: recentActivity,

@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useUser, useSettings } from '@/store/hooks'
+import { useUser, useSettings, useAppDispatch } from '@/store/hooks'
+import { logout } from '@/store/slices/authSlice'
 import { UserCircle, Edit, Lock, LogOut, AlertTriangle, Phone, Cake } from 'lucide-react'
 import ChangePasswordForm from '@/components/client/ChangePasswordForm'
 import EditProfileForm from '@/components/client/EditProfileForm'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useRouter } from 'next/navigation'
-import { createClientBrowser } from '@/lib/supabase/client'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { useDeactivateAccount } from '@/hooks/queries/useUserQueries'
 import { useExtendedProfileData } from '@/hooks/use-extended-profile'
@@ -18,6 +18,7 @@ type BottomSheetType = 'edit' | 'password' | 'delete' | null
 export default function ProfileView() {
   const user = useUser()
   const settings = useSettings()
+  const dispatch = useAppDispatch()
   const router = useRouter()
   const systemSettings = useSystemSettings()
   const extendedData = useExtendedProfileData(user?.id)
@@ -69,8 +70,8 @@ export default function ProfileView() {
 
   const handleLogout = async () => {
     try {
-      const supabase = createClientBrowser()
-      await supabase.auth.signOut()
+      // 🔥 Usar Redux logout que limpia localStorage automáticamente
+      await dispatch(logout()).unwrap()
       router.push('/login')
     } catch (error) {
       console.error('Error al cerrar sesión:', error)
@@ -83,9 +84,8 @@ export default function ProfileView() {
     try {
       await deactivateAccount.mutateAsync(user.id)
       
-      // Cerrar sesión después del soft delete
-      const supabase = createClientBrowser()
-      await supabase.auth.signOut()
+      // 🔥 Usar Redux logout después del soft delete
+      await dispatch(logout()).unwrap()
       router.push('/login')
     } catch (error) {
       console.error('Error al eliminar cuenta:', error)

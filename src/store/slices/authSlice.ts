@@ -214,6 +214,14 @@ export const logout = createAsyncThunk(
   async () => {
     const supabase = createClientBrowser()
     await supabase.auth.signOut()
+    
+    // 🧹 Limpiar el localStorage de Redux Persist
+    try {
+      localStorage.removeItem('persist:fuego-rewards-v2')
+      console.log('🧹 localStorage cleared on logout')
+    } catch (error) {
+      console.warn('⚠️ Error clearing localStorage:', error)
+    }
   }
 )
 
@@ -515,13 +523,23 @@ const authSlice = createSlice({
         state.isAuthenticated = false
         state.isLoading = false
         state.error = null
-        // 🆕 Resetear datos de usuario al logout
+        // 🆕 Resetear TODOS los datos de usuario al logout
         state.recentActivity = []
         state.recentActivityLoading = false
         state.recentActivityError = null
         state.recentActivityLoaded = false
         state.streakPrizes = []
         state.streakPrizesLoaded = false
+        // 🔄 Resetear cupones también
+        state.coupons = {
+          active: [],
+          expired: [],
+          hasMoreActive: false,
+          hasMoreExpired: false,
+          loadingMore: false,
+          totalActive: 0,
+          totalExpired: 0
+        }
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false

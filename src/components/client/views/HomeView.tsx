@@ -65,6 +65,9 @@ export default function HomeView() {
         </p>
       </div>
 
+      {/* Sección de racha - Movida arriba para mayor prominencia */}
+      <StreakSectionWrapper />
+
       {/* Botón CTA principal */}
       <div 
         onClick={() => dispatch(setCurrentView('roulette'))}
@@ -131,9 +134,6 @@ export default function HomeView() {
           )}
         </div>*/}
       </div>
-
-      {/* Sección de racha - Usando componente original que funciona */}
-      <StreakSectionWrapper />
 
       {/* Actividad reciente - Componente funcional */}
       <div className="bg-white rounded-lg">

@@ -12,13 +12,14 @@ export function RecentActivity({ userId }: Props) {
   const { data: checkIns = [], isLoading, error } = useRecentActivityRedux(userId)
   const settings = useSettings()
 
-  // 🔍 Debug logging
+  // 🔍 Debug logging mejorado
   console.log('🔍 RecentActivity render:', { 
     userId, 
     checkInsCount: checkIns.length, 
     isLoading, 
     error,
-    latestCheckIn: checkIns[0]?.created_at
+    latestCheckIn: checkIns[0]?.created_at,
+    allCheckIns: checkIns.map(c => ({ id: c.id, date: c.check_in_date, created: c.created_at }))
   })
 
   const primaryColor = settings.company_theme_primary || '#D73527'

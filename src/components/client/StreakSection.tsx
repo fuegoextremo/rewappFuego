@@ -49,22 +49,9 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
     .sort((a, b) => (a.streak_threshold || 0) - (b.streak_threshold || 0))
 
   if (currentCount === 0) {
-    // 🎯 Buscar el próximo objetivo (premio activo) con imagen disponible
+    // 🎯 INICIO: Siempre mostrar imagen inicial (no del premio)
+    const image = settings?.streak_initial_image || defaultImages.initial
     const firstPrize = validPrizes[0]
-    
-    // Si el primer premio no tiene imagen, buscar el siguiente con imagen
-    let imageToUse = firstPrize?.image_url && firstPrize.image_url.trim() !== '' 
-      ? firstPrize.image_url 
-      : null
-    
-    // Si el primer premio no tiene imagen, buscar el siguiente premio con imagen
-    if (!imageToUse) {
-      const nextPrizeWithImage = validPrizes.find(p => p.image_url && p.image_url.trim() !== '')
-      imageToUse = nextPrizeWithImage?.image_url || null
-    }
-    
-    // Fallback final a configuración o emoji
-    const image = imageToUse || settings?.streak_initial_image || defaultImages.initial
     
     return {
       image,

@@ -61,19 +61,19 @@ export function useStreakPrizesRedux() {
 // 🔥 Hook que reemplaza useRecentActivity de React Query  
 export function useRecentActivityRedux(userId: string) {
   const dispatch = useAppDispatch()
-  const recentActivity = useSelector((state: RootState) => state.auth.recentActivity)
+  const { recentActivity, recentActivityLoading, recentActivityError, recentActivityLoaded } = useSelector((state: RootState) => state.auth)
   
-  // Cargar actividad si no está presente
+  // Cargar actividad si no se ha cargado antes
   useEffect(() => {
-    if (userId && recentActivity.length === 0) {
+    if (userId && !recentActivityLoaded && !recentActivityLoading) {
       dispatch(loadRecentActivity(userId))
     }
-  }, [userId, recentActivity.length, dispatch])
+  }, [userId, recentActivityLoaded, recentActivityLoading, dispatch])
   
   return {
     data: recentActivity,
-    isLoading: recentActivity.length === 0 && !!userId,
-    error: null // TODO: Manejar errores si es necesario
+    isLoading: recentActivityLoading,
+    error: recentActivityError
   }
 }
 

@@ -75,6 +75,9 @@ interface AuthState {
   
   // 🔥 NUEVOS: Datos que estaban en React Query
   recentActivity: CheckInRow[]
+  recentActivityLoading: boolean
+  recentActivityError: string | null
+  recentActivityLoaded: boolean  // 🆕 Flag para evitar loop infinito
   streakPrizes: StreakPrize[]
   streakPrizesLoaded: boolean
 }
@@ -97,6 +100,9 @@ const initialState: AuthState = {
   
   // 🔥 NUEVOS: Estados iniciales para datos que estaban en React Query
   recentActivity: [],
+  recentActivityLoading: false,
+  recentActivityError: null,
+  recentActivityLoaded: false,  // 🆕 Inicial: no se ha cargado
   streakPrizes: [],
   streakPrizesLoaded: false
 }
@@ -135,14 +141,14 @@ export const loadUserProfile = createAsyncThunk(
       .from('streaks')
       .select('current_count')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     // 4. Cargar spins disponibles desde user_spins
     const { data: spinsData } = await supabase
       .from('user_spins')
       .select('available_spins')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     const totalCheckins = checkinData?.length || 0
     const currentStreak = streakData?.current_count || 0
@@ -509,6 +515,13 @@ const authSlice = createSlice({
         state.isAuthenticated = false
         state.isLoading = false
         state.error = null
+        // 🆕 Resetear datos de usuario al logout
+        state.recentActivity = []
+        state.recentActivityLoading = false
+        state.recentActivityError = null
+        state.recentActivityLoaded = false
+        state.streakPrizes = []
+        state.streakPrizesLoaded = false
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false
@@ -518,14 +531,21 @@ const authSlice = createSlice({
       // 🔥 NUEVOS: Extra reducers para migración de React Query
       
       // Load Recent Activity
-      .addCase(loadRecentActivity.pending, () => {
-        // No mostrar loading global para estos datos
+      .addCase(loadRecentActivity.pending, (state) => {
+        state.recentActivityLoading = true
+        state.recentActivityError = null
       })
       .addCase(loadRecentActivity.fulfilled, (state, action) => {
         state.recentActivity = action.payload
+        state.recentActivityLoading = false
+        state.recentActivityError = null
+        state.recentActivityLoaded = true  // 🆕 Marcar como cargado
       })
       .addCase(loadRecentActivity.rejected, (state, action) => {
         console.error('Error loading recent activity:', action.error.message)
+        state.recentActivityLoading = false
+        state.recentActivityError = action.error.message || 'Error desconocido'
+        state.recentActivityLoaded = true  // 🆕 Marcar como cargado (aunque falló)
       })
       
       // Load Streak Prizes

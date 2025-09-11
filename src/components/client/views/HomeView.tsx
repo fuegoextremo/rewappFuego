@@ -148,13 +148,16 @@ export default function HomeView() {
       {/* Logo del establecimiento */}
       {settings.company_logo_url && (
         <div className="text-center py-6">
-          <Image 
-            src={settings.company_logo_url} 
-            alt={companyName}
-            width={64}
-            height={64}
-            className="mx-auto opacity-60"
-          />
+          <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+            <Image 
+              src={settings.company_logo_url} 
+              alt={companyName}
+              width={160}
+              height={160}
+              className="object-contain w-full h-full"
+              priority
+            />
+          </div>
         </div>
       )}
     </div>

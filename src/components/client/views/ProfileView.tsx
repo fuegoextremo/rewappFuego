@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useUser } from '@/store/hooks'
-import { UserCircle, Edit, Lock, Settings, LogOut, AlertTriangle, Phone, Cake } from 'lucide-react'
+import { useUser, useSettings } from '@/store/hooks'
+import { UserCircle, Edit, Lock, LogOut, AlertTriangle, Phone, Cake } from 'lucide-react'
 import ChangePasswordForm from '@/components/client/ChangePasswordForm'
 import EditProfileForm from '@/components/client/EditProfileForm'
 import BottomSheet from '@/components/ui/BottomSheet'
@@ -11,11 +11,13 @@ import { createClientBrowser } from '@/lib/supabase/client'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { useDeactivateAccount } from '@/hooks/queries/useUserQueries'
 import { useExtendedProfileData } from '@/hooks/use-extended-profile'
+import Image from 'next/image'
 
 type BottomSheetType = 'edit' | 'password' | 'delete' | null
 
 export default function ProfileView() {
   const user = useUser()
+  const settings = useSettings()
   const router = useRouter()
   const systemSettings = useSystemSettings()
   const extendedData = useExtendedProfileData(user?.id)
@@ -97,7 +99,7 @@ export default function ProfileView() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header con Avatar - 40% de la pantalla */}
       <div className="bg-white">
         <div className="max-w-md mx-auto px-6 py-12 text-center">
@@ -141,7 +143,8 @@ export default function ProfileView() {
         {/* Botón principal de edición */}
         <button
           onClick={() => setActiveSheet('edit')}
-          className="w-full flex items-center justify-center space-x-3 bg-blue-600 text-white py-4 px-6 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+          className="w-full flex items-center justify-center space-x-3 text-white py-4 px-6 rounded-xl hover:opacity-90 transition-all shadow-sm"
+          style={{ backgroundColor: primaryColor }}
         >
           <Edit className="w-5 h-5 antialiased" style={{ shapeRendering: 'geometricPrecision' }} />
           <span className="font-semibold">Editar mi perfil</span>
@@ -191,6 +194,22 @@ export default function ProfileView() {
             </div>
           </button>
         </div>
+
+        {/* Logo del establecimiento */}
+        {settings?.company_logo_url && (
+          <div className="text-center py-6">
+            <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+              <Image 
+                src={settings.company_logo_url} 
+                alt={settings.company_name || 'Logo de la empresa'}
+                width={160}
+                height={160}
+                className="object-contain w-full h-full"
+                priority
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Sheets */}

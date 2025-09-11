@@ -39,6 +39,7 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
         setTitle(json.prizeName ?? 'Premio')
         setCode(json.code ?? '')
       } catch (e) {
+        console.error('Error generando QR de cupón:', e)
         if (!mounted) return
         setErr('No se pudo generar el QR. Intenta de nuevo.')
       }

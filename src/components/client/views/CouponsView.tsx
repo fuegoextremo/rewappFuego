@@ -1,13 +1,15 @@
 'use client'
 import { useEffect } from 'react'
-import { useUser } from '@/store/hooks'
+import { useUser, useSettings } from '@/store/hooks'
 import { useCoupons } from '@/hooks/useCoupons'
 import SPAAnimatedCouponStack from '@/components/client/SPAAnimatedCouponStack'
 import SPAAnimatedExpiredCouponStack from '@/components/client/SPAAnimatedExpiredCouponStack'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 
 export default function CouponsView() {
   const user = useUser()
+  const settings = useSettings()
   const { 
     activeCoupons, 
     expiredCoupons, 
@@ -93,6 +95,22 @@ export default function CouponsView() {
             <span>Cargando cupones...</span>
           </div>
         </motion.div>
+      )}
+
+      {/* Logo del establecimiento */}
+      {settings?.company_logo_url && (
+        <div className="text-center py-6">
+          <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+            <Image 
+              src={settings.company_logo_url} 
+              alt={settings.company_name || 'Logo de la empresa'}
+              width={160}
+              height={160}
+              className="object-contain w-full h-full"
+              priority
+            />
+          </div>
+        </div>
       )}
     </motion.div>
   )

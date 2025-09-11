@@ -3,6 +3,7 @@
 import { useUser, useSettings } from '@/store/hooks'
 import { useRoulettePrizes, getRarityFromWeight } from '@/hooks/queries/useRouletteQueries'
 import SpinButton from '@/app/client/roulette/spin-button'
+import Image from 'next/image'
 
 export default function RouletteView() {
   const user = useUser()
@@ -135,6 +136,22 @@ export default function RouletteView() {
           </p>
         </div>*/}
       </div>
+
+      {/* Logo del establecimiento */}
+      {settings?.company_logo_url && (
+        <div className="text-center py-6">
+          <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+            <Image 
+              src={settings.company_logo_url} 
+              alt={settings.company_name || 'Logo de la empresa'}
+              width={160}
+              height={160}
+              className="object-contain w-full h-full"
+              priority
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

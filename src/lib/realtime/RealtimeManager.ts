@@ -405,7 +405,7 @@ export class RealtimeManager {
         } else if (source === 'roulette') {
           const prizeName = prizeInfo?.name || 'Premio de ruleta'
           NotificationService.notifyRoulettePrize(prizeName)
-          console.log('🔔 RealtimeManager: ✅ Toast cupón por RULETA mostrado')
+          console.log('🔔 RealtimeManager: ⏳ Toast cupón por RULETA programado (con delay de 5.5s)')
         } else {
           // Fallback para otros tipos
           const prizeName = prizeInfo?.name || 'Premio sorpresa'

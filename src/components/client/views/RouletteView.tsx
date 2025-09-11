@@ -85,7 +85,7 @@ export default function RouletteView() {
       </div>
 
       {/* 🏆 Lista de premios disponibles */}
-      <div className="space-y-4">
+      <div className="space-y-4 px-4">
         <h3 className="text-lg font-semibold text-gray-900">🎁 Premios Disponibles</h3>
         
         {prizes && prizes.length > 0 ? (
@@ -128,12 +128,12 @@ export default function RouletteView() {
           </div>
         )}
         
-        {/* 💡 Tip informativo */}
+        {/* 💡 Tip informativo 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-xs text-blue-700">
             <strong>💡 Tip:</strong> Los premios más raros tienen menor probabilidad, pero ¡siempre hay una oportunidad de ganar!
           </p>
-        </div>
+        </div>*/}
       </div>
     </div>
   )

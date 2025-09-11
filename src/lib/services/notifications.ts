@@ -145,10 +145,18 @@ export class NotificationService {
 
   /**
    * Notificación: Cupón ganado en la ruleta
+   * Con delay de 5.5s para sincronizar con animación RIVE
    */
   static notifyRoulettePrize(prizeName: string) {
-    const message = `🎲 ¡Ganaste en la ruleta: ${prizeName}!`
-    this.showSuccess(message, 5000, "🎲 Premio de Ruleta")
+    const RULETA_ANIMATION_DELAY = 5500 // 5.5s para coincidir con animación RIVE
+    
+    console.log('🎲 RealtimeManager: ⏳ Delay de notificación ruleta iniciado - esperando', RULETA_ANIMATION_DELAY, 'ms')
+    
+    setTimeout(() => {
+      const message = `🎲 ¡Ganaste en la ruleta: ${prizeName}!`
+      this.showSuccess(message, 5000, "🎲 Premio de Ruleta")
+      console.log('🎲 RealtimeManager: ✅ Toast cupón por RULETA mostrado (con delay)')
+    }, RULETA_ANIMATION_DELAY)
   }
 
   /**

@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<authentication_system_plan>
+  <metadata>
+    <title>Sistema de Autenticación Mejorado - RewardApp</title>
+    <date>2025-09-10</date>
+    <branch>feature/spa-architecture</branch>
+    <status>📋 Plan completo - Listo para implementar</status>
+    <version>1.0</version>
+  </metadata>
+
+  <objectives>
+    <primary>
+      <item>Registro completo con campos requeridos (email, teléfono, fecha nacimiento, contraseña)</item>
+      <item>Login mejorado con diseño corporativo y colores de preferencias</item>
+      <item>Autenticación social (Google y Facebook) con completar perfil</item>
+      <item>Sistema de recuperación de contraseña autoservicio</item>
+      <item>Páginas de términos y condiciones dinámicas desde preferencias</item>
+    </primary>
+    <secondary>
+      <item>Validaciones robustas del lado cliente y servidor</item>
+      <item>Experiencia de usuario fluida y responsive</item>
+      <item>Branding consistente con configuraciones del sistema</item>
+    </secondary>
+  </objectives>
+
+  <database_analysis>
+    <existing_structure>
+      <user_profiles_table>
+        <field name="id" type="UUID" notes="PK - Referencias auth.users(id)"/>
+        <field name="first_name" type="TEXT" notes="Nombre"/>
+        <field name="last_name" type="TEXT" notes="Apellido"/>
+        <field name="phone" type="TEXT" notes="📱 REQUERIDO EN REGISTRO"/>
+        <field name="birth_date" type="DATE" notes="📅 REQUERIDO EN REGISTRO"/>
+        <field name="role" type="TEXT" notes="Default: 'client'"/>
+        <field name="branch_id" type="UUID" notes="FK a branches - opcional"/>
+        <field name="unique_code" type="TEXT" notes="Código QR personal"/>
+        <field name="is_active" type="BOOLEAN" notes="Default: true"/>
+        <field name="created_at" type="TIMESTAMPTZ" notes="Automático"/>
+        <field name="updated_at" type="TIMESTAMPTZ" notes="Automático"/>
+      </user_profiles_table>
+
+      <auth_users_table>
+        <field name="email" type="TEXT" notes="📧 REQUERIDO - viene de Supabase Auth"/>
+        <field name="password" type="TEXT" notes="🔐 REQUERIDO - hasheado por Supabase"/>
+        <field name="email_confirmed_at" type="TIMESTAMPTZ" notes="Confirmación email"/>
+        <field name="raw_user_meta_data" type="JSONB" notes="Datos adicionales (OAuth)"/>
+      </auth_users_table>
+    </existing_structure>
+
+    <missing_fields>
+      <note>Todos los campos necesarios YA EXISTEN en la estructura actual</note>
+      <validation>✅ email - auth.users</validation>
+      <validation>✅ phone - user_profiles.phone</validation>
+      <validation>✅ birth_date - user_profiles.birth_date</validation>
+      <validation>✅ first_name - user_profiles.first_name</validation>
+      <validation>✅ last_name - user_profiles.last_name</validation>
+    </missing_fields>
+  </database_analysis>
+
+  <system_settings_integration>
+    <existing_settings>
+      <setting key="company_name" usage="Logo/branding en auth"/>
+      <setting key="company_logo_url" usage="Logo en páginas de auth"/>
+      <setting key="company_theme_primary" usage="Color botones principales"/>
+      <setting key="company_theme_secondary" usage="Color elementos secundarios"/>
+      <setting key="company_terms_conditions" usage="Contenido página términos"/>
+      <setting key="company_privacy_policy" usage="Contenido página privacidad"/>
+    </existing_settings>
+
+    <new_hook_needed>
+      <file>src/hooks/use-auth-branding.ts</file>
+      <purpose>Hook para obtener configuraciones de branding para auth</purpose>
+    </new_hook_needed>
+  </system_settings_integration>
+
+  <implementation_phases>
+    <phase number="1" status="🎯 MVP AUTH - IMPLEMENTAR PRIMERO" priority="ALTA">
+      <name>Páginas de Login y Registro Básicas</name>
+      <description>Login y registro mejorados con diseño corporativo</description>
+      
+      <deliverables>
+        <item>Página de login mejorada con branding dinámico</item>
+        <item>Página de registro completa con todos los campos</item>
+        <item>Hook de branding para auth (colors, logo, etc)</item>
+        <item>Validaciones del lado cliente</item>
+      </deliverables>
+
+      <file_structure>
+        <new_files>
+          <file>src/app/(auth)/login/page.tsx</file>
+          <file>src/app/(auth)/register/page.tsx</file>
+          <file>src/components/auth/LoginForm.tsx</file>
+          <file>src/components/auth/RegisterForm.tsx</file>
+          <file>src/components/auth/AuthLayout.tsx</file>
+          <file>src/hooks/use-auth-branding.ts</file>
+          <file>src/lib/validations/auth.ts</file>
+        </new_files>
+        
+        <modified_files>
+          <file>src/app/(auth)/layout.tsx</file>
+        </modified_files>
+      </file_structure>
+
+      <login_design_specs>
+        <layout>
+          <header>Logo empresa (desde system_settings)</header>
+          <title>Iniciar Sesión</title>
+          <social_buttons>
+            <button type="google">Continuar con Google</button>
+            <button type="facebook">Continuar con Facebook</button>
+          </social_buttons>
+          <divider>o</divider>
+          <form_section>
+            <input type="email" placeholder="Correo electrónico" required="true"/>
+            <input type="password" placeholder="Contraseña" required="true"/>
+            <button type="submit" color="company_theme_primary">Iniciar Sesión</button>
+          </form_section>
+          <forgot_password>
+            <link>¿Olvidaste tu contraseña?</link>
+          </forgot_password>
+          <register_link>
+            <text>¿Aún no tienes cuenta? </text>
+            <link>Regístrate</link>
+          </register_link>
+        </layout>
+
+        <responsive_design>
+          <mobile>Diseño vertical optimizado</mobile>
+          <tablet>Centrado con max-width</tablet>
+          <desktop>Centrado con sombras elegantes</desktop>
+        </responsive_design>
+      </login_design_specs>
+
+      <register_design_specs>
+        <layout>
+          <header>Logo empresa (desde system_settings)</header>
+          <title>Crear Cuenta</title>
+          <form_section>
+            <input type="text" name="first_name" placeholder="Nombre" required="true"/>
+            <input type="text" name="last_name" placeholder="Apellidos" required="true"/>
+            <input type="email" name="email" placeholder="Correo electrónico" required="true"/>
+            <input type="tel" name="phone" placeholder="WhatsApp (incluye código país)" required="true"/>
+            <input type="date" name="birth_date" placeholder="Fecha de nacimiento" required="true"/>
+            <input type="password" name="password" placeholder="Contraseña" required="true"/>
+            <input type="password" name="confirm_password" placeholder="Confirmar contraseña" required="true"/>
+            <checkbox name="accept_terms" required="true">
+              <text>Acepto los </text>
+              <link target="terms_page">términos y condiciones</link>
+            </checkbox>
+            <button type="submit" color="company_theme_primary">Crear Cuenta</button>
+          </form_section>
+          <login_link>
+            <text>¿Ya tienes cuenta? </text>
+            <link>Iniciar sesión</link>
+          </login_link>
+        </layout>
+
+        <validations>
+          <email>Formato email válido</email>
+          <phone>Formato internacional recomendado</phone>
+          <birth_date>Mayor de 13 años</birth_date>
+          <password>Mínimo 6 caracteres</password>
+          <confirm_password>Debe coincidir con contraseña</confirm_password>
+          <terms>Checkbox debe estar marcado</terms>
+        </validations>
+      </register_design_specs>
+    </phase>
+
+    <phase number="2" status="🔗 OAUTH SOCIAL" priority="ALTA">
+      <name>Autenticación Social (Google/Facebook)</name>
+      <description>OAuth con completar perfil para datos faltantes</description>
+      
+      <deliverables>
+        <item>Configuración OAuth Google y Facebook</item>
+        <item>Página de completar perfil post-OAuth</item>
+        <item>Lógica para detectar datos faltantes</item>
+        <item>Redirección automática a completar perfil</item>
+      </deliverables>
+
+      <file_structure>
+        <new_files>
+          <file>src/app/(auth)/complete-profile/page.tsx</file>
+          <file>src/components/auth/CompleteProfileForm.tsx</file>
+          <file>src/components/auth/SocialButton.tsx</file>
+          <file>src/lib/auth/social-handlers.ts</file>
+        </new_files>
+        
+        <modified_files>
+          <file>src/components/auth/LoginForm.tsx</file>
+          <file>src/lib/auth/auth-helpers.ts</file>
+        </modified_files>
+      </file_structure>
+
+      <oauth_flow>
+        <step order="1">Usuario hace clic en "Continuar con Google/Facebook"</step>
+        <step order="2">Supabase maneja OAuth y crea auth.users</step>
+        <step order="3">Trigger automático crea user_profiles con datos disponibles</step>
+        <step order="4">Sistema detecta si faltan phone o birth_date</step>
+        <step order="5">Redirige a /complete-profile si faltan datos</step>
+        <step order="6">Usuario completa información faltante</step>
+        <step order="7">Redirige a aplicación principal</step>
+      </oauth_flow>
+
+      <complete_profile_design>
+        <layout>
+          <header>Logo empresa</header>
+          <title>Completa tu perfil</title>
+          <welcome_message>¡Bienvenido {first_name}! Solo necesitamos algunos datos más</welcome_message>
+          <form_section>
+            <input type="tel" name="phone" placeholder="WhatsApp (incluye código país)" required="true"/>
+            <input type="date" name="birth_date" placeholder="Fecha de nacimiento" required="true"/>
+            <checkbox name="accept_terms" required="true">
+              <text>Acepto los </text>
+              <link target="terms_page">términos y condiciones</link>
+            </checkbox>
+            <button type="submit" color="company_theme_primary">Completar Registro</button>
+          </form_section>
+        </layout>
+      </complete_profile_design>
+    </phase>
+
+    <phase number="3" status="🔐 PASSWORD RESET" priority="MEDIA">
+      <name>Sistema de Recuperación de Contraseña</name>
+      <description>Autoservicio de reset de password con email</description>
+      
+      <deliverables>
+        <item>Página "¿Olvidaste tu contraseña?"</item>
+        <item>Página de nueva contraseña</item>
+        <item>Emails de recuperación personalizados</item>
+        <item>Validaciones de seguridad</item>
+      </deliverables>
+
+      <file_structure>
+        <new_files>
+          <file>src/app/(auth)/forgot-password/page.tsx</file>
+          <file>src/app/(auth)/reset-password/page.tsx</file>
+          <file>src/components/auth/ForgotPasswordForm.tsx</file>
+          <file>src/components/auth/ResetPasswordForm.tsx</file>
+        </new_files>
+      </file_structure>
+
+      <reset_flow>
+        <step order="1">Usuario hace clic en "¿Olvidaste tu contraseña?"</step>
+        <step order="2">Ingresa email en formulario</step>
+        <step order="3">Supabase envía email con link de reset</step>
+        <step order="4">Usuario hace clic en link del email</step>
+        <step order="5">Redirige a página reset-password con token</step>
+        <step order="6">Usuario ingresa nueva contraseña</step>
+        <step order="7">Password actualizado, redirige a login</step>
+      </reset_flow>
+    </phase>
+
+    <phase number="4" status="📄 LEGAL PAGES" priority="MEDIA">
+      <name>Páginas de Términos y Privacidad</name>
+      <description>Páginas dinámicas desde system_settings</description>
+      
+      <deliverables>
+        <item>Página de términos y condiciones</item>
+        <item>Página de política de privacidad</item>
+        <item>Layout legal consistente</item>
+        <item>Content dinámico desde base de datos</item>
+      </deliverables>
+
+      <file_structure>
+        <new_files>
+          <file>src/app/legal/terms/page.tsx</file>
+          <file>src/app/legal/privacy/page.tsx</file>
+          <file>src/app/legal/layout.tsx</file>
+          <file>src/components/legal/LegalLayout.tsx</file>
+        </new_files>
+      </file_structure>
+
+      <legal_design>
+        <layout>
+          <header>Logo empresa + navegación</header>
+          <content>
+            <title>Términos y Condiciones / Política de Privacidad</title>
+            <text source="system_settings">Contenido dinámico desde BD</text>
+            <last_updated>Última actualización: {updated_at}</last_updated>
+          </content>
+          <footer>Link de regreso a auth</footer>
+        </layout>
+      </legal_design>
+    </phase>
+
+    <phase number="5" status="✨ POLISH UX" priority="BAJA">
+      <name>Pulir Experiencia de Usuario</name>
+      <description>Mejoras de UX, animaciones y detalles</description>
+      
+      <deliverables>
+        <item>Loading states elegantes</item>
+        <item>Animaciones de transición</item>
+        <item>Mensajes de error contextual</item>
+        <item>Responsive perfection</item>
+        <item>Accesibilidad (a11y)</item>
+      </deliverables>
+    </phase>
+  </implementation_phases>
+
+  <technical_specifications>
+    <routing_structure>
+      <auth_routes>
+        <route path="/login" component="LoginPage"/>
+        <route path="/register" component="RegisterPage"/>
+        <route path="/complete-profile" component="CompleteProfilePage"/>
+        <route path="/forgot-password" component="ForgotPasswordPage"/>
+        <route path="/reset-password" component="ResetPasswordPage"/>
+      </auth_routes>
+      
+      <legal_routes>
+        <route path="/legal/terms" component="TermsPage"/>
+        <route path="/legal/privacy" component="PrivacyPage"/>
+      </legal_routes>
+    </routing_structure>
+
+    <form_validations>
+      <library>Zod + React Hook Form</library>
+      <client_side>Tiempo real con feedback visual</client_side>
+      <server_side>Validación en Supabase Edge Functions si necesario</server_side>
+      
+      <validation_rules>
+        <email>Email válido + único en sistema</email>
+        <phone>Formato internacional recomendado</phone>
+        <birth_date>Fecha válida + mayor de 13 años</birth_date>
+        <password>Mínimo 6 caracteres + seguridad básica</password>
+        <terms>Checkbox requerido</terms>
+      </validation_rules>
+    </form_validations>
+
+    <supabase_integration>
+      <auth_methods>
+        <email_password>Método principal</email_password>
+        <google_oauth>Provider OAuth configurado</google_oauth>
+        <facebook_oauth>Provider OAuth configurado</facebook_oauth>
+      </auth_methods>
+      
+      <user_creation_flow>
+        <step>auth.users creado por Supabase Auth</step>
+        <step>Trigger automático crea user_profiles</step>
+        <step>Datos OAuth en raw_user_meta_data</step>
+        <step>Sistema detecta campos faltantes</step>
+      </user_creation_flow>
+    </supabase_integration>
+
+    <styling_approach>
+      <framework>Tailwind CSS</framework>
+      <components>shadcn/ui components</components>
+      <branding>Dynamic colors from system_settings</branding>
+      <responsive>Mobile-first design</responsive>
+      
+      <color_implementation>
+        <primary_color>company_theme_primary para botones principales</primary_color>
+        <secondary_color>company_theme_secondary para elementos accent</secondary_color>
+        <logo>company_logo_url dinámico en header</logo>
+      </color_implementation>
+    </styling_approach>
+  </technical_specifications>
+
+  <user_experience_flows>
+    <new_user_registration>
+      <step order="1">Llega a /register</step>
+      <step order="2">Ve logo de empresa y branding</step>
+      <step order="3">Completa formulario completo</step>
+      <step order="4">Acepta términos (link a página legal)</step>
+      <step order="5">Crea cuenta exitosamente</step>
+      <step order="6">Recibe email de confirmación</step>
+      <step order="7">Confirma email y accede a app</step>
+    </new_user_registration>
+
+    <social_oauth_registration>
+      <step order="1">Llega a /login</step>
+      <step order="2">Hace clic "Continuar con Google/Facebook"</step>
+      <step order="3">OAuth process en ventana popup</step>
+      <step order="4">Sistema detecta que faltan phone/birth_date</step>
+      <step order="5">Redirige a /complete-profile</step>
+      <step order="6">Completa datos faltantes</step>
+      <step order="7">Acepta términos</step>
+      <step order="8">Accede a app principal</step>
+    </social_oauth_registration>
+
+    <existing_user_login>
+      <step order="1">Llega a /login</step>
+      <step order="2">Ingresa email/password O usa OAuth</step>
+      <step order="3">Autenticación exitosa</step>
+      <step order="4">Redirige directamente a app principal</step>
+    </existing_user_login>
+
+    <password_recovery>
+      <step order="1">Hace clic "¿Olvidaste tu contraseña?"</step>
+      <step order="2">Ingresa email en /forgot-password</step>
+      <step order="3">Recibe email con link de reset</step>
+      <step order="4">Hace clic en link</step>
+      <step order="5">Llega a /reset-password con token</step>
+      <step order="6">Ingresa nueva contraseña</step>
+      <step order="7">Password actualizado, regresa a /login</step>
+    </password_recovery>
+  </user_experience_flows>
+
+  <integration_with_existing_system>
+    <redux_store>
+      <note>Sistema auth debe actualizar Redux store tras login exitoso</note>
+      <user_profile>Cargar datos completos a userSlice</user_profile>
+      <auth_state>Mantener estado de autenticación</auth_state>
+    </redux_store>
+
+    <realtime_manager>
+      <note>Auth exitoso debe inicializar RealtimeManager</note>
+      <websocket_connection>Conectar tras login successful</websocket_connection>
+    </realtime_manager>
+
+    <routing_protection>
+      <public_routes>['/login', '/register', '/legal/*', '/forgot-password', '/reset-password']</public_routes>
+      <protected_routes>Todas las demás rutas requieren auth</protected_routes>
+      <auth_middleware>Middleware para proteger rutas automáticamente</auth_middleware>
+    </routing_protection>
+  </integration_with_existing_system>
+
+  <testing_strategy>
+    <unit_tests>
+      <validation_functions>Testear todas las validaciones</validation_functions>
+      <auth_helpers>Testear helpers de autenticación</auth_helpers>
+      <form_components>Testear submit y validaciones</form_components>
+    </unit_tests>
+
+    <integration_tests>
+      <registration_flow>Test completo de registro</registration_flow>
+      <login_flow>Test completo de login</login_flow>
+      <oauth_flow>Test de OAuth (con mocks)</oauth_flow>
+      <password_reset_flow>Test de recuperación de password</password_reset_flow>
+    </integration_tests>
+
+    <manual_testing>
+      <responsive_design>Probar en mobile, tablet, desktop</responsive_design>
+      <browser_compatibility>Chrome, Firefox, Safari</browser_compatibility>
+      <accessibility>Screen readers y navegación por teclado</accessibility>
+    </manual_testing>
+  </testing_strategy>
+
+  <deployment_considerations>
+    <environment_variables>
+      <supabase_url>Para conexión a Supabase</supabase_url>
+      <supabase_anon_key>Para auth del lado cliente</supabase_anon_key>
+      <google_oauth_client_id>Para OAuth Google</google_oauth_client_id>
+      <facebook_app_id>Para OAuth Facebook</facebook_app_id>
+    </environment_variables>
+
+    <supabase_configuration>
+      <auth_providers>Habilitar Google y Facebook en Supabase Dashboard</auth_providers>
+      <email_templates>Personalizar templates de confirmación y reset</email_templates>
+      <redirect_urls>Configurar URLs de redirect post-OAuth</redirect_urls>
+    </supabase_configuration>
+
+    <domain_configuration>
+      <auth_redirects>Configurar dominios permitidos para OAuth</auth_redirects>
+      <email_sender>Configurar dominio para emails de auth</email_sender>
+    </domain_configuration>
+  </deployment_considerations>
+
+  <success_metrics>
+    <functional_requirements>
+      <registration>✅ Usuario puede registrarse con todos los campos</registration>
+      <login>✅ Usuario puede hacer login con email/password</login>
+      <oauth>✅ OAuth Google/Facebook funciona + complete profile</oauth>
+      <password_reset>✅ Reset de password funciona end-to-end</password_reset>
+      <responsive>✅ Diseño funciona en mobile, tablet, desktop</responsive>
+      <branding>✅ Logo y colores dinámicos desde system_settings</branding>
+      <legal_pages>✅ Páginas de términos y privacidad accesibles</legal_pages>
+    </functional_requirements>
+
+    <user_experience>
+      <design_consistency>Branding coherente con resto de app</design_consistency>
+      <loading_states>Estados de carga claros y responsive</loading_states>
+      <error_handling>Mensajes de error útiles y contextuales</error_handling>
+      <form_validation>Validación en tiempo real sin fricciones</form_validation>
+    </user_experience>
+
+    <technical_metrics>
+      <performance>Páginas de auth cargan en &lt;2 segundos</performance>
+      <security>Todas las validaciones del lado servidor funcionan</security>
+      <accessibility>Cumple con estándares básicos de a11y</accessibility>
+      <browser_support>Funciona en Chrome, Firefox, Safari últimas versiones</browser_support>
+    </technical_metrics>
+  </success_metrics>
+
+  <future_enhancements>
+    <two_factor_auth>Autenticación de dos factores opcional</two_factor_auth>
+    <magic_links>Login sin contraseña via email links</magic_links>
+    <more_oauth_providers>Apple, GitHub, LinkedIn</more_oauth_providers>
+    <password_strength_meter>Indicador visual de fortaleza de contraseña</password_strength_meter>
+    <social_registration_skip>Permitir saltarse datos opcionales en OAuth</social_registration_skip>
+    <remember_me>Funcionalidad de "recordarme"</remember_me>
+    <session_management>Gestión avanzada de sesiones múltiples</session_management>
+  </future_enhancements>
+</authentication_system_plan>

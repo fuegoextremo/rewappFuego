@@ -1,11 +1,26 @@
+/**
+ * 📝 LOGIN FORM COMPONENT
+ * Formulario de login mejorado con diseño corporativo
+ * Incluye OAuth, validaciones y branding dinámico
+ */
+
 'use client'
 
 import { useState } from 'react'
-import { createClientBrowser } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import Link from 'next/link'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { useAuthBranding } from '@/hooks/use-auth-branding'
+import { SocialButton } from './SocialButton'
+
+import { createClientBrowser } from '@/lib/supabase/client'
+import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 
 // Función para obtener el destino según el rol
 function getRoleDestination(role: string): string {
@@ -20,107 +35,171 @@ function getRoleDestination(role: string): string {
 }
 
 export default function LoginForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClientBrowser()
   const { toast } = useToast()
+  const { primaryColor } = useAuthBranding()
+  const [isLoading, setIsLoading] = useState(false)
+  const supabase = createClientBrowser()
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  })
+
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       })
 
-      if (error) throw error
+      if (authError) {
+        throw authError
+      }
 
-      // Obtener el perfil del usuario para determinar la redirección
-      const { data: profile } = await supabase
+      if (!authData.user) {
+        throw new Error('No se pudo obtener información del usuario')
+      }
+
+      // Obtener perfil del usuario para determinar redirección
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('role, first_name')
-        .eq('id', data.user.id)
+        .select('role')
+        .eq('id', authData.user.id)
         .single()
 
-      const destination = getRoleDestination(profile?.role || 'client')
-      const userName = profile?.first_name || 'Usuario'
+      if (profileError) {
+        console.warn('Error obteniendo perfil:', profileError)
+        // Si no puede obtener el perfil, asume que es cliente
+        router.push('/client')
+        return
+      }
 
-      // Mostrar toast de éxito
+      // Redireccionar según el rol
+      const destination = getRoleDestination(profile.role || 'client')
+      router.push(destination)
+
       toast({
-        title: `¡Bienvenido ${userName}!`,
-        description: "Acceso exitoso, redirigiendo a tu panel...",
-        duration: 2000,
+        title: "¡Bienvenido!",
+        description: "Has iniciado sesión exitosamente.",
       })
-
-      // Esperar un poco para que el usuario vea el toast antes de redirigir
-      setTimeout(() => {
-        router.push(destination)
-        router.refresh()
-      }, 1500)
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al iniciar sesión'
-      setError(errorMessage)
+      console.error('Error en login:', error)
+      
+      let message = 'Error desconocido al iniciar sesión'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid login credentials')) {
+          message = 'Email o contraseña incorrectos'
+        } else if (error.message.includes('Email not confirmed')) {
+          message = 'Confirma tu email antes de iniciar sesión'
+        } else {
+          message = error.message
+        }
+      }
+
       toast({
         title: "Error al iniciar sesión",
-        description: errorMessage || 'Verifica tus credenciales e intenta nuevamente',
+        description: message,
         variant: "destructive",
-        duration: 4000,
       })
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleLogin} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-          {error}
+    <div className="space-y-6">
+      {/* Botones de OAuth */}
+      <div className="space-y-3">
+        <SocialButton provider="google" disabled={isLoading} />
+        <SocialButton provider="facebook" disabled={isLoading} />
+      </div>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-gray-300" />
         </div>
-      )}
-      
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email
-        </label>
-        <Input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="mt-1"
-        />
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">o</span>
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          Contraseña
-        </label>
-        <Input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="mt-1"
-        />
-      </div>
+      {/* Formulario de email/password */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div>
+          <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+            Correo electrónico
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            {...register('email')}
+            className="mt-1"
+            placeholder="tu@ejemplo.com"
+          />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          )}
+        </div>
 
-      <Button
-        type="submit"
-        disabled={loading}
-        className="w-full"
-      >
-        {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-      </Button>
-    </form>
+        <div>
+          <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+            Contraseña
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            {...register('password')}
+            className="mt-1"
+            placeholder="••••••••"
+          />
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
+
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="w-full py-3 text-white transition-colors"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+        </Button>
+      </form>
+
+      {/* Link de registro */}
+      <div className="text-center">
+        <p className="text-sm text-gray-600">
+          ¿Aún no tienes cuenta?{' '}
+          <Link
+            href="/register"
+            className="font-medium transition-colors"
+            style={{ color: primaryColor }}
+          >
+            Regístrate
+          </Link>
+        </p>
+      </div>
+    </div>
   )
 }

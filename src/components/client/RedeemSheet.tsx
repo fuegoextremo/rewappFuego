@@ -53,9 +53,10 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
       onClose={onClose}
       title={title}
     >
-      <div className="px-6 pb-6">
-        <div className="text-center space-y-1 mb-6">
+      <div className="px-6 pb-6 ">
+        <div className="text-center space-y-1 m-6"> 
           <p className="text-xs tracking-wider text-gray-500">RECLAMANDO</p>
+          <h3>{title}</h3> 
           {code && <p className="text-sm text-gray-500">#{code}</p>}
         </div>
 

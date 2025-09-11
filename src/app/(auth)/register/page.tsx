@@ -1,22 +1,19 @@
 /**
- * 📝 LOGIN PAGE
- * Página de inicio de sesión con nuevo diseño corporativo
+ * 📝 REGISTER PAGE
+ * Página de registro con nuevo diseño corporativo
  */
 
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createClientBrowser } from '@/lib/supabase/client'
-import { useToast } from '@/hooks/use-toast'
 
 import { AuthLayout } from '@/components/auth/AuthLayout'
-import LoginForm from '@/components/auth/LoginForm'
+import RegisterForm from '@/components/auth/RegisterForm'
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const { toast } = useToast()
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const supabase = createClientBrowser()
 
@@ -24,16 +21,6 @@ export default function LoginPage() {
   useEffect(() => {
     const checkUser = async () => {
       try {
-        // Mostrar mensaje si viene de registro
-        const message = searchParams.get('message')
-        if (message) {
-          toast({
-            title: "Información",
-            description: message,
-            variant: "default",
-          })
-        }
-
         const { data: { user } } = await supabase.auth.getUser()
         
         if (user) {
@@ -59,7 +46,7 @@ export default function LoginPage() {
     }
 
     checkUser()
-  }, [router, supabase, searchParams, toast])
+  }, [router, supabase])
 
   // Mostrar loading mientras verifica auth
   if (isCheckingAuth) {
@@ -72,10 +59,10 @@ export default function LoginPage() {
 
   return (
     <AuthLayout 
-      title="Iniciar Sesión"
-      subtitle="Accede a tu cuenta para continuar"
+      title="Crear Cuenta"
+      subtitle="Únete a nosotros y comienza a ganar recompensas"
     >
-      <LoginForm />
+      <RegisterForm />
     </AuthLayout>
   )
 }

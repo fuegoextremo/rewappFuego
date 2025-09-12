@@ -145,7 +145,7 @@ export class NotificationService {
    */
   static notifyManualCoupon(prizeName: string) {
     const message = `🎁 ¡Recibiste un premio: ${prizeName}!`
-    this.showSuccess(message, 5000, "🎁 Regalo del Admin")
+    this.showSuccess(message, 5000, "🎁 Recibiste un Regalo")
   }
 
   /**

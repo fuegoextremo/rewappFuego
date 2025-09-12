@@ -91,7 +91,7 @@ export default function AnimatedCouponStack({
           transition={{ delay: 0.2 }}
           whileTap={{ scale: 0.95 }}
         >
-          {isExpanded ? '📚 Apilar' : '📋 Ver todos'}
+          {isExpanded ? 'Apilar' : 'Ver todos'}
         </motion.button>
       </div>
       

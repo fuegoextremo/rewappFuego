@@ -30,6 +30,8 @@ export const queryKeys = {
     checkins: (userId: string) => ['user', 'checkins', userId],
     coupons: (userId: string) => ['user', 'coupons', userId],
     stats: (userId: string) => ['user', 'stats', userId],
+    streak: (userId: string) => ['user', 'streak', userId],
+    spins: (userId: string) => ['user', 'spins', userId],
   },
   // Sistema
   system: {
@@ -39,10 +41,20 @@ export const queryKeys = {
   },
   // Dinámicos (con filtros)
   checkins: {
-    list: (filters: Record<string, any>) => ['checkins', 'list', filters],
+    list: (filters: Record<string, unknown>) => ['checkins', 'list', filters],
   },
   coupons: {
     available: (userId: string) => ['coupons', 'available', userId],
     used: (userId: string) => ['coupons', 'used', userId],
+  },
+  // Streaks
+  streaks: {
+    prizes: ['streaks', 'prizes'],
+    settings: ['streaks', 'settings'],
+  },
+  // Roulette
+  roulette: {
+    prizes: ['roulette', 'prizes'],
+    spins: (userId: string) => ['roulette', 'spins', userId],
   },
 } as const

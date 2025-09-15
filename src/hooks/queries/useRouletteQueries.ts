@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
+import { queryKeys } from '@/lib/queryClient'
 
 // 🎰 Tipo para premios de ruleta
 export type RoulettePrize = {
@@ -18,7 +19,7 @@ export type RoulettePrize = {
 //  Hook para premios de ruleta disponibles
 export function useRoulettePrizes() {
   return useQuery({
-    queryKey: ['roulette', 'prizes'],
+    queryKey: queryKeys.roulette.prizes,
     queryFn: async (): Promise<RoulettePrize[]> => {
       const supabase = createClientBrowser()
       

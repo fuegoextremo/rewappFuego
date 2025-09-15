@@ -6,6 +6,53 @@ import type { CouponRow } from '@/store/slices/authSlice'
 // 🔔 NUEVO: Importar NotificationService de forma SEGURA
 import NotificationService from '@/lib/services/notifications'
 
+// 🚀 FASE 1.3: Sistema de logging estructurado
+type LogLevel = 'info' | 'warn' | 'error' | 'debug'
+
+interface LogEntry {
+  timestamp: string
+  level: LogLevel
+  context: string
+  message: string
+  data?: Record<string, unknown>
+}
+
+class RealtimeLogger {
+  private static formatTimestamp(): string {
+    return new Date().toISOString()
+  }
+
+  private static formatLogEntry(level: LogLevel, context: string, message: string, data?: Record<string, unknown>): LogEntry {
+    return {
+      timestamp: this.formatTimestamp(),
+      level,
+      context,
+      message,
+      data
+    }
+  }
+
+  static info(context: string, message: string, data?: Record<string, unknown>) {
+    const entry = this.formatLogEntry('info', context, message, data)
+    console.log(`🔵 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+  }
+
+  static warn(context: string, message: string, data?: Record<string, unknown>) {
+    const entry = this.formatLogEntry('warn', context, message, data)
+    console.warn(`🟡 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+  }
+
+  static error(context: string, message: string, data?: Record<string, unknown>) {
+    const entry = this.formatLogEntry('error', context, message, data)
+    console.error(`🔴 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+  }
+
+  static debug(context: string, message: string, data?: Record<string, unknown>) {
+    const entry = this.formatLogEntry('debug', context, message, data)
+    console.log(`🔍 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+  }
+}
+
 // 🎯 Tipos para los datos específicos
 interface CheckinData {
   id: string
@@ -62,10 +109,17 @@ export class RealtimeManager {
   private reduxDispatch: AppDispatch | null = null
   private isConfigured: boolean = false
   private recentCheckinTimestamp: number | null = null // 🔔 NUEVO: Para detectar giros de admin vs check-in
+  
+  // 🚀 FASE 1.2: Page Visibility API
+  private isPaused: boolean = false
+  private visibilityListener: (() => void) | null = null
 
   private constructor() {
     // Cliente Supabase compartido - usa el mismo que el resto de la app
     this.supabaseClient = createClientBrowser()
+    
+    // 🚀 FASE 1.2: Inicializar Page Visibility API
+    this.initializePageVisibility()
   }
 
   static getInstance(): RealtimeManager {
@@ -90,6 +144,7 @@ export class RealtimeManager {
   // Conectar para un usuario específico
   connect(userId: string) {
     if (this.currentUserId === userId && this.channel) {
+      RealtimeLogger.debug('connect', 'Usuario ya conectado, evitando reconexión', { userId })
       return
     }
 
@@ -97,6 +152,7 @@ export class RealtimeManager {
     this.disconnect()
 
     this.currentUserId = userId
+    RealtimeLogger.info('connect', 'Iniciando conexión realtime unificada', { userId })
 
     // 🚀 OPTIMIZACIÓN FASE 1.1: Conexión unificada en lugar de 4 separadas
     this.channel = this.supabaseClient
@@ -113,7 +169,7 @@ export class RealtimeManager {
         schema: 'public',
         table: 'check_ins'
       }, (payload: RealtimePayload) => {
-        console.log('🔍 RealtimeManager: Raw checkin event recibido:', payload)
+        RealtimeLogger.debug('check-ins', 'Raw checkin event recibido', { payload })
         this.handleCheckinChange(payload)
       })
       .on('postgres_changes', {
@@ -133,7 +189,11 @@ export class RealtimeManager {
       })
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
-          console.log('🚀 RealtimeManager: Conexión unificada establecida para usuario:', userId)
+          RealtimeLogger.info('connect', 'Conexión unificada establecida exitosamente', { userId })
+        } else if (status === 'CHANNEL_ERROR') {
+          RealtimeLogger.error('connect', 'Error en canal realtime', { userId, status })
+        } else {
+          RealtimeLogger.debug('connect', 'Estado de canal', { userId, status })
         }
       })
   }
@@ -141,11 +201,16 @@ export class RealtimeManager {
   // Desconectar
   disconnect() {
     if (this.channel) {
-      console.log('🔌 RealtimeManager desconectando...')
+      RealtimeLogger.info('disconnect', 'Desconectando canal realtime', { userId: this.currentUserId })
       this.supabaseClient.removeChannel(this.channel)
       this.channel = null
       this.currentUserId = null
     }
+    
+    // 🚀 IMPORTANTE: NO hacer cleanup de Page Visibility aquí
+    // ❌ this.cleanupPageVisibility() - Se mantiene activo para el singleton
+    // 🔄 Solo reset el estado de pausa
+    this.isPaused = false
   }
 
   // Handlers para eventos específicos
@@ -154,14 +219,19 @@ export class RealtimeManager {
       const newSpins = payload.new.available_spins as number
       const oldSpins = (payload.old?.available_spins as number) || 0
       
-      console.log('🎰 RealtimeManager: user_spins cambió:', { oldSpins, newSpins, diff: newSpins - oldSpins })
+      RealtimeLogger.info('user-spins', 'Cambio en spins detectado', { 
+        oldSpins, 
+        newSpins, 
+        diff: newSpins - oldSpins,
+        userId: this.currentUserId 
+      })
       
       // ✨ Actualizar solo Redux - fuente única de verdad para giros
       if (this.reduxDispatch) {
         // Importamos dinámicamente para evitar dependencias circulares
         import('@/store/slices/authSlice').then(({ updateAvailableSpins }) => {
           this.reduxDispatch!(updateAvailableSpins(newSpins))
-          console.log('🔥 RealtimeManager: ✅ Giros actualizados a:', newSpins)
+          RealtimeLogger.info('user-spins', 'Redux store actualizado exitosamente', { newSpins })
         })
       }
 
@@ -176,12 +246,12 @@ export class RealtimeManager {
             // Solo mostrar si no hubo check-in muy reciente (detectar admin)
             if (!this.recentCheckinTimestamp || Date.now() - this.recentCheckinTimestamp > 2000) {
               NotificationService.notifyManualSpins(spinsAdded)
-              console.log('🔔 RealtimeManager: ✅ Toast giros de ADMIN mostrado')
+              RealtimeLogger.info('notifications', 'Toast giros admin mostrado exitosamente')
             }
           }, 1000) // Delay para evitar solapamiento
         }
       } catch (error) {
-        console.warn('🔔 RealtimeManager: Error en toast giros admin:', error)
+        RealtimeLogger.warn('notifications', 'Error en toast giros admin', { error })
         // NO ROMPE NADA - continúa normalmente
       }
 
@@ -194,9 +264,12 @@ export class RealtimeManager {
   }
 
   private handleCheckinChange(payload: RealtimePayload) {
-    console.log('🔍 RealtimeManager: handleCheckinChange llamado con:', payload)
+    RealtimeLogger.debug('check-ins', 'handleCheckinChange llamado', { payload })
     if (payload.new && payload.new.user_id === this.currentUserId) {
-      console.log('🔥 RealtimeManager: Checkin payload completo:', payload.new)
+      RealtimeLogger.info('check-ins', 'Nuevo checkin detectado para usuario actual', { 
+        payload: payload.new,
+        userId: this.currentUserId 
+      })
       
       // 🔔 NUEVO: Marcar timestamp de check-in para diferenciar de giros de admin
       this.recentCheckinTimestamp = Date.now()
@@ -209,10 +282,10 @@ export class RealtimeManager {
         }) => {
           // Incrementar visitas totales
           this.reduxDispatch!(incrementTotalCheckins())
-          console.log('🔥 RealtimeManager: ✅ Incrementando total_checkins')
+          RealtimeLogger.info('check-ins', 'Incrementando total_checkins en Redux')
           
           // 🔄 NUEVO: Los giros se actualizan solo via user_spins (evita race condition)
-          console.log('🔥 RealtimeManager: ⏸️ Giros se actualizarán via evento user_spins')
+          RealtimeLogger.debug('check-ins', 'Giros se actualizarán via evento user_spins')
           
           // 🔥 NUEVO: Agregar el check-in a recentActivity en Redux
           const newCheckin = {
@@ -449,6 +522,69 @@ export class RealtimeManager {
 
   getCurrentUserId(): string | null {
     return this.currentUserId
+  }
+
+  // 🚀 FASE 1.2: Page Visibility API Implementation
+  private initializePageVisibility() {
+    if (typeof window === 'undefined') return // Solo en cliente
+    
+    // 🚀 Evitar múltiples listeners - solo si no existe ya
+    if (this.visibilityListener) {
+      console.log('⚠️ Page Visibility ya inicializado - evitando duplicados')
+      return
+    }
+    
+    this.visibilityListener = () => {
+      if (document.hidden) {
+        console.log('🌙 PESTAÑA OCULTA - RealtimeManager pausando...')
+        this.pause()
+      } else {
+        console.log('📱 PESTAÑA VISIBLE - RealtimeManager resumiendo...')
+        this.resume()
+      }
+    }
+    
+    document.addEventListener('visibilitychange', this.visibilityListener)
+    console.log('✅ Page Visibility API inicializado - Cambiar de pestaña para ver logs')
+    RealtimeLogger.info('page-visibility', 'Page Visibility API inicializado exitosamente')
+  }
+  
+  private pause() {
+    if (this.isPaused || !this.channel) return
+    
+    console.log('🔴 PAUSE: Conexión realtime pausada por Page Visibility API')
+    RealtimeLogger.info('page-visibility', 'Pausando conexión realtime (pestaña oculta)', { 
+      userId: this.currentUserId 
+    })
+    this.isPaused = true
+    
+    // Pausar conexión manteniendo referencia para resume
+    this.supabaseClient.removeChannel(this.channel)
+    console.log('📡 Canal Supabase removido - conservando memoria')
+    // No limpiar this.channel para poder resumir
+  }
+  
+  private resume() {
+    if (!this.isPaused || !this.currentUserId) return
+    
+    console.log('🟢 RESUME: Conexión realtime resumida por Page Visibility API')
+    RealtimeLogger.info('page-visibility', 'Resumiendo conexión realtime (pestaña visible)', { 
+      userId: this.currentUserId 
+    })
+    this.isPaused = false
+    
+    // Reconectar con el mismo userId
+    this.connect(this.currentUserId)
+    console.log('🔄 Reconexión completa')
+  }
+  
+  // Cleanup para evitar memory leaks
+  private cleanupPageVisibility() {
+    if (this.visibilityListener && typeof window !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.visibilityListener)
+      this.visibilityListener = null
+      RealtimeLogger.debug('page-visibility', 'Page Visibility listener removido correctamente')
+    }
   }
 }
 

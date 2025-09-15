@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
+import { queryKeys } from '@/lib/queryClient'
 
 // 🎯 Interfaces para tipado correcto
 interface StreakPrize {
@@ -22,7 +23,7 @@ interface SystemSettings {
 // 🎯 Hook optimizado para datos de racha con cache reactivo
 export function useUserStreak(userId: string) {
   return useQuery({
-    queryKey: ['user', 'streak', userId],
+    queryKey: queryKeys.user.streak(userId),
     queryFn: async () => {
       const supabase = createClientBrowser()
       
@@ -50,7 +51,7 @@ export function useUserStreak(userId: string) {
 // 🎯 Hook para premios de racha (más estáticos)
 export function useStreakPrizes() {
   return useQuery({
-    queryKey: ['streak', 'prizes'],
+    queryKey: queryKeys.streaks.prizes,
     queryFn: async () => {
       const supabase = createClientBrowser()
       

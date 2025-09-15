@@ -3,6 +3,7 @@
 import { Suspense, lazy, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queryClient'
 import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
@@ -45,7 +46,7 @@ export function AppShell({ children }: AppShellProps) {
   const [pullDistance, setPullDistance] = useState(0)
   const [startY, setStartY] = useState<number | null>(null) // 🎯 Trackear inicio del touch
 
-  // 🔄 Pull-to-refresh logic
+  // 🔄 Pull-to-refresh logic optimizado - solo queries NON-realtime
   const handleRefresh = useCallback(async () => {
     if (!user?.id || isRefreshing) return
     
@@ -53,23 +54,31 @@ export function AppShell({ children }: AppShellProps) {
     dispatch(setRefreshing(true))
     
     try {
-      console.log('🔄 Iniciando pull-to-refresh...')
+      console.log('🔄 Iniciando pull-to-refresh optimizado...')
       
-      // Invalidar consultas específicas que pueden causar problemas
+      // 🚀 FASE 2.2: Solo invalidar datos que NO vienen por Realtime
+      // Datos estáticos/semi-estáticos que necesitan refresh manual
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['streak'] }),
-        queryClient.invalidateQueries({ queryKey: ['prizes'] }),
-        queryClient.invalidateQueries({ queryKey: ['settings'] }),
-        queryClient.invalidateQueries({ queryKey: ['user'] })
+        // Sistema (settings, branches, premios) - cambian raramente
+        queryClient.invalidateQueries({ queryKey: queryKeys.system.settings }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.system.branches }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.system.prizes }),
+        
+        // Premios de streak y roulette - semi-estáticos
+        queryClient.invalidateQueries({ queryKey: queryKeys.streaks.prizes }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.roulette.prizes }),
+        
+        // Checkins históricos - datos de consulta, no realtime
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.checkins(user.id) }),
       ])
       
-      // Disparar evento para que todos los componentes se refresquen
-      window.dispatchEvent(new CustomEvent('app-refresh'))
+      // 📝 NOTA: NO invalidamos datos que vienen por RealtimeManager:
+      // ❌ user.stats (viene por postgres_changes)
+      // ❌ user_spins (viene por postgres_changes) 
+      // ❌ coupons activos (vienen por postgres_changes)
+      // ❌ user.profile (se actualiza por mutations específicas)
       
-      // Esperar un momento para que los componentes procesen
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      console.log('✅ Pull-to-refresh completado')
+      console.log('✅ Pull-to-refresh completado - solo datos estáticos refrescados')
     } catch (error) {
       console.error('❌ Error en pull-to-refresh:', error)
     } finally {

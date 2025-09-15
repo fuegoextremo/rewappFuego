@@ -22,7 +22,7 @@ export type CouponRow = {
 
 export function useUserCoupons(userId: string) {
   return useQuery({
-    queryKey: ['user', 'coupons', userId],
+    queryKey: queryKeys.user.coupons(userId),
     queryFn: async (): Promise<CouponRow[]> => {
       const supabase = createClientBrowser()
       
@@ -47,7 +47,7 @@ export function useUserCoupons(userId: string) {
 
 export function useAvailableCoupons(userId: string) {
   return useQuery({
-    queryKey: ['user', 'coupons', 'available', userId],
+    queryKey: queryKeys.coupons.available(userId),
     queryFn: async (): Promise<CouponRow[]> => {
       const supabase = createClientBrowser()
       
@@ -73,7 +73,7 @@ export function useAvailableCoupons(userId: string) {
 
 export function useUsedCoupons(userId: string) {
   return useQuery({
-    queryKey: ['user', 'coupons', 'used', userId],
+    queryKey: queryKeys.coupons.used(userId),
     queryFn: async (): Promise<CouponRow[]> => {
       const supabase = createClientBrowser()
       
@@ -119,15 +119,15 @@ export function useUseCoupon() {
       return data?.[0]
     },
     onSuccess: (data, variables) => {
-      // 🔄 Actualizar cache con nuevos queryKeys modernos
+      // 🔄 Actualizar cache con queryKeys centralizados
       queryClient.invalidateQueries({ 
-        queryKey: ['user', 'coupons', variables.userId] 
+        queryKey: queryKeys.user.coupons(variables.userId)
       })
       queryClient.invalidateQueries({ 
-        queryKey: ['user', 'coupons', 'available', variables.userId] 
+        queryKey: queryKeys.coupons.available(variables.userId)
       })
       queryClient.invalidateQueries({ 
-        queryKey: ['user', 'coupons', 'used', variables.userId] 
+        queryKey: queryKeys.coupons.used(variables.userId)
       })
       
       console.log('✅ Cupón usado exitosamente')
@@ -144,13 +144,13 @@ export function useRefreshCoupons() {
 
   return (userId: string) => {
     queryClient.invalidateQueries({ 
-      queryKey: ['user', 'coupons', userId] 
+      queryKey: queryKeys.user.coupons(userId)
     })
     queryClient.invalidateQueries({ 
-      queryKey: ['user', 'coupons', 'available', userId] 
+      queryKey: queryKeys.coupons.available(userId)
     })
     queryClient.invalidateQueries({ 
-      queryKey: ['user', 'coupons', 'used', userId] 
+      queryKey: queryKeys.coupons.used(userId)
     })
   }
 }

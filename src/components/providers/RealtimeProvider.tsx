@@ -1,11 +1,17 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react'
+import { createContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAppDispatch, useUser } from '@/store/hooks'
 import { loadUserProfile, updateAvailableSpins } from '@/store/slices/authSlice'
+import { queryKeys } from '@/lib/queryClient' // 🚀 FASE 3.3: QueryKeys modernos
+import type { RealtimePostgresChangesPayload, RealtimeChannel } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
+
+// Tipo para el row de user_spins
+type UserSpinsRow = Database['public']['Tables']['user_spins']['Row']
 
 interface RealtimeContextType {
   isConnected: boolean
@@ -27,12 +33,12 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
   const userId = user?.id
   
   // 🎯 Callbacks estables para evitar re-renders
-  const stableToast = useCallback((params: any) => toast(params), [toast])
-  const stableDispatch = useCallback((action: any) => dispatch(action), [dispatch])
+  const stableToast = useCallback((params: Parameters<typeof toast>[0]) => toast(params), [toast])
+  const stableDispatch = useCallback((action: ReturnType<typeof loadUserProfile> | ReturnType<typeof updateAvailableSpins>) => dispatch(action), [dispatch])
   
   // 🎯 Estado mínimo y limpio
   const [isConnected, setIsConnected] = useState(false)
-  const channelRef = useRef<any>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
   const connectedUserIdRef = useRef<string | null>(null)
 
   // ✨ SINGLE useEffect - simplificado al máximo
@@ -97,14 +103,20 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
             duration: 3000,
           })
 
-          // ✨ Invalidar queries relevantes
-          queryClient.invalidateQueries({ queryKey: ['user', 'streak', userId] })
-          queryClient.invalidateQueries({ queryKey: ['streak', 'stage'] })
-          queryClient.invalidateQueries({ queryKey: ['user', userId, 'stats'] })
-          queryClient.invalidateQueries({ queryKey: ['user', 'profile', userId] })
-          queryClient.invalidateQueries({ queryKey: ['user', 'spins', userId] }) // ✨ Giros de ruleta
-          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] }) // ✨ Cupones del usuario
-          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] }) // ✨ Cupones disponibles
+          // 🚀 FASE 3.3: setQueryData optimizado en lugar de 8+ invalidaciones
+          // Solo actualizar datos que NO vienen por Realtime para evitar redundancia
+          
+          // ✅ Check-ins history: Query (porque es lista histórica)
+          queryClient.invalidateQueries({ queryKey: queryKeys.user.checkins(userId) })
+          
+          // ❌ ELIMINADO: invalidaciones redundantes para datos Realtime
+          // ❌ ['user', 'streak', userId] → Viene por RealtimeManager
+          // ❌ ['user', userId, 'stats'] → Viene por RealtimeManager  
+          // ❌ ['user', 'spins', userId] → Viene por RealtimeManager
+          // ❌ ['user', 'coupons', userId] → Viene por RealtimeManager
+          // ❌ ['user', 'coupons', 'available', userId] → Viene por RealtimeManager
+          
+          console.log('🔴 RealtimeProvider: Check-in - solo invalidando datos estáticos')
           stableDispatch(loadUserProfile(userId))
           
           // ✨ Event para otros componentes
@@ -129,9 +141,12 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
             duration: 4000,
           })
 
-          // ✨ Invalidar todos los queries de cupones
-          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] })
-          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] })
+          // 🚀 FASE 3.3: RealtimeManager ya maneja cupones via postgres_changes
+          // ❌ ELIMINADO: invalidaciones redundantes
+          // ❌ ['user', 'coupons', userId] → Viene por RealtimeManager
+          // ❌ ['user', 'coupons', 'available', userId] → Viene por RealtimeManager
+          
+          console.log('🔴 RealtimeProvider: Nuevo cupón - RealtimeManager se encarga de updates')
           
           // ✨ Event para otros componentes
           window.dispatchEvent(new CustomEvent('user-data-updated', { 
@@ -149,10 +164,13 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         if (payload.new && payload.new.user_id === userId && payload.new.is_redeemed && !payload.old.is_redeemed) {
           console.log('✅ Cupón redimido:', payload)
           
-          // ✨ Invalidar todos los queries de cupones
-          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] })
-          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'available', userId] })
-          queryClient.invalidateQueries({ queryKey: ['user', 'coupons', 'used', userId] })
+          // 🚀 FASE 3.3: RealtimeManager ya maneja cupones via postgres_changes
+          // ❌ ELIMINADO: invalidaciones redundantes
+          // ❌ ['user', 'coupons', userId] → Viene por RealtimeManager
+          // ❌ ['user', 'coupons', 'available', userId] → Viene por RealtimeManager
+          // ❌ ['user', 'coupons', 'used', userId] → Viene por RealtimeManager
+          
+          console.log('🔴 RealtimeProvider: Cupón redimido - RealtimeManager se encarga de updates')
           
           // ✨ Event para otros componentes (como RedeemSheet)
           window.dispatchEvent(new CustomEvent('user-data-updated', { 
@@ -165,20 +183,23 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         event: '*', // ✨ TODOS los eventos (INSERT, UPDATE, DELETE)
         schema: 'public',
         table: 'user_spins'
-      }, (payload) => {
+      }, (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
         console.log('🔔 CUALQUIER cambio en user_spins detectado:', payload)
         console.log('🔍 Payload completo:', JSON.stringify(payload, null, 2))
-        console.log('🔍 Payload.new.user_id:', (payload.new as any)?.user_id)
+        
+        // ✨ Type guard para verificar que payload.new tiene las propiedades necesarias
+        const newRecord = payload.new as UserSpinsRow | null
+        console.log('🔍 Payload.new.user_id:', newRecord?.user_id)
         console.log('🔍 UserId actual:', userId)
         
         // ✨ Filtrar - solo cambios del usuario actual
-        if (payload.new && (payload.new as any).user_id === userId) {
+        if (newRecord && newRecord.user_id === userId && newRecord.available_spins !== null) {
           console.log('🎰 Cambio en giros detectado para nuestro usuario:', payload)
           
-          const newAvailableSpins = (payload.new as any).available_spins
+          const newAvailableSpins = newRecord.available_spins
           
           // 🎯 GRANULAR: Actualizar React Query directamente (para RouletteView)
-          queryClient.setQueryData(['user', 'spins', userId], (oldData: any) => {
+          queryClient.setQueryData(['user', 'spins', userId], (oldData: { availableSpins: number } | undefined) => {
             if (oldData) {
               console.log('🎰 React Query: Actualizando spins de', oldData.availableSpins, 'a', newAvailableSpins)
               console.log('🎯 RouletteView será actualizado automáticamente')
@@ -193,8 +214,11 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
           stableDispatch(updateAvailableSpins(newAvailableSpins))
           console.log('✅ Redux dispatch reactivado - ambos sistemas funcionando')
           
-          // ✨ Opcional: Invalidar solo stats si es necesario
-          queryClient.invalidateQueries({ queryKey: ['user', 'stats', userId] })
+          // 🚀 FASE 3.3: RealtimeManager ya maneja user_stats via postgres_changes
+          // ❌ ELIMINADO: invalidación redundante  
+          // ❌ ['user', 'stats', userId] → Viene por RealtimeManager
+          
+          console.log('🔴 RealtimeProvider: Spins update - RealtimeManager se encarga de stats updates')
           
           // ✨ Event para otros componentes
           window.dispatchEvent(new CustomEvent('user-data-updated', { 
@@ -202,7 +226,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
           }))
         }
       })
-      .subscribe((status: any) => {
+      .subscribe((status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => {
         console.log('🔌 Realtime status:', status)
         
         if (status === 'SUBSCRIBED') {

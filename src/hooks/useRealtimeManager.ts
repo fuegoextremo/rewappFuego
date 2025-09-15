@@ -40,17 +40,12 @@ export function useRealtimeManager() {
     }
   }, [userId, queryClient, dispatch])
 
-  // Verificar estado de conexión periódicamente
+  // 🚀 OPTIMIZACIÓN FASE 1.1: Eliminar polling innecesario de 2 segundos
+  // La conexión es persistente y estable, no necesita verificación constante
   useEffect(() => {
-    const interval = setInterval(() => {
-      const currentConnectionState = realtimeManager.isConnected()
-      if (currentConnectionState !== isConnected) {
-        setIsConnected(currentConnectionState)
-      }
-    }, 2000)
-
-    return () => clearInterval(interval)
-  }, [isConnected])
+    // Solo actualizar estado inicial y cuando cambie el userId
+    setIsConnected(realtimeManager.isConnected())
+  }, [userId])
 
   return {
     isConnected,

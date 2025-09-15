@@ -98,9 +98,8 @@ export class RealtimeManager {
 
     this.currentUserId = userId
 
-    // 🚀 OPTIMIZACIÓN FASE 1.1: Conexión unificada en lugar de 4 separadas
     this.channel = this.supabaseClient
-      .channel(`unified-realtime-${userId}`)
+      .channel(`realtime-${userId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -133,7 +132,7 @@ export class RealtimeManager {
       })
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
-          console.log('🚀 RealtimeManager: Conexión unificada establecida para usuario:', userId)
+          // Conexión exitosa
         }
       })
   }

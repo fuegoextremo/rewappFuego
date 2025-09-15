@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RealtimeManager } from '@/lib/realtime/RealtimeManager'
 
-// 🎯 Hook simplificado - solo retorna el estado de conexión del singleton
+// 🚀 OPTIMIZACIÓN FASE 1.1: Hook simplificado SIN polling - solo retorna estado actual
 export function useUserRealtime() {
   const [isConnected, setIsConnected] = useState(false)
   
@@ -9,15 +9,9 @@ export function useUserRealtime() {
     const manager = RealtimeManager.getInstance()
     setIsConnected(manager.isConnected())
     
-    // Listener para cambios de estado de conexión
-    const checkConnection = () => {
-      setIsConnected(manager.isConnected())
-    }
+    // ❌ ELIMINADO: Polling cada 5 segundos (innecesario con conexión estable)
+    // La conexión es persistente, no necesita verificación constante
     
-    // Verificar estado cada 5 segundos (opcional)
-    const interval = setInterval(checkConnection, 5000)
-    
-    return () => clearInterval(interval)
   }, [])
 
   return { isConnected }

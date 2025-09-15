@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { useRive, Layout, Fit, Alignment } from '@rive-app/react-canvas';
-import { motion } from 'framer-motion';
 
 interface SimpleRiveLoopProps {
   src: string;
@@ -10,16 +9,15 @@ interface SimpleRiveLoopProps {
   onError?: (src: string) => void;
 }
 
-const SimpleRiveLoop: React.FC<SimpleRiveLoopProps> = ({ 
-  src, 
-  className = "",
-  onError 
-}) => {
+const SimpleRiveLoop = function SimpleRiveLoop({ src, className, onError }: SimpleRiveLoopProps) {
   console.log('🎭 SimpleRiveLoop rendering with src:', src);
   
   const [hasError, setHasError] = useState(false);
-  const [animationComplete, setAnimationComplete] = useState(false);
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialMount, setIsInitialMount] = useState(true);
+
+  console.log('🔍 SimpleRiveLoop state:', { hasError, isLoading, isInitialMount, src });
+
   const { rive, RiveComponent } = useRive({
     src: src,
     autoplay: true,
@@ -29,21 +27,32 @@ const SimpleRiveLoop: React.FC<SimpleRiveLoopProps> = ({
     })
   });
 
+  console.log('🔍 useRive result:', { rive: !!rive, RiveComponent: !!RiveComponent });
+
   // Verificar si Rive se carga exitosamente
   useEffect(() => {
+    console.log('🔄 useEffect[rive, src] triggered:', { rive: !!rive, src });
     if (rive) {
       console.log('✅ Rive loaded successfully:', src);
       setHasError(false);
+      setIsLoading(false);
     }
   }, [rive, src]);
 
-  // Resetear animación cuando cambia el src
+  // ✨ Marcar que ya no es mount inicial después de un tiempo
   useEffect(() => {
-    setAnimationComplete(false);
-  }, [src]);
+    console.log('🔄 useEffect[initial mount] triggered');
+    const timer = setTimeout(() => {
+      console.log('⏰ Setting isInitialMount to false');
+      setIsInitialMount(false);
+    }, 700); // Después de que termine la animación CSS
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Timeout de seguridad para detectar errores
   useEffect(() => {
+    console.log('🔄 useEffect[timeout] triggered:', { rive: !!rive, hasError, src });
     const timer = setTimeout(() => {
       if (!rive && !hasError) {
         console.log('⏰ Timeout loading Rive animation:', src);
@@ -59,54 +68,49 @@ const SimpleRiveLoop: React.FC<SimpleRiveLoopProps> = ({
   if (hasError) {
     console.log('💥 Showing fallback for:', src);
     return (
-      <motion.div 
-        className={`${className} flex items-center justify-center bg-gray-100 text-gray-500`}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 260, 
-          damping: 20,
-          duration: 0.6
-        }}
+      <div 
+        className={`${className} flex items-center justify-center bg-gray-100 text-gray-500 ${isInitialMount ? 'animate-rive-enter initial-mount' : ''}`}
       >
         <div className="text-center">
           <div className="text-4xl mb-2">🎯</div>
           <div className="text-sm">Animation Loading...</div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
-  // ✨ Usar motion solo durante la animación inicial, luego div normal para calidad máxima
-  if (!animationComplete) {
-    return (
-      <motion.div 
-        className={className}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 260, 
-          damping: 20,
-          duration: 0.6
-        }}
-        onAnimationComplete={() => {
-          console.log('🎉 Animation completed, switching to div for quality');
-          setAnimationComplete(true);
-        }}
-      >
-        <RiveComponent className="w-full h-full" />
-      </motion.div>
-    );
-  }
-
-  // ✅ Div normal después de la animación - calidad máxima preservada
+  // ✨ Componente simple con CSS animation solo en mount inicial
   return (
-    <div className={className}>
+    <div className={`${className} ${isInitialMount ? 'animate-rive-enter initial-mount' : ''} relative`}>
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 animate-pulse">
+          <div className="text-2xl">🎭</div>
+        </div>
+      )}
       <RiveComponent className="w-full h-full" />
     </div>
   );
 };
 
-export default SimpleRiveLoop;
+SimpleRiveLoop.displayName = 'SimpleRiveLoop';
+
+// Custom comparison function para debugging
+const arePropsEqual = (prevProps: SimpleRiveLoopProps, nextProps: SimpleRiveLoopProps) => {
+  const areEqual = prevProps.src === nextProps.src && 
+                   prevProps.className === nextProps.className && 
+                   prevProps.onError === nextProps.onError;
+  
+  if (!areEqual) {
+    console.log('🔍 SimpleRiveLoop props changed:', {
+      srcChanged: prevProps.src !== nextProps.src,
+      classNameChanged: prevProps.className !== nextProps.className,
+      onErrorChanged: prevProps.onError !== nextProps.onError,
+      prevSrc: prevProps.src,
+      nextSrc: nextProps.src
+    });
+  }
+  
+  return areEqual;
+};
+
+export default memo(SimpleRiveLoop, arePropsEqual);

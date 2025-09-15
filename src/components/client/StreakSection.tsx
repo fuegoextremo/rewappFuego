@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback, memo } from 'react'
 import Image from 'next/image'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { createClientBrowser } from '@/lib/supabase/client'
@@ -101,7 +101,9 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
   }
 }
 
-export function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
+const StreakSectionComponent = function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
+  console.log('🔍 StreakSection render:', { currentCount, externalLoading });
+  
   const [imageLoading, setImageLoading] = useState(false)
   const [previousImageUrl, setPreviousImageUrl] = useState<string>('')
   const [streakPrizes, setStreakPrizes] = useState<StreakPrize[]>([])
@@ -109,6 +111,26 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
   const [error, setError] = useState<string | null>(null)
   
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
+  
+  console.log('🔍 StreakSection settings:', { 
+    hasSettings: !!settings, 
+    settingsLoading,
+    settingsKeys: settings ? Object.keys(settings).length : 0
+  });
+
+  // ✨ OPTIMIZACIÓN: Memoizar onError callbacks
+  const handleRiveError = useCallback((src: string) => {
+    console.error('❌ Error loading Rive animation:', src);
+    setImageLoading(false);
+  }, [])
+
+  const handleImageError = useCallback(() => {
+    setImageLoading(false);
+  }, [])
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoading(false);
+  }, [])
 
   // ✨ Cargar premios de racha una sola vez (datos semi-estáticos)
   useEffect(() => {
@@ -144,11 +166,32 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
 
   // ✨ Calcular el stage reactivamente cuando cambian los datos
   const streakStage = useMemo(() => {
+    console.log('🔄 StreakSection useMemo[streakStage] triggered:', { 
+      prizesLength: streakPrizes.length, 
+      hasSettings: !!settings, 
+      currentCount 
+    });
     if (streakPrizes.length > 0 && settings) {
       return calculateStreakStage(currentCount, streakPrizes, settings)
     }
     return null
   }, [currentCount, streakPrizes, settings]) // 🎯 Se recalcula cuando currentCount cambia
+
+  // ✨ OPTIMIZACIÓN: Mover side-effects a useEffect
+  useEffect(() => {
+    if (streakStage && streakStage.image !== previousImageUrl) {
+      const isNewImage = streakStage.image.startsWith('http') || streakStage.image.startsWith('/')
+      setImageLoading(isNewImage) // Solo loading si es imagen real (no emoji)
+      setPreviousImageUrl(streakStage.image)
+    }
+  }, [streakStage, previousImageUrl])
+
+  // ✨ OPTIMIZACIÓN: Memoizar solo la imagen para key estable
+  const stableImageKey = useMemo(() => {
+    const key = streakStage?.image || '';
+    console.log('🔍 stableImageKey calculated:', key);
+    return key;
+  }, [streakStage?.image])
 
   // Loading states
   const isLoading = externalLoading || settingsLoading || prizesLoading
@@ -195,13 +238,6 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
 
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
-  // ✨ Optimistic image loading - solo mostrar loading para imágenes nuevas
-  if (streakStage.image !== previousImageUrl) {
-    const isNewImage = streakStage.image.startsWith('http') || streakStage.image.startsWith('/')
-    setImageLoading(isNewImage) // Solo loading si es imagen real (no emoji)
-    setPreviousImageUrl(streakStage.image)
-  }
-
   return (
     <div className={`relative overflow-hidden rounded-2xl ${
       streakStage.stage.includes('perdida') 
@@ -215,15 +251,12 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
         {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
           <>
             {isRiveFile(streakStage.image) ? (
-              // 🎭 Renderizar animación Rive
+              // 🎭 Renderizar animación Rive SIN AnimatePresence
               <SimpleRiveLoop 
-                key={streakStage.image} // ✨ FORZAR RE-MOUNT cuando cambia la animación
+                key={stableImageKey} // ✨ Key estable basado solo en la imagen
                 src={streakStage.image} 
                 className="w-full aspect-square rounded-xl overflow-hidden bg-gray-50"
-                onError={(src: string) => {
-                  console.error('❌ Error loading Rive animation:', src);
-                  setImageLoading(false);
-                }}
+                onError={handleRiveError}
               />
             ) : (
               // 🖼️ Renderizar imagen normal
@@ -239,11 +272,8 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
                   fill
                   className={`object-cover transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    console.error('❌ Error loading image:', streakStage.image);
-                    setImageLoading(false);
-                  }}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
                   priority={true}
                 />
               </div>
@@ -321,4 +351,27 @@ export function StreakSection({ currentCount, isLoading: externalLoading }: Prop
       </div>
     </div>
   )
-}
+};
+
+// 🔍 Custom comparison function para debugging
+const areStreakPropsEqual = (prevProps: Props, nextProps: Props) => {
+  const areEqual = prevProps.currentCount === nextProps.currentCount && 
+                   prevProps.isLoading === nextProps.isLoading;
+  
+  if (!areEqual) {
+    console.log('🔍 StreakSection props changed:', {
+      currentCountChanged: prevProps.currentCount !== nextProps.currentCount,
+      isLoadingChanged: prevProps.isLoading !== nextProps.isLoading,
+      prevCount: prevProps.currentCount,
+      nextCount: nextProps.currentCount,
+      prevLoading: prevProps.isLoading,
+      nextLoading: nextProps.isLoading
+    });
+  } else {
+    console.log('🔍 StreakSection props IDENTICAL but still re-rendering - memo bypassed');
+  }
+  
+  return areEqual;
+};
+
+export const StreakSection = memo(StreakSectionComponent, areStreakPropsEqual);

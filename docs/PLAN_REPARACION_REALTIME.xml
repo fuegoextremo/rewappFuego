@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan_reparacion>
+  <meta>
+    <titulo>Plan de Reparación - Sistema Realtime Híbrido</titulo>
+    <version>1.0</version>
+    <fecha_creacion>2025-09-15</fecha_creacion>
+    <estado>EN_EJECUCION</estado>
+    <objetivo>Restaurar funcionalidad completa con arquitectura híbrida correcta</objetivo>
+  </meta>
+
+  <problema_actual>
+    <descripcion>Sistema realtime roto tras eliminar RealtimeInitializer</descripcion>
+    <sintomas>
+      <sintoma>Giros infinitos (available_spins no se actualiza)</sintoma>
+      <sintoma>No aparece indicador "En vivo"</sintoma>
+      <sintoma>Datos no se reflejan en tiempo real</sintoma>
+      <sintoma>Redux no recibe updates</sintoma>
+    </sintomas>
+    <causa_raiz>RealtimeProvider no actualiza Redux Store</causa_raiz>
+  </problema_actual>
+
+  <arquitectura_objetivo>
+    <descripcion>Sistema híbrido con separación clara de responsabilidades</descripcion>
+    
+    <realtime_redux>
+      <titulo>REALTIME → REDUX (datos dinámicos críticos)</titulo>
+      <datos>
+        <dato>user.current_streak</dato>
+        <dato>user.available_spins</dato>
+        <dato>user.total_checkins</dato>
+        <dato>auth.user</dato>
+        <dato>auth.isAuthenticated</dato>
+      </datos>
+      <herramientas>
+        <herramienta>RealtimeManager Singleton</herramienta>
+        <herramienta>RealtimeInitializer</herramienta>
+        <herramienta>Redux Store</herramienta>
+      </herramientas>
+    </realtime_redux>
+
+    <query_cache>
+      <titulo>REACT QUERY (datos semi-estáticos)</titulo>
+      <datos>
+        <dato>system.settings</dato>
+        <dato>streak.prizes</dato>
+        <dato>user.profile</dato>
+        <dato>coupon.history</dato>
+      </datos>
+      <herramientas>
+        <herramienta>React Query</herramienta>
+        <herramienta>useSystemSettings hook</herramienta>
+        <herramienta>Invalidaciones selectivas</herramienta>
+      </herramientas>
+    </query_cache>
+  </arquitectura_objetivo>
+
+  <fases>
+    <!-- ============================================= -->
+    <!-- FASE 1: REPARACIÓN INMEDIATA (30 min) -->
+    <!-- ============================================= -->
+    <fase id="1" nombre="Reparación Inmediata" duracion="30min" prioridad="CRITICA">
+      <objetivo>Restaurar funcionalidad básica del sistema realtime</objetivo>
+      
+      <tarea id="1.1" orden="1">
+        <nombre>Eliminar RealtimeProvider de Providers.tsx</nombre>
+        <archivo>src/components/providers/Providers.tsx</archivo>
+        <accion>
+          <descripcion>Remover import y uso de RealtimeProvider</descripcion>
+          <codigo_antes>
+            import { RealtimeProvider } from '@/components/providers/RealtimeProvider'
+            &lt;RealtimeInitializer&gt;
+              &lt;RealtimeProvider&gt;
+                &lt;ModalProvider&gt;
+          </codigo_antes>
+          <codigo_despues>
+            // RealtimeProvider removido - causaba conflicto
+            &lt;RealtimeInitializer&gt;
+              &lt;ModalProvider&gt;
+          </codigo_despues>
+        </accion>
+        <validacion>
+          <criterio>Compilación exitosa</criterio>
+          <criterio>No errores de imports</criterio>
+        </validacion>
+      </tarea>
+
+      <tarea id="1.2" orden="2">
+        <nombre>Restaurar useRealtimeManager sin polling</nombre>
+        <archivo>src/hooks/useRealtimeManager.ts</archivo>
+        <accion>
+          <descripcion>Mantener funcionalidad pero eliminar setInterval</descripcion>
+          <codigo_antes>
+            // 🎯 OPTIMIZACIÓN: Solo escuchar eventos de conexión, NO polling
+            useEffect(() => {
+              const initialState = realtimeManager.isConnected()
+              setIsConnected(initialState)
+            }, [userId])
+          </codigo_antes>
+          <codigo_despues>
+            // 🎯 ESTADO: Obtener estado cuando cambie userId o configuración
+            useEffect(() => {
+              const currentState = realtimeManager.isConnected()
+              setIsConnected(currentState)
+              
+              // Verificar estado después de configuración
+              const timer = setTimeout(() => {
+                const newState = realtimeManager.isConnected()
+                if (newState !== currentState) {
+                  setIsConnected(newState)
+                }
+              }, 1000) // Solo 1 verificación diferida
+              
+              return () => clearTimeout(timer)
+            }, [userId])
+          </codigo_despues>
+        </accion>
+        <validacion>
+          <criterio>RealtimeManager se conecta</criterio>
+          <criterio>isConnected se actualiza correctamente</criterio>
+        </validacion>
+      </tarea>
+
+      <tarea id="1.3" orden="3">
+        <nombre>Restaurar useUserRealtime con polling mínimo</nombre>
+        <archivo>src/hooks/useUserRealtime.ts</archivo>
+        <accion>
+          <descripcion>Polling solo para indicador "En vivo" - reducido a 15s</descripcion>
+          <codigo_antes>
+            useEffect(() => {
+              const manager = RealtimeManager.getInstance()
+              setIsConnected(manager.isConnected())
+            }, [])
+          </codigo_antes>
+          <codigo_despues>
+            useEffect(() => {
+              const manager = RealtimeManager.getInstance()
+              
+              // Estado inicial
+              setIsConnected(manager.isConnected())
+              
+              // Polling mínimo solo para UX del indicador "En vivo"
+              const checkConnection = () => {
+                const currentState = manager.isConnected()
+                setIsConnected(currentState)
+              }
+              
+              const interval = setInterval(checkConnection, 15000) // 15s - solo para UX
+              
+              return () => clearInterval(interval)
+            }, [])
+          </codigo_despues>
+        </accion>
+        <validacion>
+          <criterio>Indicador "En vivo" aparece en HomeView</criterio>
+          <criterio>Polling cada 15s (no 5s)</criterio>
+        </validacion>
+      </tarea>
+
+      <tarea id="1.4" orden="4">
+        <nombre>Verificar funcionamiento completo</nombre>
+        <archivo>Toda la aplicación</archivo>
+        <accion>
+          <descripcion>Testing básico de funcionalidad realtime</descripcion>
+        </accion>
+        <validacion>
+          <criterio>Giros de ruleta se decrementan correctamente</criterio>
+          <criterio>Check-ins incrementan contadores</criterio>
+          <criterio>Indicador "En vivo" visible</criterio>
+          <criterio>No giros infinitos</criterio>
+        </validacion>
+      </tarea>
+
+      <resultado_esperado>
+        <descripcion>Sistema funcionando como antes pero optimizado</descripcion>
+        <metricas>
+          <metrica>available_spins se actualiza en tiempo real</metrica>
+          <metrica>Indicador "En vivo" visible</metrica>
+          <metrica>Polling reducido de 5s a 15s</metrica>
+          <metrica>RealtimeManager único y funcional</metrica>
+        </metricas>
+      </resultado_esperado>
+    </fase>
+
+    <!-- ============================================= -->
+    <!-- FASE 2: OPTIMIZACIÓN REALTIME (1-2 horas) -->
+    <!-- ============================================= -->
+    <fase id="2" nombre="Optimización RealtimeManager" duracion="1-2h" prioridad="ALTA">
+      <objetivo>Optimizar RealtimeManager para 1 conexión y mejor performance</objetivo>
+      
+      <tarea id="2.1" orden="1">
+        <nombre>Unificar conexiones en RealtimeManager</nombre>
+        <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+        <accion>
+          <descripcion>Cambiar de múltiples canales a 1 canal unificado</descripcion>
+          <detalle>
+            Actualmente se crean múltiples suscripciones:
+            - user_spins
+            - check_ins  
+            - coupons
+            
+            Unificar en un solo canal con múltiples event handlers
+          </detalle>
+        </accion>
+        <validacion>
+          <criterio>Solo 1 conexión WebSocket activa</criterio>
+          <criterio>Todos los eventos siguen funcionando</criterio>
+          <criterio>Reducción en uso de memoria</criterio>
+        </validacion>
+      </tarea>
+
+      <tarea id="2.2" orden="2">
+        <nombre>Eliminar invalidaciones redundantes</nombre>
+        <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+        <accion>
+          <descripcion>RealtimeManager solo actualiza Redux, no React Query</descripcion>
+          <principio>
+            REALTIME → REDUX únicamente
+            React Query se maneja por separado
+          </principio>
+        </accion>
+        <validacion>
+          <criterio>Solo updates a Redux Store</criterio>
+          <criterio>No invalidaciones de React Query</criterio>
+          <criterio>Performance mejorado</criterio>
+        </validacion>
+      </tarea>
+
+      <tarea id="2.3" orden="3">
+        <nombre>Optimizar selectores Redux</nombre>
+        <archivo>src/store/hooks/index.ts</archivo>
+        <accion>
+          <descripcion>Mantener optimización de useUser con comparación granular</descripcion>
+        </accion>
+        <validacion>
+          <criterio>StreakSectionWrapper solo re-renderiza cuando necesario</criterio>
+          <criterio>Menos renders de SimpleRiveLoop</criterio>
+        </validacion>
+      </tarea>
+
+      <resultado_esperado>
+        <descripcion>RealtimeManager optimizado con 1 conexión</descripcion>
+        <metricas>
+          <metrica>1 conexión WebSocket (en lugar de 3)</metrica>
+          <metrica>Reducción 50% en renders innecesarios</metrica>
+          <metrica>Solo Redux updates (no React Query)</metrica>
+        </metricas>
+      </resultado_esperado>
+    </fase>
+
+    <!-- ============================================= -->
+    <!-- FASE 3: OPTIMIZACIÓN REACT QUERY (1 hora) -->
+    <!-- ============================================= -->
+    <fase id="3" nombre="Optimización React Query" duracion="1h" prioridad="MEDIA">
+      <objetivo>Optimizar queries para datos estáticos sin conflicto con Realtime</objetivo>
+      
+      <tarea id="3.1" orden="1">
+        <nombre>Limpiar pull-to-refresh</nombre>
+        <archivo>src/components/ui/pull-to-refresh.tsx</archivo>
+        <accion>
+          <descripcion>Pull-to-refresh solo invalida datos NO-realtime</descripcion>
+          <datos_invalidar>
+            <dato>system.settings</dato>
+            <dato>user.profile</dato>
+            <dato>coupon.history</dato>
+          </datos_invalidar>
+          <datos_no_invalidar>
+            <dato>user.stats (viene por Realtime)</dato>
+            <dato>user.available_spins (viene por Realtime)</dato>
+            <dato>streak.current (viene por Realtime)</dato>
+          </datos_no_invalidar>
+        </accion>
+        <validacion>
+          <criterio>Pull-to-refresh más rápido</criterio>
+          <criterio>No conflictos con datos Realtime</criterio>
+        </validacion>
+      </tarea>
+
+      <tarea id="3.2" orden="2">
+        <nombre>Standardizar queryKeys</nombre>
+        <archivo>src/hooks/queries/</archivo>
+        <accion>
+          <descripcion>Usar formato consistente para queryKeys</descripcion>
+          <formato>
+            queryKey: ['domain', 'action', userId?, 'subtype'?]
+            Ejemplo: ['system', 'settings']
+            Ejemplo: ['user', 'profile', userId]
+            Ejemplo: ['streak', 'prizes']
+          </formato>
+        </accion>
+        <validacion>
+          <criterio>QueryKeys consistentes</criterio>
+          <criterio>Mejor debugging</criterio>
+        </validacion>
+      </tarea>
+
+      <resultado_esperado>
+        <descripcion>React Query optimizado para datos estáticos</descripcion>
+        <metricas>
+          <metrica>Pull-to-refresh 50% más rápido</metrica>
+          <metrica>QueryKeys standardizados</metrica>
+          <metrica>Separación clara Realtime vs Query</metrica>
+        </metricas>
+      </resultado_esperado>
+    </fase>
+
+    <!-- ============================================= -->
+    <!-- FASE 4: TESTING Y VALIDACIÓN (30 min) -->
+    <!-- ============================================= -->
+    <fase id="4" nombre="Testing y Validación" duracion="30min" prioridad="ALTA">
+      <objetivo>Verificar funcionamiento completo del sistema híbrido</objetivo>
+      
+      <tarea id="4.1" orden="1">
+        <nombre>Testing completo de flujos críticos</nombre>
+        <flujos>
+          <flujo>
+            <nombre>Giro de ruleta</nombre>
+            <pasos>
+              <paso>Verificar available_spins inicial</paso>
+              <paso>Hacer giro</paso>
+              <paso>Verificar decremento en Redux</paso>
+              <paso>Verificar actualización en HomeView</paso>
+            </pasos>
+          </flujo>
+          <flujo>
+            <nombre>Check-in</nombre>
+            <pasos>
+              <paso>Verificar current_streak inicial</paso>
+              <paso>Hacer check-in</paso>
+              <paso>Verificar incremento en Redux</paso>
+              <paso>Verificar actualización en StreakSection</paso>
+            </pasos>
+          </flujo>
+          <flujo>
+            <nombre>Indicador "En vivo"</nombre>
+            <pasos>
+              <paso>Verificar conexión Realtime</paso>
+              <paso>Verificar indicador visible en HomeView</paso>
+              <paso>Simular desconexión (airplane mode)</paso>
+              <paso>Verificar indicador desaparece</paso>
+            </pasos>
+          </flujo>
+        </flujos>
+      </tarea>
+
+      <tarea id="4.2" orden="2">
+        <nombre>Performance testing</nombre>
+        <metricas>
+          <metrica>Contar renders de SimpleRiveLoop (&lt;10)</metrica>
+          <metrica>Verificar 1 sola conexión WebSocket</metrica>
+          <metrica>Medir tiempo de pull-to-refresh (&lt;2s)</metrica>
+          <metrica>Verificar uso de memoria (sin memory leaks)</metrica>
+        </metricas>
+      </tarea>
+
+      <criterios_aceptacion>
+        <criterio>✅ Giros de ruleta funcionan correctamente</criterio>
+        <criterio>✅ Check-ins actualizan contadores</criterio>
+        <criterio>✅ Indicador "En vivo" visible y funcional</criterio>
+        <criterio>✅ SimpleRiveLoop renderiza máximo 10 veces</criterio>
+        <criterio>✅ Solo 1 conexión WebSocket activa</criterio>
+        <criterio>✅ Pull-to-refresh rápido y efectivo</criterio>
+        <criterio>✅ No memory leaks en DevTools</criterio>
+        <criterio>✅ No errores en consola</criterio>
+      </criterios_aceptacion>
+    </fase>
+  </fases>
+
+  <rollback_plan>
+    <condicion>Si algo se rompe durante la implementación</condicion>
+    <pasos>
+      <paso>Revertir a commit anterior funcional</paso>
+      <paso>Restaurar RealtimeInitializer en Providers.tsx</paso>
+      <paso>Verificar funcionalidad básica</paso>
+      <paso>Analizar problema específico</paso>
+    </pasos>
+  </rollback_plan>
+
+  <logging_strategy>
+    <desarrollo>
+      <log>🔴 REALTIME: [acción] [datos]</log>
+      <log>🔵 QUERY: [queryKey] [acción]</log>
+      <log>🟢 REDUX: [acción] [estado]</log>
+      <log>🎭 RENDER: [componente] [motivo]</log>
+    </desarrollo>
+    <produccion>
+      <log>Solo errores críticos</log>
+      <log>Métricas de conexión</log>
+    </produccion>
+  </logging_strategy>
+
+  <success_criteria>
+    <funcionalidad>
+      <item>Sistema realtime completamente funcional</item>
+      <item>No giros infinitos</item>
+      <item>Indicador "En vivo" operativo</item>
+      <item>Datos se actualizan en tiempo real</item>
+    </funcionalidad>
+    <performance>
+      <item>≤10 renders de SimpleRiveLoop en carga inicial</item>
+      <item>1 conexión WebSocket únicamente</item>
+      <item>Pull-to-refresh &lt;2 segundos</item>
+      <item>Polling reducido a 15 segundos máximo</item>
+    </performance>
+    <arquitectura>
+      <item>Separación clara Realtime vs Query</item>
+      <item>Redux para datos dinámicos</item>
+      <item>React Query para datos estáticos</item>
+      <item>Código mantenible y debuggeable</item>
+    </arquitectura>
+  </success_criteria>
+
+  <tiempo_total>3-4 horas</tiempo_total>
+  <riesgo>BAJO - Plan incremental con rollback</riesgo>
+  <impacto>ALTO - Restaura funcionalidad + optimiza performance</impacto>
+</plan_reparacion>

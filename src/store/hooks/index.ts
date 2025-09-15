@@ -5,9 +5,17 @@ import type { RootState, AppDispatch } from '../index'
 export const useAppDispatch = () => useDispatch<AppDispatch>()
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
 
-// 🔐 SELECTORES DE AUTH
+// 🔐 SELECTORES DE AUTH OPTIMIZADOS
 export const useAuth = () => useAppSelector(state => state.auth)
-export const useUser = () => useAppSelector(state => state.auth.user)
+export const useUser = () => useAppSelector(state => state.auth.user, (left, right) => {
+  // 🎯 OPTIMIZACIÓN: Solo re-render si propiedades relevantes cambian
+  if (!left && !right) return true
+  if (!left || !right) return false
+  return left.id === right.id && 
+         left.current_streak === right.current_streak &&
+         left.total_checkins === right.total_checkins &&
+         left.available_spins === right.available_spins
+})
 export const useIsAuthenticated = () => useAppSelector(state => state.auth.isAuthenticated)
 export const useAuthLoading = () => useAppSelector(state => state.auth.isLoading)
 export const useAuthError = () => useAppSelector(state => state.auth.error)

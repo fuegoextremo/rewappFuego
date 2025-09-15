@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useAppDispatch, useAuth } from '@/store/hooks'
@@ -19,6 +19,10 @@ export function useAuthManager() {
   const dispatch = useAppDispatch()
   const { user, isLoading, isAuthenticated, error } = useAuth()
   const router = useRouter()
+  
+  // 🎯 OPTIMIZACIÓN: Ref estable para evitar loop con user como dependencia
+  const userRef = useRef(user)
+  userRef.current = user
 
   // 🎧 CONFIGURAR LISTENERS DE SUPABASE
   useEffect(() => {
@@ -32,6 +36,15 @@ export function useAuthManager() {
         switch (event) {
           case 'SIGNED_IN':
             if (session?.user) {
+              // 🎯 OPTIMIZACIÓN: Solo cargar datos si es un login REAL, no una reconexión
+              const isReconnection = userRef.current?.id === session.user.id
+              
+              if (isReconnection) {
+                console.log('🔄 Auth: SIGNED_IN detectado como reconexión - saltando cargas innecesarias')
+                return // Skip cargas duplicadas durante reconexión
+              }
+              
+              console.log('🔑 Auth: Nuevo login detectado - cargando datos del usuario')
               // Cargar perfil del usuario
               dispatch(loadUserProfile(session.user.id))
               // Cargar configuraciones
@@ -43,9 +56,32 @@ export function useAuthManager() {
               dispatch(loadUserStreakData(session.user.id))
             }
             break
+
+          case 'INITIAL_SESSION':
+            if (session?.user) {
+              // 🎯 OPTIMIZACIÓN: INITIAL_SESSION es igual que reconexión
+              const isAlreadyLoaded = userRef.current?.id === session.user.id
+              
+              if (isAlreadyLoaded) {
+                console.log('🔄 Auth: INITIAL_SESSION detectado con usuario ya cargado - saltando')
+                return // Skip para prevenir loop infinito
+              }
+              
+              console.log('🔑 Auth: INITIAL_SESSION con nuevo usuario - cargando datos')
+              // Cargar perfil del usuario
+              dispatch(loadUserProfile(session.user.id))
+              // Cargar configuraciones
+              dispatch(loadSettings())
+              
+              // 🔥 NUEVOS: Cargar datos que estaban en React Query
+              dispatch(loadRecentActivity(session.user.id))
+              dispatch(loadStreakPrizes())
+              dispatch(loadUserStreakData(session.user.id))
+            }
+            break
             
           case 'TOKEN_REFRESHED':
-            if (session?.user && !user) {
+            if (session?.user && !userRef.current) {
               // Solo cargar si no hay usuario en store
               dispatch(loadUserProfile(session.user.id))
               dispatch(loadSettings())
@@ -79,6 +115,15 @@ export function useAuthManager() {
 
         if (session?.user) {
           console.log('📱 Sesión inicial encontrada:', session.user.id)
+          
+          // 🎯 OPTIMIZACIÓN: Solo cargar si no hay usuario en store
+          const isAlreadyLoaded = userRef.current?.id === session.user.id
+          
+          if (isAlreadyLoaded) {
+            console.log('🔄 Auth: checkInitialSession - usuario ya cargado, saltando')
+            return // Prevenir doble carga con INITIAL_SESSION event
+          }
+          
           dispatch(loadUserProfile(session.user.id))
           dispatch(loadSettings())
         } else {
@@ -98,7 +143,7 @@ export function useAuthManager() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [dispatch, user?.id]) // Solo depende del ID del usuario
+  }, [dispatch]) // 🎯 OPTIMIZACIÓN: Solo dispatch - user como dependencia causa loop infinito
 
   // 🚪 FUNCIÓN DE LOGOUT
   const logout = async () => {

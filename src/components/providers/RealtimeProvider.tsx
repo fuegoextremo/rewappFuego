@@ -231,7 +231,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         setIsConnected(false)
       }
     }
-  }, [userId]) // 🔧 SOLO userId como string - estable y no causa re-renders
+  }, [userId, queryClient, stableToast, stableDispatch]) // 🔧 Todas las dependencias incluidas
 
   return (
     <RealtimeContext.Provider value={{ isConnected }}>

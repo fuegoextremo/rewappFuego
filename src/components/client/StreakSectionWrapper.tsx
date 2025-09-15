@@ -1,8 +1,9 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { StreakSection } from './StreakSection'
 import { useUser } from '@/store/hooks'
 
-export function StreakSectionWrapper() {
+// 🎯 Componente optimizado para evitar re-renders innecesarios
+function StreakSectionWrapperComponent() {
   const user = useUser()
 
   // ✨ Solo usar Redux como fuente única de verdad
@@ -12,3 +13,6 @@ export function StreakSectionWrapper() {
     isLoading={!user} // Loading si no hay datos de usuario
   />
 }
+
+// 🎯 OPTIMIZACIÓN: Memo para evitar re-renders cuando user no cambia realmente
+export const StreakSectionWrapper = memo(StreakSectionWrapperComponent)

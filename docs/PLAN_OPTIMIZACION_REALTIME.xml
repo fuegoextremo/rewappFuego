@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan_trabajo>
+  <meta>
+    <titulo>Plan de Optimización del Sistema Realtime</titulo>
+    <version>1.0</version>
+    <fecha_creacion>2025-09-12</fecha_creacion>
+    <autor>GitHub Copilot</autor>
+    <estado>Planificado</estado>
+  </meta>
+
+  <resumen_ejecutivo>
+    <descripcion>
+      Plan para optimizar gradualmente el sistema RealtimeManager existente,
+      mejorando eficiencia de conexiones, reliability y performance sin romper
+      la funcionalidad actual.
+    </descripcion>
+    <objetivos>
+      <objetivo id="1">Reducir número de conexiones WebSocket de 3 a 1</objetivo>
+      <objetivo id="2">Implementar detección de visibilidad de página</objetivo>
+      <objetivo id="3">Agregar auto-reconexión automática</objetivo>
+      <objetivo id="4">Mejorar manejo de errores y logging</objetivo>
+      <objetivo id="5">Optimizar performance y uso de memoria</objetivo>
+    </objetivos>
+  </resumen_ejecutivo>
+
+  <fases>
+    <!-- ================================================== -->
+    <!-- FASE 1: OPTIMIZACIONES BÁSICAS -->
+    <!-- ================================================== -->
+    <fase id="1" nombre="Optimizaciones Básicas" duracion_estimada="2-3 días">
+      <descripcion>
+        Mejoras fundamentales de eficiencia sin cambios arquitectónicos mayores.
+        Impacto inmediato con riesgo mínimo.
+      </descripcion>
+      
+      <tareas>
+        <tarea id="1.1" prioridad="alta" complejidad="media">
+          <nombre>Unificar conexiones realtime en un solo canal</nombre>
+          <descripcion>
+            Cambiar de 3 canales separados (user_spins, check_ins, user_coupons) 
+            a una sola conexión WebSocket que maneje todas las suscripciones.
+          </descripcion>
+          <archivos_afectados>
+            <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+          </archivos_afectados>
+          <pasos>
+            <paso>1. Crear método unifiedSubscribe()</paso>
+            <paso>2. Migrar handlers existentes</paso>
+            <paso>3. Actualizar disconnect() para un solo canal</paso>
+            <paso>4. Testing con 3 usuarios simultáneos</paso>
+            <paso>5. Monitoring de performance antes/después</paso>
+          </pasos>
+          <testing>
+            <test>Verificar que todos los eventos llegan correctamente</test>
+            <test>Confirmar reducción en uso de memoria</test>
+            <test>Validar que disconnect funciona correctamente</test>
+          </testing>
+        </tarea>
+
+        <tarea id="1.2" prioridad="alta" complejidad="baja">
+          <nombre>Implementar Page Visibility API</nombre>
+          <descripcion>
+            Pausar/resumir conexiones cuando el usuario cambia de pestaña 
+            o minimiza la aplicación para ahorrar recursos.
+          </descripcion>
+          <archivos_afectados>
+            <archivo>src/components/providers/RealtimeProvider.tsx</archivo>
+            <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+          </archivos_afectados>
+          <pasos>
+            <paso>1. Agregar listeners de visibilitychange</paso>
+            <paso>2. Implementar métodos pause() y resume()</paso>
+            <paso>3. Testing en múltiples pestañas</paso>
+            <paso>4. Validar comportamiento en mobile</paso>
+          </pasos>
+          <beneficios>
+            <beneficio>Reducir uso de batería en mobile</beneficio>
+            <beneficio>Menor carga en servidor Supabase</beneficio>
+            <beneficio>Mejor UX al retomar la pestaña</beneficio>
+          </beneficios>
+        </tarea>
+
+        <tarea id="1.3" prioridad="media" complejidad="baja">
+          <nombre>Mejorar logging y debugging</nombre>
+          <descripcion>
+            Agregar logs estructurados para facilitar debugging y monitoring
+            del sistema realtime en producción.
+          </descripcion>
+          <archivos_afectados>
+            <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+          </archivos_afectados>
+          <pasos>
+            <paso>1. Crear logger con niveles (debug, info, warn, error)</paso>
+            <paso>2. Agregar timestamps y userId a todos los logs</paso>
+            <paso>3. Log de métricas de conexión (latencia, reconexiones)</paso>
+            <paso>4. Configurar logs solo en desarrollo vs producción</paso>
+          </pasos>
+        </tarea>
+      </tareas>
+
+      <entregables>
+        <entregable>RealtimeManager con conexión unificada</entregable>
+        <entregable>Sistema de pausa/resume por visibilidad</entregable>
+        <entregable>Logging mejorado con métricas</entregable>
+        <entregable>Documentación de cambios</entregable>
+      </entregables>
+    </fase>
+
+    <!-- ================================================== -->
+    <!-- FASE 2: RELIABILITY Y RECONEXIÓN -->
+    <!-- ================================================== -->
+    <fase id="2" nombre="Reliability y Auto-reconexión" duracion_estimada="3-4 días">
+      <descripcion>
+        Implementar sistemas de recuperación automática y manejo robusto 
+        de errores para conexiones más estables.
+      </descripción>
+
+      <tareas>
+        <tarea id="2.1" prioridad="alta" complejidad="alta">
+          <nombre>Sistema de auto-reconexión inteligente</nombre>
+          <descripcion>
+            Detectar desconexiones y reconectar automáticamente con 
+            estrategia de backoff exponencial.
+          </descripción>
+          <archivos_afectados>
+            <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+          </archivos_afectados>
+          <pasos>
+            <paso>1. Implementar heartbeat/ping cada 30 segundos</paso>
+            <paso>2. Detectar pérdida de conexión</paso>
+            <paso>3. Backoff exponencial: 1s, 2s, 4s, 8s, 16s, 30s max</paso>
+            <paso>4. Límite de intentos de reconexión (5 máximo)</paso>
+            <paso>5. Notificar al usuario sobre estado de conexión</paso>
+          </pasos>
+          <testing>
+            <test>Simular pérdida de internet</test>
+            <test>Verificar reconexión automática</test>
+            <test>Validar que no haga spam de reconexiones</test>
+          </testing>
+        </tarea>
+
+        <tarea id="2.2" prioridad="media" complejidad="media">
+          <nombre>Connection health monitoring</nombre>
+          <descripción>
+            Monitorear salud de la conexión y exponer métricas útiles
+            para debugging y alertas.
+          </descripción>
+          <archivos_afectados>
+            <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+            <archivo>src/hooks/useRealtimeStatus.ts</archivo>
+          </archivos_afectados>
+          <pasos>
+            <paso>1. Crear hook useRealtimeStatus()</paso>
+            <paso>2. Exponer métricas: latencia, estado, reconexiones</paso>
+            <paso>3. Componente de debug para mostrar estado</paso>
+            <paso>4. Alertas automáticas si conexión falla mucho</paso>
+          </pasos>
+        </tarea>
+
+        <tarea id="2.3" prioridad="media" complejidad="baja">
+          <nombre>Manejo robusto de errores</nombre>
+          <descripcion>
+            Mejorar captura y manejo de errores de conexión realtime.
+          </descripcion>
+          <pasos>
+            <paso>1. Try-catch en todos los handlers</paso>
+            <paso>2. Error boundaries para componentes realtime</paso>
+            <paso>3. Fallback graceful cuando realtime falla</paso>
+            <paso>4. Reporting de errores para análisis</paso>
+          </pasos>
+        </tarea>
+      </tareas>
+
+      <entregables>
+        <entregable>Sistema de auto-reconexión con backoff</entregable>
+        <entregable>Hook useRealtimeStatus para monitoring</entregable>
+        <entregable>Error handling robusto</entregable>
+        <entregable>Componente de debug de conexión</entregable>
+      </entregables>
+    </fase>
+
+    <!-- ================================================== -->
+    <!-- FASE 3: PERFORMANCE Y OPTIMIZACIÓN AVANZADA -->
+    <!-- ================================================== -->
+    <fase id="3" nombre="Performance y Optimización" duracion_estimada="2-3 días">
+      <descripcion>
+        Optimizaciones avanzadas de performance, memoria y UX para 
+        el sistema realtime.
+      </descripcion>
+
+      <tareas>
+        <tarea id="3.1" prioridad="media" complejidad="media">
+          <nombre>Debouncing y batching de eventos</nombre>
+          <descripcion>
+            Evitar actualizaciones excesivas del UI cuando llegan muchos 
+            eventos seguidos.
+          </descripcion>
+          <archivos_afectados>
+            <archivo>src/lib/realtime/RealtimeManager.ts</archivo>
+          </archivos_afectados>
+          <pasos>
+            <paso>1. Implementar debounce en handlers (300ms)</paso>
+            <paso>2. Batch updates para múltiples eventos</paso>
+            <paso>3. Queue de eventos para procesar en chunks</paso>
+            <paso>4. Testing con ráfagas de eventos</paso>
+          </pasos>
+        </tarea>
+
+        <tarea id="3.2" prioridad="baja" complejidad="baja">
+          <nombre>Memory cleanup y garbage collection</nombre>
+          <descripcion>
+            Asegurar que no hay memory leaks en suscripciones y handlers.
+          </descripcion>
+          <pasos>
+            <paso>1. Cleanup listeners en unmount</paso>
+            <paso>2. WeakMap para referencias temporales</paso>
+            <paso>3. Profiling de memoria antes/después</paso>
+            <paso>4. Testing de long-running sessions</paso>
+          </pasos>
+        </tarea>
+
+        <tarea id="3.3" prioridad="baja" complejidad="media">
+          <nombre>Caching inteligente de datos realtime</nombre>
+          <descripcion>
+            Cache local de datos frecuentemente accedidos para reducir 
+            latencia y calls innecesarias.
+          </descripcion>
+          <pasos>
+            <paso>1. Cache en memoria para user_spins, coupons</paso>
+            <paso>2. TTL automático para invalidar cache</paso>
+            <paso>3. Sync cache con eventos realtime</paso>
+            <paso>4. Fallback a API si cache falla</paso>
+          </pasos>
+        </tarea>
+      </tareas>
+
+      <entregables>
+        <entregable>Sistema de debouncing para eventos</entregable>
+        <entregable>Memory management optimizado</entregable>
+        <entregable>Cache inteligente de datos</entregable>
+        <entregable>Métricas de performance</entregable>
+      </entregables>
+    </fase>
+  </fases>
+
+  <!-- ================================================== -->
+  <!-- MÉTRICAS Y SUCCESS CRITERIA -->
+  <!-- ================================================== -->
+  <metricas_exito>
+    <metrica nombre="Reducción de conexiones WebSocket">
+      <objetivo>De 3 conexiones a 1 conexión por usuario</objetivo>
+      <medicion>Monitoring de Supabase dashboard</medicion>
+    </metrica>
+    <metrica nombre="Tiempo de reconexión">
+      <objetivo>Reconexión automática en menos de 5 segundos</objetivo>
+      <medicion>Testing manual + logs automáticos</medicion>
+    </metrica>
+    <metrica nombre="Uso de memoria">
+      <objetivo>Reducir uso de memoria en 20-30%</objetivo>
+      <medicion>Chrome DevTools memory profiling</medicion>
+    </metrica>
+    <metrica nombre="Latencia de eventos">
+      <objetivo>Eventos procesados en menos de 100ms</objetivo>
+      <medicion>Timestamps en logs + métricas custom</medicion>
+    </metrica>
+    <metrica nombre="Estabilidad de conexión">
+      <objetivo>99% uptime en sesiones de 1+ hora</objetivo>
+      <medicion>Tracking de disconnects vs tiempo total</medicion>
+    </metrica>
+  </metricas_exito>
+
+  <!-- ================================================== -->
+  <!-- RIESGOS Y MITIGACIÓN -->
+  <!-- ================================================== -->
+  <riesgos>
+    <riesgo nivel="medio">
+      <descripcion>Breaking changes en funcionalidad existente</descripcion>
+      <mitigacion>
+        <accion>Testing exhaustivo antes de cada commit</accion>
+        <accion>Feature flags para rollback rápido</accion>
+        <accion>Backup del RealtimeManager actual</accion>
+      </mitigacion>
+    </riesgo>
+    <riesgo nivel="bajo">
+      <descripcion>Performance degradation durante desarrollo</descripcion>
+      <mitigacion>
+        <accion>Benchmarking antes/después de cada fase</accion>
+        <accion>Rollback automático si métricas empeoran</accion>
+      </mitigacion>
+    </riesgo>
+    <riesgo nivel="bajo">
+      <descripcion>Complejidad adicional en debugging</descripcion>
+      <mitigacion>
+        <accion>Logging detallado en cada fase</accion>
+        <accion>Documentación actualizada constantemente</accion>
+        <accion>Componente de debug visual</accion>
+      </mitigacion>
+    </riesgo>
+  </riesgos>
+
+  <!-- ================================================== -->
+  <!-- PLAN DE TESTING -->
+  <!-- ================================================== -->
+  <testing_strategy>
+    <test_suite nombre="Realtime Functionality">
+      <test>Conexión/desconexión correcta</test>
+      <test>Recepción de eventos user_spins</test>
+      <test>Recepción de eventos check_ins</test>
+      <test>Recepción de eventos user_coupons</test>
+      <test>Filtering correcto por userId</test>
+    </test_suite>
+    <test_suite nombre="Performance">
+      <test>Memory usage profiling</test>
+      <test>Latencia de eventos < 100ms</test>
+      <test>CPU usage durante ráfagas de eventos</test>
+      <test>Comportamiento con 100+ eventos/min</test>
+    </test_suite>
+    <test_suite nombre="Reliability">
+      <test>Reconexión automática tras pérdida de red</test>
+      <test>Comportamiento con múltiples pestañas</test>
+      <test>Pausa/resume al cambiar visibilidad</test>
+      <test>Long-running sessions (2+ horas)</test>
+    </test_suite>
+  </testing_strategy>
+
+  <!-- ================================================== -->
+  <!-- NOTAS DE IMPLEMENTACIÓN -->
+  <!-- ================================================== -->
+  <notas_implementacion>
+    <nota tipo="arquitectura">
+      Mantener compatibilidad hacia atrás con la API actual del RealtimeManager 
+      para no romper componentes existentes.
+    </nota>
+    <nota tipo="performance">
+      Considerar implementar lazy loading de handlers para reducir bundle size inicial.
+    </nota>
+    <nota tipo="monitoring">
+      Integrar con sistema de analytics existente para tracking de métricas realtime.
+    </nota>
+    <nota tipo="deployment">
+      Desplegar cambios gradualmente usando feature flags en producción.
+    </nota>
+  </notas_implementacion>
+
+  <!-- ================================================== -->
+  <!-- CONCLUSIÓN -->
+  <!-- ================================================== -->
+  <conclusion>
+    <resumen>
+      Este plan optimiza el sistema realtime de forma incremental y segura,
+      priorizando mejoras de impacto inmediato y bajo riesgo. La implementación
+      por fases permite validar cada mejora antes de continuar.
+    </resumen>
+    <impacto_esperado>
+      - 60-70% reducción en conexiones WebSocket
+      - 20-30% mejora en uso de memoria  
+      - 90%+ reducción en desconexiones no deseadas
+      - Mejor UX con reconexión automática invisible
+      - Foundation sólida para futuras optimizaciones
+    </impacto_esperado>
+  </conclusion>
+</plan_trabajo>

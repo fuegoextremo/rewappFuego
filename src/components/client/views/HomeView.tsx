@@ -1,5 +1,6 @@
-import { useUser, useSettings, useAppDispatch } from '@/store/hooks'
+import { useAppDispatch, useUser, useSettings } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
+import { useBlockedDispatch } from '@/hooks/useBlockedDispatch'
 import { StreakSection } from '@/components/client/StreakSection'
 import { CTAButton } from '@/components/client/CTAButton'
 import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
@@ -11,8 +12,12 @@ import { useMemo } from 'react'
 
 export default function HomeView() {
   const dispatch = useAppDispatch()
+  const blockedDispatch = useBlockedDispatch()
   const user = useUser()
   const settings = useSettings()
+  
+  // Crear dispatch wrapper que respeta el bloqueo
+  const safeDispatch = blockedDispatch(dispatch)
 
   // ✨ Solo obtener el estado de conexión (la conexión es automática)
   const { isConnected } = useUserRealtime()
@@ -79,7 +84,7 @@ export default function HomeView() {
 
       {/* Botón CTA principal */}
       <div 
-        onClick={() => dispatch(setCurrentView('roulette'))}
+        onClick={() => safeDispatch(setCurrentView('roulette'))}
         className="px-4 cursor-pointer"
       >
         <CTAButton>

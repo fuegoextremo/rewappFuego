@@ -24,3 +24,14 @@ export const useIsRefreshing = () => useAppSelector(state => state.ui.isRefreshi
 export const useSettings = () => useAppSelector(state => state.settings.settings)
 export const useSettingsLoading = () => useAppSelector(state => state.settings.isLoading)
 export const useSetting = (key: string) => useAppSelector(state => state.settings.settings[key])
+
+// 🎰 SELECTORES DE ROULETTE
+export const useIsSpinning = () => useAppSelector(state => state.roulette.isSpinning)
+export const useIsNavigationBlocked = () => useAppSelector(state => state.roulette.isNavigationBlocked)
+export const useSpinStartTime = () => useAppSelector(state => state.roulette.spinStartTime)
+export const useLockDuration = () => useAppSelector(state => state.roulette.lockDuration)
+export const useShouldBeUnlocked = () => useAppSelector(state => {
+  const { spinStartTime, lockDuration } = state.roulette
+  if (!spinStartTime) return true
+  return Date.now() - spinStartTime > lockDuration
+})

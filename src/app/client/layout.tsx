@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { ReduxProvider } from '@/store/providers/ReduxProvider'
+import { NavigationBlockProvider } from '@/components/providers/NavigationBlockProvider'
+import { SpinLockDebugPanel } from '@/components/debug/SpinLockDebugPanel'
 import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
 import { AdminPreviewBanner } from '@/components/shared/AdminPreviewBanner'
 import { ClientThemeProvider } from '@/components/providers/ClientThemeProvider'
@@ -18,8 +20,9 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
       
       <ReduxProvider>
-        <ClientProviders>
-          <ClientThemeProvider>
+        <NavigationBlockProvider>
+          <ClientProviders>
+            <ClientThemeProvider>
             <div className="min-h-dvh bg-white text-gray-900">
               {/* Banners de estado */}
               <AdminPreviewBanner />
@@ -44,9 +47,13 @@ export default async function ClientLayout({ children }: { children: ReactNode }
                   </div>
                   {children}
                 </main>
+                
+                {/* Panel de debug para desarrollo */}
+                <SpinLockDebugPanel />
               </div>
             </ClientThemeProvider>
-        </ClientProviders>
+          </ClientProviders>
+        </NavigationBlockProvider>
       </ReduxProvider>
     </>
   )

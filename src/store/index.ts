@@ -5,20 +5,22 @@ import { combineReducers } from '@reduxjs/toolkit'
 import authSlice from './slices/authSlice'
 import uiSlice from './slices/uiSlice'
 import settingsSlice from './slices/settingsSlice'
+import rouletteSlice from './slices/rouletteSlice'
 
 // 🎯 CONFIGURACIÓN DE PERSISTENCIA
 const persistConfig = {
   key: 'fuego-rewards-v2', // 🔥 CAMBIADO: Nueva key para reset de estado con nuevos campos
   storage,
   whitelist: ['auth', 'settings'], // Solo persistir auth y settings
-  blacklist: ['ui'] // No persistir estado de UI
+  blacklist: ['ui', 'roulette'] // No persistir estado de UI ni roulette (temporal)
 }
 
 // 🔗 COMBINAR REDUCERS
 const rootReducer = combineReducers({
   auth: authSlice,
   ui: uiSlice,
-  settings: settingsSlice
+  settings: settingsSlice,
+  roulette: rouletteSlice
 })
 
 // 🎨 PERSISTIR REDUCER

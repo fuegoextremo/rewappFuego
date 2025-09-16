@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
-// import { useRouter } from 'next/navigation'
-// import { useQueryClient } from '@tanstack/react-query'
-// import { useUser } from '@/store/hooks'
+import { useState, useTransition, useRef, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
+import { useUser, useSettings, useAppDispatch } from '@/store/hooks'
+import { startSpin, endSpin } from '@/store/slices/rouletteSlice'
+import { useNavigationBlock } from '@/hooks/useNavigationBlock'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import ResultSheet from '@/components/client/ResultSheet'
 import WheelRive, { WheelRiveRef } from '@/components/client/WheelRive'
+// import { useRouter } from 'next/navigation'
 
 const RIVE_ANIMATION_DURATION = 5000 // 5.5s spin + 1s transition = 6.5s total
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -19,9 +21,27 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [result, setResult] = useState<SpinResult | null>(null)
   const [spinning, setSpinning] = useState(false) // Estado para la animación RIVE
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
+  const dispatch = useAppDispatch()
+  const user = useUser()
+  
+  // 🔒 Activar hook de bloqueo de navegación
+  useNavigationBlock()
+  
+  // 🔓 Desbloquear navegación cuando se muestre el resultado
+  useEffect(() => {
+    if (result && !spinning) {
+      // Esperar 3 segundos adicionales para que el usuario vea el resultado
+      const unlockTimer = setTimeout(() => {
+        dispatch(endSpin())
+        console.log('🔓 Navegación desbloqueada - resultado mostrado')
+      }, 3000)
+      
+      return () => clearTimeout(unlockTimer)
+    }
+  }, [result, spinning, dispatch])
+  
   // const router = useRouter()
   // const queryClient = useQueryClient()
-  // const user = useUser()
   const wheelRiveRef = useRef<WheelRiveRef>(null)
 
   // ✨ Loading inteligente: solo skeleton si NO tenemos settings Y estamos cargando
@@ -43,6 +63,11 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const onSpin = () => {
     setMsg(null)
     setResult(null)
+    
+    // 🔒 ACTIVAR BLOQUEO DE NAVEGACIÓN
+    dispatch(startSpin())
+    console.log('🔒 Navegación bloqueada - iniciando giro')
+    
     start(async () => {
       try {
         // 1️⃣ Obtener resultado del API primero
@@ -51,6 +76,9 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
 
         if (!res.ok || !json.ok) {
           setMsg(json?.error ?? 'No se pudo girar')
+          // 🔓 DESBLOQUEAR en caso de error
+          dispatch(endSpin())
+          console.log('🔓 Navegación desbloqueada - error en giro')
           return
         }
 
@@ -91,6 +119,9 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
         setSpinning(false)
         // Resetear RIVE en caso de error
         wheelRiveRef.current?.resetSpin()
+        // 🔓 DESBLOQUEAR en caso de error
+        dispatch(endSpin())
+        console.log('🔓 Navegación desbloqueada - error de red')
       }
     })
   }

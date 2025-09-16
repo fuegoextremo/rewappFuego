@@ -2,6 +2,7 @@
 import { useCurrentView, useAppDispatch, useUser } from '@/store/hooks'
 import { useSettings } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
+import { useBlockedDispatch } from '@/hooks/useBlockedDispatch'
 import { Home, FerrisWheel, QrCode, Ticket, User } from 'lucide-react'
 
 const items = [
@@ -14,9 +15,13 @@ const items = [
 
 export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
   const dispatch = useAppDispatch()
+  const blockedDispatch = useBlockedDispatch()
   const currentView = useCurrentView()
   const settings = useSettings()
   const user = useUser()
+  
+  // Crear dispatch wrapper que respeta el bloqueo
+  const safeDispatch = blockedDispatch(dispatch)
   
   const primaryColor = settings.company_theme_primary || '#D73527'
   const availableSpins = user?.available_spins ?? 0
@@ -48,7 +53,7 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => dispatch(setCurrentView(item.view as 'home' | 'profile' | 'coupons' | 'roulette'))}
+                  onClick={() => safeDispatch(setCurrentView(item.view as 'home' | 'profile' | 'coupons' | 'roulette'))}
                   className="w-full flex flex-col items-center py-3 text-xs focus:outline-none"
                 >
                   <div className="relative">

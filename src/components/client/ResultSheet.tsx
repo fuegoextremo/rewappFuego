@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Gift, Trophy } from 'lucide-react'
 import { useAppDispatch } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
+import { useBlockedDispatch } from '@/hooks/useBlockedDispatch'
 
 type ResultSheetProps = {
   open: boolean
@@ -15,10 +16,14 @@ type ResultSheetProps = {
 
 export default function ResultSheet({ open, onClose, won, prizeName }: ResultSheetProps) {
   const dispatch = useAppDispatch()
+  const blockedDispatch = useBlockedDispatch()
+  
+  // Crear dispatch wrapper que respeta el bloqueo
+  const safeDispatch = blockedDispatch(dispatch)
   
   const handleGoToCoupons = () => {
     onClose()
-    dispatch(setCurrentView('coupons'))
+    safeDispatch(setCurrentView('coupons'))
   }
   
   // cerrar con ESC

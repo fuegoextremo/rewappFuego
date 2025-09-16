@@ -1,5 +1,7 @@
-import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux'
-import type { RootState, AppDispatch } from '../index'
+import { useSelector, useDispatch } from 'react-redux'
+import { shallowEqual } from 'react-redux'
+import type { TypedUseSelectorHook } from 'react-redux'
+import type { RootState, AppDispatch } from '..'
 
 // 🎯 HOOKS TIPADOS
 export const useAppDispatch = () => useDispatch<AppDispatch>()
@@ -7,15 +9,8 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
 
 // 🔐 SELECTORES DE AUTH OPTIMIZADOS
 export const useAuth = () => useAppSelector(state => state.auth)
-export const useUser = () => useAppSelector(state => state.auth.user, (left, right) => {
-  // 🎯 OPTIMIZACIÓN: Solo re-render si propiedades relevantes cambian
-  if (!left && !right) return true
-  if (!left || !right) return false
-  return left.id === right.id && 
-         left.current_streak === right.current_streak &&
-         left.total_checkins === right.total_checkins &&
-         left.available_spins === right.available_spins
-})
+// 🔧 OPTIMIZADO: Selector con shallow comparison para evitar re-renders innecesarios
+export const useUser = () => useSelector((state: RootState) => state.auth.user, shallowEqual)
 export const useIsAuthenticated = () => useAppSelector(state => state.auth.isAuthenticated)
 export const useAuthLoading = () => useAppSelector(state => state.auth.isLoading)
 export const useAuthError = () => useAppSelector(state => state.auth.error)

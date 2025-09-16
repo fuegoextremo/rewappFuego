@@ -101,7 +101,35 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
   }
 }
 
-const StreakSectionComponent = function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
+// 🔍 Custom comparison function para debugging
+const areStreakPropsEqual = (prevProps: Props, nextProps: Props) => {
+  console.log('🔍 React.memo comparación ejecutada:', {
+    prevCount: prevProps.currentCount,
+    nextCount: nextProps.currentCount,
+    prevLoading: prevProps.isLoading,
+    nextLoading: nextProps.isLoading
+  })
+  
+  const areEqual = prevProps.currentCount === nextProps.currentCount && 
+                   prevProps.isLoading === nextProps.isLoading;
+  
+  if (!areEqual) {
+    console.log('🔍 StreakSection props changed:', {
+      currentCountChanged: prevProps.currentCount !== nextProps.currentCount,
+      isLoadingChanged: prevProps.isLoading !== nextProps.isLoading,
+      prevCount: prevProps.currentCount,
+      nextCount: nextProps.currentCount,
+      prevLoading: prevProps.isLoading,
+      nextLoading: nextProps.isLoading
+    });
+  } else {
+    console.log('🔍 StreakSection memo: props IDENTICAL - skipping render');
+  }
+  
+  return areEqual;
+};
+
+const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
   console.log('🔍 StreakSection render:', { currentCount, externalLoading });
   
   const [imageLoading, setImageLoading] = useState(false)
@@ -112,10 +140,21 @@ const StreakSectionComponent = function StreakSection({ currentCount, isLoading:
   
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   
+  // 🔧 OPTIMIZADO: Memoizar solo las propiedades que necesitamos para evitar re-renders
+  const stableSettings = useMemo(() => {
+    if (!settings) return undefined
+    return {
+      streak_initial_image: settings.streak_initial_image,
+      streak_progress_default: settings.streak_progress_default,
+      streak_complete_image: settings.streak_complete_image,
+      company_theme_primary: settings.company_theme_primary
+    }
+  }, [settings])
+  
   console.log('🔍 StreakSection settings:', { 
-    hasSettings: !!settings, 
+    hasSettings: !!stableSettings, 
     settingsLoading,
-    settingsKeys: settings ? Object.keys(settings).length : 0
+    settingsKeys: stableSettings ? Object.keys(stableSettings).length : 0
   });
 
   // ✨ OPTIMIZACIÓN: Memoizar onError callbacks
@@ -168,14 +207,14 @@ const StreakSectionComponent = function StreakSection({ currentCount, isLoading:
   const streakStage = useMemo(() => {
     console.log('🔄 StreakSection useMemo[streakStage] triggered:', { 
       prizesLength: streakPrizes.length, 
-      hasSettings: !!settings, 
+      hasSettings: !!stableSettings, 
       currentCount 
     });
-    if (streakPrizes.length > 0 && settings) {
-      return calculateStreakStage(currentCount, streakPrizes, settings)
+    if (streakPrizes.length > 0 && stableSettings) {
+      return calculateStreakStage(currentCount, streakPrizes, stableSettings)
     }
     return null
-  }, [currentCount, streakPrizes, settings]) // 🎯 Se recalcula cuando currentCount cambia
+  }, [currentCount, streakPrizes, stableSettings]) // 🎯 OPTIMIZADO: Usa stableSettings
 
   // ✨ OPTIMIZACIÓN: Mover side-effects a useEffect
   useEffect(() => {
@@ -351,27 +390,6 @@ const StreakSectionComponent = function StreakSection({ currentCount, isLoading:
       </div>
     </div>
   )
-};
+}, areStreakPropsEqual);
 
-// 🔍 Custom comparison function para debugging
-const areStreakPropsEqual = (prevProps: Props, nextProps: Props) => {
-  const areEqual = prevProps.currentCount === nextProps.currentCount && 
-                   prevProps.isLoading === nextProps.isLoading;
-  
-  if (!areEqual) {
-    console.log('🔍 StreakSection props changed:', {
-      currentCountChanged: prevProps.currentCount !== nextProps.currentCount,
-      isLoadingChanged: prevProps.isLoading !== nextProps.isLoading,
-      prevCount: prevProps.currentCount,
-      nextCount: nextProps.currentCount,
-      prevLoading: prevProps.isLoading,
-      nextLoading: nextProps.isLoading
-    });
-  } else {
-    console.log('🔍 StreakSection props IDENTICAL but still re-rendering - memo bypassed');
-  }
-  
-  return areEqual;
-};
-
-export const StreakSection = memo(StreakSectionComponent, areStreakPropsEqual);
+export const StreakSection = StreakSectionComponent;

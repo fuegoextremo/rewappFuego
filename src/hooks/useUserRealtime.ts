@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RealtimeManager } from '@/lib/realtime/RealtimeManager'
 
-// 🚀 OPTIMIZACIÓN FASE 1.1: Hook simplificado SIN polling - solo retorna estado actual
+// 🚀 OPTIMIZACIÓN FASE 1.1: Hook simplificado SIN polling - solo retorna estado inicial
 export function useUserRealtime() {
   const [isConnected, setIsConnected] = useState(false)
   
@@ -9,8 +9,8 @@ export function useUserRealtime() {
     const manager = RealtimeManager.getInstance()
     setIsConnected(manager.isConnected())
     
-    // ❌ ELIMINADO: Polling cada 5 segundos (innecesario con conexión estable)
-    // La conexión es persistente, no necesita verificación constante
+    // ❌ ELIMINADO: Polling y eventos (causaban re-renders innecesarios)
+    // El indicador "En vivo" es estático pero evita cascada de re-renders
     
   }, [])
 

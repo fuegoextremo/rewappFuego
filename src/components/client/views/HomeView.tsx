@@ -1,12 +1,13 @@
 import { useUser, useSettings, useAppDispatch } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
-import { StreakSectionWrapper } from '@/components/client/StreakSectionWrapper'
+import { StreakSection } from '@/components/client/StreakSection'
 import { CTAButton } from '@/components/client/CTAButton'
 import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
 import { RecentActivity } from '@/components/client/RecentActivity'
 import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { Goal, FerrisWheel } from 'lucide-react'
 import Image from 'next/image'
+import { useMemo } from 'react'
 
 export default function HomeView() {
   const dispatch = useAppDispatch()
@@ -15,6 +16,14 @@ export default function HomeView() {
 
   // ✨ Solo obtener el estado de conexión (la conexión es automática)
   const { isConnected } = useUserRealtime()
+
+  // 🔧 OPTIMIZACIÓN: Memoizar props para StreakSection
+  const streakProps = useMemo(() => ({
+    currentCount: user?.current_streak || 0,
+    isLoading: false
+  }), [user?.current_streak])
+
+  console.log('🔍 HomeView render - user.current_streak:', user?.current_streak);
 
   if (!user) {
     return (
@@ -66,7 +75,7 @@ export default function HomeView() {
       </div>
 
       {/* Sección de racha - Movida arriba para mayor prominencia */}
-      <StreakSectionWrapper />
+      <StreakSection {...streakProps} />
 
       {/* Botón CTA principal */}
       <div 

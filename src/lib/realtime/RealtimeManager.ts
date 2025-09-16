@@ -113,6 +113,8 @@ export class RealtimeManager {
   // 🚀 FASE 1.2: Page Visibility API
   private isPaused: boolean = false
   private visibilityListener: (() => void) | null = null
+  private windowBlurListener: (() => void) | null = null
+  private windowFocusListener: (() => void) | null = null
 
   private constructor() {
     // Cliente Supabase compartido - usa el mismo que el resto de la app
@@ -145,6 +147,13 @@ export class RealtimeManager {
   connect(userId: string) {
     if (this.currentUserId === userId && this.channel) {
       RealtimeLogger.debug('connect', 'Usuario ya conectado, evitando reconexión', { userId })
+      return
+    }
+
+    // 🔧 No conectar si estamos pausados (a menos que sea desde resume())
+    if (this.isPaused) {
+      RealtimeLogger.debug('connect', 'Conexión pausada - deferiendo hasta resume', { userId })
+      this.currentUserId = userId // Guardar para reconectar en resume
       return
     }
 
@@ -331,15 +340,12 @@ export class RealtimeManager {
     if (payload.new && payload.new.user_id === this.currentUserId) {
       console.log('🔥 RealtimeManager: Streak payload completo:', payload.new)
       
-      // ✨ Actualización granular de racha usando Redux
+      // ✨ Actualización granular de racha usando Redux (OPTIMIZADO: solo una dispatch)
       if (this.reduxDispatch) {
-        import('@/store/slices/authSlice').then(({ updateCurrentStreak, updateUserStreakData }) => {
+        import('@/store/slices/authSlice').then(({ updateUserStreakData }) => {
           const streakCount = payload.new?.current_count as number
           if (typeof streakCount === 'number' && streakCount >= 0) {
-            this.reduxDispatch!(updateCurrentStreak(streakCount))
-            console.log('🔥 RealtimeManager: ✅ Actualizando current_streak:', streakCount)
-            
-            // 🔥 ACTUALIZADO: Incluir todos los campos nuevos
+            // 🔥 OPTIMIZADO: Solo una actualización completa, evita doble re-render
             const streakData = {
               current_count: streakCount,
               completed_count: (payload.new?.completed_count as number) || 0,
@@ -348,6 +354,7 @@ export class RealtimeManager {
               last_check_in: payload.new?.last_check_in as string | null
             }
             this.reduxDispatch!(updateUserStreakData(streakData))
+            console.log('🔥 RealtimeManager: ✅ Actualizando streak data completo:', streakData)
             console.log('🔥 RealtimeManager: ✅ Actualizando streakData completo:', streakData)
           }
         })
@@ -454,7 +461,7 @@ export class RealtimeManager {
 
   // Status
   isConnected(): boolean {
-    return this.channel !== null && this.currentUserId !== null
+    return this.channel !== null && this.currentUserId !== null && !this.isPaused
   }
 
   // 🔔 HELPER: Manejo de notificaciones de cupones
@@ -544,46 +551,101 @@ export class RealtimeManager {
       }
     }
     
+    // 🎯 Window Focus Listeners
+    this.windowBlurListener = () => {
+      console.log('🌙 VENTANA SIN FOCO - RealtimeManager pausando...')
+      this.pause()
+    }
+    
+    this.windowFocusListener = () => {
+      console.log('📱 VENTANA CON FOCO - RealtimeManager resumiendo...')
+      this.resume()
+    }
+    
+    // 🎯 Page Visibility API - pausa cuando la pestaña se oculta
     document.addEventListener('visibilitychange', this.visibilityListener)
-    console.log('✅ Page Visibility API inicializado - Cambiar de pestaña para ver logs')
-    RealtimeLogger.info('page-visibility', 'Page Visibility API inicializado exitosamente')
+    
+    // 🎯 Window Focus API - pausa cuando la ventana pierde foco
+    window.addEventListener('blur', this.windowBlurListener)
+    window.addEventListener('focus', this.windowFocusListener)
+    
+    console.log('✅ Page Visibility API y Window Focus inicializados - Cambiar de pestaña o foco para ver logs')
+    RealtimeLogger.info('page-visibility', 'Page Visibility API y Window Focus inicializados exitosamente')
   }
   
   private pause() {
-    if (this.isPaused || !this.channel) return
+    if (this.isPaused) return
     
     console.log('🔴 PAUSE: Conexión realtime pausada por Page Visibility API')
     RealtimeLogger.info('page-visibility', 'Pausando conexión realtime (pestaña oculta)', { 
-      userId: this.currentUserId 
+      userId: this.currentUserId,
+      hadChannel: !!this.channel
     })
     this.isPaused = true
     
-    // Pausar conexión manteniendo referencia para resume
-    this.supabaseClient.removeChannel(this.channel)
-    console.log('📡 Canal Supabase removido - conservando memoria')
-    // No limpiar this.channel para poder resumir
+    // Solo remover canal si existe - permite pausar incluso sin conexión activa
+    if (this.channel) {
+      this.supabaseClient.removeChannel(this.channel)
+      this.channel = null // 🔧 CRUCIAL: limpiar referencia para permitir reconexión
+      console.log('📡 Canal Supabase removido y referencia limpiada')
+    } else {
+      console.log('📡 Pausa registrada sin canal activo (conexión aún no establecida)')
+    }
   }
   
   private resume() {
-    if (!this.isPaused || !this.currentUserId) return
+    if (!this.isPaused) return
     
     console.log('🟢 RESUME: Conexión realtime resumida por Page Visibility API')
     RealtimeLogger.info('page-visibility', 'Resumiendo conexión realtime (pestaña visible)', { 
-      userId: this.currentUserId 
+      userId: this.currentUserId,
+      willReconnect: !!this.currentUserId
     })
     this.isPaused = false
     
-    // Reconectar con el mismo userId
-    this.connect(this.currentUserId)
-    console.log('🔄 Reconexión completa')
+    // Solo reconectar si tenemos un userId (puede que se haya pausado antes de la conexión inicial)
+    if (this.currentUserId) {
+      // 🔧 Forzar reconexión completa ya que el canal fue limpiado en pause()
+      const userIdToReconnect = this.currentUserId
+      this.currentUserId = null // Limpiar para forzar nueva conexión
+      this.connect(userIdToReconnect)
+      
+      // 🔄 SINCRONIZACIÓN: Invalidar queries críticas para refrescar datos que pudieron cambiar
+      if (this.queryClient) {
+        console.log('🔄 Invalidando queries para sincronizar datos tras resume...')
+        this.queryClient.invalidateQueries({ queryKey: ['user', 'spins', userIdToReconnect] })
+        this.queryClient.invalidateQueries({ queryKey: ['user', 'streaks', userIdToReconnect] })
+        this.queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userIdToReconnect] })
+        RealtimeLogger.info('page-visibility', 'Queries invalidadas para sincronización post-resume', { userId: userIdToReconnect })
+      }
+      
+      console.log('🔄 Reconexión completa con canal nuevo')
+    } else {
+      console.log('🔄 Resume sin userId - esperando conexión inicial')
+    }
   }
   
   // Cleanup para evitar memory leaks
   private cleanupPageVisibility() {
-    if (this.visibilityListener && typeof window !== 'undefined') {
-      document.removeEventListener('visibilitychange', this.visibilityListener)
-      this.visibilityListener = null
-      RealtimeLogger.debug('page-visibility', 'Page Visibility listener removido correctamente')
+    if (typeof window !== 'undefined') {
+      // Remover Page Visibility listener
+      if (this.visibilityListener) {
+        document.removeEventListener('visibilitychange', this.visibilityListener)
+        this.visibilityListener = null
+      }
+      
+      // Remover Window Focus listeners
+      if (this.windowBlurListener) {
+        window.removeEventListener('blur', this.windowBlurListener)
+        this.windowBlurListener = null
+      }
+      
+      if (this.windowFocusListener) {
+        window.removeEventListener('focus', this.windowFocusListener)
+        this.windowFocusListener = null
+      }
+      
+      RealtimeLogger.debug('page-visibility', 'Page Visibility y Window Focus listeners removidos correctamente')
     }
   }
 }

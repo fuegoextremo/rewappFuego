@@ -7,8 +7,6 @@ import CouponCard from './CouponCard'
 interface SPAAnimatedExpiredCouponStackProps {
   coupons: CouponRow[]
   title?: string
-  emptyMessage?: string
-  emptySubMessage?: string
   hasMore?: boolean
   loading?: boolean
   onLoadMore?: () => void
@@ -18,8 +16,6 @@ interface SPAAnimatedExpiredCouponStackProps {
 export default function SPAAnimatedExpiredCouponStack({ 
   coupons, 
   title = "Cupones usados/vencidos",
-  emptyMessage = "No tienes cupones usados",
-  emptySubMessage = "Historial limpio 📋",
   hasMore = false,
   loading = false,
   onLoadMore,

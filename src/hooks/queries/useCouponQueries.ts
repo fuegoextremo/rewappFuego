@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
-import { getUserCoupons, getAvailableCoupons, getUsedCoupons, useCoupon } from '@/lib/api/coupons'
 import { queryKeys } from '@/lib/queryClient'
 
 // �️ Tipo para cupones (compatible con classic)

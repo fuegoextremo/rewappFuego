@@ -75,8 +75,6 @@ export default function CouponsView() {
         <SPAAnimatedExpiredCouponStack 
           coupons={expiredCoupons}
           title="Historial"
-          emptyMessage="No tienes cupones en el historial"
-          emptySubMessage="Los cupones usados aparecerán aquí 📋"
           hasMore={hasMoreExpired}
           loading={loadingMore}
           onLoadMore={loadMoreExpiredCoupons}

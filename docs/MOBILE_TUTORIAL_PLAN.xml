@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mobile_tutorial_plan>
+  <metadata>
+    <title>Plan de Implementación - Tutorial Mobile con Driver.js</title>
+    <description>Tutorial interactivo mobile-first para onboarding de usuarios nuevos</description>
+    <library>Driver.js v1.3.1</library>
+    <target_platform>Mobile PWA</target_platform>
+    <estimated_duration>60-90 segundos</estimated_duration>
+    <created_date>2025-09-16</created_date>
+  </metadata>
+
+  <!-- ================================ -->
+  <!-- CONFIGURACIÓN TÉCNICA -->
+  <!-- ================================ -->
+  <technical_setup>
+    <dependencies>
+      <dependency>
+        <name>driver.js</name>
+        <version>^1.3.1</version>
+        <size>~4kb gzipped</size>
+        <install_command>npm install driver.js</install_command>
+      </dependency>
+    </dependencies>
+    
+    <implementation_files>
+      <file path="src/hooks/useTutorial.ts" purpose="Hook principal para manejo del tutorial" />
+      <file path="src/components/providers/TutorialProvider.tsx" purpose="Provider context para estado global" />
+      <file path="src/store/slices/tutorialSlice.ts" purpose="Redux slice para persistencia" />
+      <file path="src/lib/tutorial/steps.ts" purpose="Configuración de pasos del tutorial" />
+      <file path="src/lib/tutorial/config.ts" purpose="Configuración de Driver.js" />
+    </implementation_files>
+
+    <integration_points>
+      <point component="ClientLayout" action="Agregar TutorialProvider wrapper" />
+      <point component="BottomNav" action="Agregar data-attributes para targeting" />
+      <point component="HomeView" action="Agregar IDs únicos para elementos clave" />
+      <point component="StreakPrizesList" action="Agregar identificadores para tutorial" />
+    </integration_points>
+  </technical_setup>
+
+  <!-- ================================ -->
+  <!-- DETECCIÓN DE PRIMERA VISITA -->
+  <!-- ================================ -->
+  <first_visit_detection>
+    <trigger_conditions>
+      <condition>Usuario autenticado por primera vez</condition>
+      <condition>No existe flag 'tutorial_completed' en localStorage</condition>
+      <condition>Estado Redux tutorial.hasCompleted === false</condition>
+    </trigger_conditions>
+    
+    <storage_strategy>
+      <local_storage key="rewapp_tutorial_completed" type="boolean" />
+      <redux_state slice="tutorial" field="hasCompleted" />
+      <user_profile field="tutorial_completed_at" type="timestamp" />
+    </storage_strategy>
+
+    <auto_start_logic>
+      <delay>2000ms después de carga completa</delay>
+      <pre_conditions>
+        <condition>Usuario tiene datos básicos cargados</condition>
+        <condition>Navegación no está bloqueada</condition>
+        <condition>Vista actual es 'home'</condition>
+      </pre_conditions>
+    </auto_start_logic>
+  </first_visit_detection>
+
+  <!-- ================================ -->
+  <!-- PASOS DEL TUTORIAL -->
+  <!-- ================================ -->
+  <tutorial_steps>
+    <!-- PASO 1: BIENVENIDA -->
+    <step id="welcome" order="1">
+      <target>body</target>
+      <position>center</position>
+      <title>🎉 ¡Bienvenido a Fuego Rewards!</title>
+      <description>Te vamos a mostrar cómo funciona nuestra app de recompensas. ¡Solo toma 1 minuto!</description>
+      <mobile_config>
+        <backdrop_opacity>0.8</backdrop_opacity>
+        <close_on_outside_click>false</close_on_outside_click>
+        <show_progress>true</show_progress>
+      </mobile_config>
+      <animations>
+        <entrance>fadeIn</entrance>
+        <exit>fadeOut</exit>
+      </animations>
+    </step>
+
+    <!-- PASO 2: SECCIÓN PRINCIPAL -->
+    <step id="home_overview" order="2">
+      <target>#home-section</target>
+      <position>bottom</position>
+      <title>🏠 Tu Panel Principal</title>
+      <description>Aquí puedes ver tu información general y estadísticas de visitas.</description>
+      <mobile_config>
+        <auto_scroll>true</auto_scroll>
+        <highlight_padding>8px</highlight_padding>
+        <popup_position>bottom</popup_position>
+      </mobile_config>
+      <key_features>
+        <feature>Saludo personalizado</feature>
+        <feature>Estadísticas de visitas totales</feature>
+        <feature>Estado de conexión en vivo</feature>
+      </key_features>
+    </step>
+
+    <!-- PASO 3: PREMIOS DE RACHA -->
+    <step id="streak_prizes" order="3">
+      <target>.streak-prizes-list</target>
+      <position>top</position>
+      <title>🏆 Premios por Racha</title>
+      <description>Mantén visitas consecutivas para desbloquear premios increíbles. ¡Ve tu progreso en tiempo real!</description>
+      <mobile_config>
+        <highlight_rounded>16px</highlight_rounded>
+        <popup_class>tutorial-streak-popup</popup_class>
+      </mobile_config>
+      <interaction_hints>
+        <hint>Los círculos muestran tu progreso actual</hint>
+        <hint>Los checkmarks verdes son premios ya desbloqueados</hint>
+      </interaction_hints>
+    </step>
+
+    <!-- PASO 4: ANALYTICS GENERALES -->
+    <step id="stats_grid" order="4">
+      <target>.stats-grid</target>
+      <position>bottom</position>
+      <title>📊 Tus Estadísticas</title>
+      <description>Aquí puedes ver tus visitas totales y giros disponibles para la ruleta.</description>
+      <mobile_config>
+        <multi_highlight>true</multi_highlight>
+        <highlight_elements>
+          <element>.visits-stat</element>
+          <element>.spins-stat</element>
+        </highlight_elements>
+      </mobile_config>
+    </step>
+
+    <!-- PASO 5: ACTIVIDAD RECIENTE -->
+    <step id="recent_activity" order="5">
+      <target>.recent-activity</target>
+      <position>top</position>
+      <title>📋 Actividad Reciente</title>
+      <description>Tu historial de visitas y acciones recientes aparece aquí.</description>
+      <mobile_config>
+        <scroll_into_view>smooth</scroll_into_view>
+      </mobile_config>
+    </step>
+
+    <!-- PASO 6: NAVEGACIÓN - RULETA -->
+    <step id="roulette_nav" order="6">
+      <target>#roulette-tab</target>
+      <position>top</position>
+      <title>🎲 La Ruleta</title>
+      <description>¡Aquí está la diversión! Gira la ruleta cuando tengas giros disponibles para ganar premios.</description>
+      <mobile_config>
+        <highlight_style>pulse</highlight_style>
+        <badge_highlight>true</badge_highlight>
+      </mobile_config>
+      <features>
+        <feature>Badge muestra giros disponibles</feature>
+        <feature>Animaciones interactivas</feature>
+        <feature>Premios diversos</feature>
+      </features>
+    </step>
+
+    <!-- PASO 7: QR CHECK-IN -->
+    <step id="checkin_qr" order="7">
+      <target>#checkin-tab</target>
+      <position>top</position>
+      <title>📱 Check-in con QR</title>
+      <description>Tu código QR único para registrar visitas. ¡Solo muéstralo al establecimiento!</description>
+      <mobile_config>
+        <highlight_border>3px solid #10B981</highlight_border>
+        <popup_theme>success</popup_theme>
+      </mobile_config>
+      <instructions>
+        <instruction>Cada usuario tiene un QR único</instruction>
+        <instruction>Se escanea para registrar tu visita</instruction>
+        <instruction>Ganas giros automáticamente</instruction>
+      </instructions>
+    </step>
+
+    <!-- PASO 8: CUPONES -->
+    <step id="coupons_section" order="8">
+      <target>#coupons-tab</target>
+      <position>top</position>
+      <title>🎫 Tus Cupones</title>
+      <description>Todos los cupones que ganes aparecen aquí. ¡Úsalos antes de que expiren!</description>
+      <mobile_config>
+        <highlight_animation>bounce</highlight_animation>
+      </mobile_config>
+      <redemption_process>
+        <step>Ve a la sección de cupones</step>
+        <step>Selecciona el cupón que quieres usar</step>
+        <step>Muestra el código al establecimiento</step>
+        <step>¡Disfruta tu premio!</step>
+      </redemption_process>
+    </step>
+
+    <!-- PASO 9: PERFIL -->
+    <step id="profile_section" order="9">
+      <target>#profile-tab</target>
+      <position>top</position>
+      <title>👤 Tu Perfil</title>
+      <description>Gestiona tu información personal y ve tu progreso general en el programa de recompensas.</description>
+      <mobile_config>
+        <highlight_color>var(--primary-color)</highlight_color>
+      </mobile_config>
+      <profile_features>
+        <feature>Editar información personal</feature>
+        <feature>Ver historial completo</feature>
+        <feature>Gestionar cuenta</feature>
+      </profile_features>
+    </step>
+
+    <!-- PASO 10: FINALIZACIÓN -->
+    <step id="completion" order="10">
+      <target>body</target>
+      <position>center</position>
+      <title>🚀 ¡Listo para Empezar!</title>
+      <description>Ya conoces todas las funciones principales. ¡Empieza a ganar puntos y premios visitando el establecimiento!</description>
+      <mobile_config>
+        <completion_animation>confetti</completion_animation>
+        <auto_close_delay>3000</auto_close_delay>
+      </mobile_config>
+      <call_to_action>
+        <primary_button>¡Comenzar mi primera visita!</primary_button>
+        <action>navigate_to_checkin</action>
+      </call_to_action>
+    </step>
+  </tutorial_steps>
+
+  <!-- ================================ -->
+  <!-- CONFIGURACIÓN MOBILE -->
+  <!-- ================================ -->
+  <mobile_optimization>
+    <responsive_design>
+      <breakpoint size="sm" max_width="640px">
+        <popup_width>90vw</popup_width>
+        <popup_max_width>360px</popup_max_width>
+        <text_size>14px</text_size>
+        <title_size>18px</title_size>
+      </breakpoint>
+      <breakpoint size="xs" max_width="480px">
+        <popup_width>95vw</popup_width>
+        <text_size>13px</text_size>
+        <padding>12px</padding>
+      </breakpoint>
+    </responsive_design>
+
+    <touch_interactions>
+      <gesture type="tap" action="next_step" />
+      <gesture type="swipe_left" action="next_step" />
+      <gesture type="swipe_right" action="previous_step" />
+      <gesture type="tap_outside" action="close_tutorial" />
+    </touch_interactions>
+
+    <performance>
+      <lazy_load>true</lazy_load>
+      <animation_fps>60</animation_fps>
+      <smooth_scroll>true</smooth_scroll>
+      <reduce_motion_support>true</reduce_motion_support>
+    </performance>
+  </mobile_optimization>
+
+  <!-- ================================ -->
+  <!-- PERSONALIZACIÓN VISUAL -->
+  <!-- ================================ -->
+  <visual_customization>
+    <theme_integration>
+      <primary_color>var(--company-theme-primary)</primary_color>
+      <accent_color>#10B981</accent_color>
+      <text_color>#374151</text_color>
+      <background_color>#FFFFFF</background_color>
+      <overlay_color>rgba(0, 0, 0, 0.75)</overlay_color>
+    </theme_integration>
+
+    <popup_styling>
+      <border_radius>16px</border_radius>
+      <box_shadow>0 10px 25px rgba(0, 0, 0, 0.1)</box_shadow>
+      <backdrop_filter>blur(8px)</backdrop_filter>
+      <padding>20px</padding>
+      <max_width>400px</max_width>
+    </popup_styling>
+
+    <button_styling>
+      <next_button>
+        <background>var(--primary-color)</background>
+        <color>#FFFFFF</color>
+        <border_radius>12px</border_radius>
+        <padding>12px 24px</padding>
+        <font_weight>600</font_weight>
+      </next_button>
+      <skip_button>
+        <background>transparent</background>
+        <color>#6B7280</color>
+        <border>1px solid #D1D5DB</border>
+        <border_radius>12px</border_radius>
+      </skip_button>
+    </button_styling>
+  </visual_customization>
+
+  <!-- ================================ -->
+  <!-- ANALYTICS Y TRACKING -->
+  <!-- ================================ -->
+  <analytics_tracking>
+    <events>
+      <event name="tutorial_started" data="user_id, timestamp" />
+      <event name="tutorial_step_viewed" data="step_id, step_order, duration" />
+      <event name="tutorial_step_skipped" data="step_id, reason" />
+      <event name="tutorial_completed" data="total_duration, completion_rate" />
+      <event name="tutorial_abandoned" data="last_step, abandonment_reason" />
+    </events>
+
+    <metrics>
+      <completion_rate>Porcentaje de usuarios que completan tutorial</completion_rate>
+      <average_duration>Tiempo promedio para completar</average_duration>
+      <step_drop_off>Pasos donde más usuarios abandonan</step_drop_off>
+      <user_engagement>Interacciones por paso</user_engagement>
+    </metrics>
+
+    <optimization_data>
+      <a_b_testing>
+        <variant name="short_tutorial" steps="5" target="high_completion" />
+        <variant name="detailed_tutorial" steps="10" target="better_understanding" />
+      </a_b_testing>
+    </optimization_data>
+  </analytics_tracking>
+
+  <!-- ================================ -->
+  <!-- ESTRATEGIA DE IMPLEMENTACIÓN -->
+  <!-- ================================ -->
+  <implementation_strategy>
+    <phase_1 title="Setup Base">
+      <tasks>
+        <task>Instalar driver.js y configurar dependencias</task>
+        <task>Crear hook useTutorial base</task>
+        <task>Implementar detección de primera visita</task>
+        <task>Agregar data-attributes a elementos target</task>
+      </tasks>
+      <estimated_time>2-3 horas</estimated_time>
+    </phase_1>
+
+    <phase_2 title="Configuración de Pasos">
+      <tasks>
+        <task>Definir configuración de pasos en steps.ts</task>
+        <task>Implementar TutorialProvider con Redux</task>
+        <task>Crear lógica de navegación entre pasos</task>
+        <task>Probar flujo básico</task>
+      </tasks>
+      <estimated_time>3-4 horas</estimated_time>
+    </phase_2>
+
+    <phase_3 title="Personalización Mobile">
+      <tasks>
+        <task>Aplicar estilos mobile-first</task>
+        <task>Configurar gestos touch</task>
+        <task>Optimizar para diferentes tamaños de pantalla</task>
+        <task>Implementar animaciones suaves</task>
+      </tasks>
+      <estimated_time>2-3 horas</estimated_time>
+    </phase_3>
+
+    <phase_4 title="Testing y Refinamiento">
+      <tasks>
+        <task>Probar en dispositivos reales</task>
+        <task>Ajustar textos y timing</task>
+        <task>Implementar analytics básicos</task>
+        <task>Testing de regresión</task>
+      </tasks>
+      <estimated_time>2-3 horas</estimated_time>
+    </phase_4>
+  </implementation_strategy>
+
+  <!-- ================================ -->
+  <!-- CONSIDERACIONES ESPECIALES -->
+  <!-- ================================ -->
+  <special_considerations>
+    <accessibility>
+      <screen_reader_support>Textos alt y aria-labels apropiados</screen_reader_support>
+      <keyboard_navigation>Soporte completo para navegación por teclado</keyboard_navigation>
+      <reduced_motion>Respeta preferencias de usuario para animaciones</reduced_motion>
+      <contrast_ratio>Cumple estándares WCAG 2.1 AA</contrast_ratio>
+    </accessibility>
+
+    <performance_considerations>
+      <lazy_loading>Driver.js solo se carga cuando es necesario</lazy_loading>
+      <memory_management>Cleanup automático después de completar tutorial</memory_management>
+      <bundle_size>Mantener impacto mínimo en bundle principal</bundle_size>
+    </performance_considerations>
+
+    <integration_challenges>
+      <navigation_blocking>Coordinar con sistema de bloqueo de navegación existente</navigation_blocking>
+      <realtime_updates>Manejar actualizaciones en tiempo real durante tutorial</realtime_updates>
+      <state_management>Sincronizar estado del tutorial con Redux existente</state_management>
+    </integration_challenges>
+  </special_considerations>
+
+  <!-- ================================ -->
+  <!-- CRITERIOS DE ÉXITO -->
+  <!-- ================================ -->
+  <success_criteria>
+    <user_experience>
+      <metric name="completion_rate" target="85%" description="Usuarios que completan tutorial completo" />
+      <metric name="time_to_complete" target="60-90s" description="Duración promedio del tutorial" />
+      <metric name="user_satisfaction" target="4.5/5" description="Rating de utilidad del tutorial" />
+    </user_experience>
+
+    <technical_performance>
+      <metric name="load_time" target="<500ms" description="Tiempo de carga del tutorial" />
+      <metric name="error_rate" target="<1%" description="Errores durante tutorial" />
+      <metric name="mobile_compatibility" target="100%" description="Funciona en todos los dispositivos target" />
+    </technical_performance>
+
+    <business_impact>
+      <metric name="feature_adoption" target="+25%" description="Aumento en uso de features después del tutorial" />
+      <metric name="user_retention" target="+15%" description="Mejora en retención de usuarios nuevos" />
+      <metric name="support_tickets" target="-30%" description="Reducción en tickets de soporte sobre navegación" />
+    </business_impact>
+  </success_criteria>
+</mobile_tutorial_plan>

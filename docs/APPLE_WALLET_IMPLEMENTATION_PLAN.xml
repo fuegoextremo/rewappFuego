@@ -1,0 +1,1011 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<apple_wallet_implementation_plan>
+  <metadata>
+    <title>Plan de Implementación - Apple Wallet QR Check-in</title>
+    <description>Integración de QR de check-in con Apple Wallet manteniendo compatibilidad con sistema actual</description>
+    <target_platform>iOS Apple Wallet + Backend Node.js</target_platform>
+    <estimated_duration>3-4 semanas</estimated_duration>
+    <created_date>2025-09-16</created_date>
+    <compatibility>Mantiene 100% compatibilidad con sistema de escaneo actual</compatibility>
+  </metadata>
+
+  <!-- ================================ -->
+  <!-- ANÁLISIS DEL SISTEMA ACTUAL -->
+  <!-- ================================ -->
+  <current_system_analysis>
+    <existing_qr_flow>
+      <qr_generation>
+        <location>Cliente web - sección QR</location>
+        <format>user_id + HMAC signature</format>
+        <security>HMAC con QR_SECRET_KEY de .env.local</security>
+        <display>QR dinámico en pantalla del usuario</display>
+      </qr_generation>
+      
+      <scanning_process>
+        <scanner_location>Dispositivo del establecimiento</scanner_location>
+        <validation_endpoint>/api/checkin/validate-qr</validation_endpoint>
+        <hmac_verification>Verifica signature con QR_SECRET_KEY</hmac_verification>
+        <business_logic>
+          <rate_limiting>Previene multiple checkins</rate_limiting>
+          <streak_calculation>Actualiza racha consecutiva</streak_calculation>
+          <spin_awarding>Otorga giros para ruleta</spin_awarding>
+          <prize_checking>Verifica premios por racha</prize_checking>
+        </business_logic>
+      </scanning_process>
+      
+      <data_flow>
+        <transaction_atomicity>DB transaction para consistency</transaction_atomicity>
+        <audit_logging>Log completo de check-ins</audit_logging>
+        <realtime_updates>Updates via Redux + WebSocket</realtime_updates>
+      </data_flow>
+    </existing_qr_flow>
+
+    <integration_points>
+      <hmac_secret>Reutilizar QR_SECRET_KEY existente</hmac_secret>
+      <validation_logic>Usar mismo endpoint de validación</validation_logic>
+      <user_identification>Mantener formato user_id + signature</user_identification>
+      <business_rules>Conservar todas las reglas existentes</business_rules>
+    </integration_points>
+  </current_system_analysis>
+
+  <!-- ================================ -->
+  <!-- ARQUITECTURA DE INTEGRACIÓN -->
+  <!-- ================================ -->
+  <integration_architecture>
+    <compatibility_strategy>
+      <principle>Zero Breaking Changes</principle>
+      <approach>Additive Only - No modificar sistema existente</approach>
+      <fallback>Si Apple Wallet falla, web QR sigue funcionando</fallback>
+    </compatibility_strategy>
+
+    <qr_format_unification>
+      <current_web_qr>user_123_a1b2c3d4e5f6</current_web_qr>
+      <wallet_qr>user_123_a1b2c3d4e5f6</current_web_qr>
+      <validation>Exactamente el mismo proceso de validación</validation>
+      <scanner_perspective>No puede distinguir origen del QR</scanner_perspective>
+    </qr_format_unification>
+
+    <dual_source_support>
+      <web_qr>
+        <generation>Existing React component</generation>
+        <refresh>Dynamic on every view</refresh>
+        <expiration>No expiration (validated server-side)</expiration>
+      </web_qr>
+      <wallet_qr>
+        <generation>New PKPass generation endpoint</generation>
+        <refresh>Static - same QR always</refresh>
+        <expiration>Never expires (same validation logic)</expiration>
+      </wallet_qr>
+      <scanner_compatibility>100% identical from scanner perspective</scanner_compatibility>
+    </dual_source_support>
+  </integration_architecture>
+
+  <!-- ================================ -->
+  <!-- REQUERIMIENTOS TÉCNICOS -->
+  <!-- ================================ -->
+  <technical_requirements>
+    <apple_developer_setup>
+      <apple_developer_account>
+        <cost>$99 USD/año</cost>
+        <requirement>Obligatorio para PKPass signing</requirement>
+        <team_id>Necesario para identificación de passes</team_id>
+      </apple_developer_account>
+      
+      <certificates_required>
+        <pass_type_id_certificate>
+          <identifier>pass.com.fuegorewards.checkin</identifier>
+          <purpose>Identificar tipo de pass único</purpose>
+          <download>Apple Developer Portal</download>
+        </pass_type_id_certificate>
+        <wwdr_intermediate_certificate>
+          <purpose>Certificado intermedio de Apple</purpose>
+          <url>https://developer.apple.com/certificationauthority/AppleWWDRCA.cer</url>
+        </wwdr_intermediate_certificate>
+        <private_key>
+          <format>.p12 file con password</format>
+          <security>Almacenar de forma segura en servidor</security>
+        </private_key>
+      </certificates_required>
+    </apple_developer_setup>
+
+    <backend_dependencies>
+      <nodejs_libraries>
+        <passkit_generator>
+          <package>passkit-generator</package>
+          <version>^3.1.0</version>
+          <purpose>Generación y firma de PKPass files</purpose>
+          <size>~2MB con dependencias</size>
+        </passkit_generator>
+        <node_forge>
+          <package>node-forge</package>
+          <version>^1.3.1</version>
+          <purpose>Manejo de certificados y claves</purpose>
+        </node_forge>
+      </nodejs_libraries>
+      
+      <file_storage>
+        <pass_templates>
+          <location>/apple-wallet/templates/</location>
+          <files>
+            <file>pass.json (configuración base)</file>
+            <file>logo.png (2x, 3x versions)</file>
+            <file>icon.png (2x, 3x versions)</file>
+            <file>strip.png (opcional, imagen de fondo)</file>
+          </files>
+        </pass_templates>
+        <certificates_storage>
+          <location>Environment variables o vault seguro</location>
+          <files>
+            <file>pass-certificate.p12</file>
+            <file>wwdr-certificate.pem</file>
+          </files>
+        </certificates_storage>
+      </file_storage>
+    </backend_dependencies>
+
+    <security_considerations>
+      <certificate_protection>
+        <storage>Variables de entorno encriptadas</storage>
+        <access>Solo proceso de generación de passes</access>
+        <rotation>Plan de rotación anual</rotation>
+      </certificate_protection>
+      <qr_consistency>
+        <secret_reuse>Usar mismo QR_SECRET_KEY</secret_reuse>
+        <format_consistency>Mantener formato exacto actual</format_consistency>
+        <validation_path>Usar mismo endpoint de validación</validation_path>
+      </qr_consistency>
+    </security_considerations>
+  </technical_requirements>
+
+  <!-- ================================ -->
+  <!-- IMPLEMENTACIÓN POR FASES -->
+  <!-- ================================ -->
+  <implementation_phases>
+    <!-- FASE 1: SETUP Y CERTIFICADOS -->
+    <phase_1 title="Apple Developer Setup" duration="3-5 días">
+      <tasks>
+        <task priority="1" complexity="medium">
+          <name>Crear Apple Developer Account</name>
+          <description>Registro y pago de membresía anual</description>
+          <deliverable>Cuenta activa con Team ID</deliverable>
+          <estimated_time>1 día (incluye aprovación)</estimated_time>
+        </task>
+        
+        <task priority="2" complexity="medium">
+          <name>Generar Pass Type ID Certificate</name>
+          <description>Crear certificado específico para passes de check-in</description>
+          <steps>
+            <step>Crear Pass Type ID: pass.com.fuegorewards.checkin</step>
+            <step>Generar Certificate Signing Request</step>
+            <step>Descargar certificado .cer</step>
+            <step>Convertir a .p12 con private key</step>
+          </steps>
+          <deliverable>Certificado .p12 listo para uso</deliverable>
+          <estimated_time>2-3 horas</estimated_time>
+        </task>
+        
+        <task priority="3" complexity="low">
+          <name>Descargar WWDR Intermediate Certificate</name>
+          <description>Obtener certificado intermedio de Apple</description>
+          <deliverable>WWDR certificate en formato .pem</deliverable>
+          <estimated_time>30 minutos</estimated_time>
+        </task>
+        
+        <task priority="4" complexity="low">
+          <name>Configurar variables de entorno</name>
+          <description>Almacenar certificados de forma segura</description>
+          <environment_variables>
+            <var>APPLE_PASS_CERTIFICATE_P12_BASE64</var>
+            <var>APPLE_PASS_CERTIFICATE_PASSWORD</var>
+            <var>APPLE_WWDR_CERTIFICATE_PEM_BASE64</var>
+            <var>APPLE_TEAM_ID</var>
+            <var>APPLE_PASS_TYPE_ID</var>
+          </environment_variables>
+          <estimated_time>1 hora</estimated_time>
+        </task>
+      </tasks>
+      
+      <validation_criteria>
+        <criterion>Certificados instalados y validados</criterion>
+        <criterion>Variables de entorno configuradas</criterion>
+        <criterion>Test de firma básica funcional</criterion>
+      </validation_criteria>
+    </phase_1>
+
+    <!-- FASE 2: BACKEND IMPLEMENTATION -->
+    <phase_2 title="Backend PKPass Generation" duration="5-7 días">
+      <tasks>
+        <task priority="1" complexity="medium">
+          <name>Instalar dependencias Node.js</name>
+          <description>Configurar librerías para generación de passes</description>
+          <commands>
+            <command>npm install passkit-generator node-forge</command>
+            <command>npm install @types/node-forge --save-dev</command>
+          </commands>
+          <estimated_time>30 minutos</estimated_time>
+        </task>
+        
+        <task priority="2" complexity="high">
+          <name>Crear servicio de generación de passes</name>
+          <description>Servicio principal para crear PKPass files</description>
+          <file_location>src/lib/apple-wallet/PassGenerator.ts</file_location>
+          <key_functions>
+            <function>generateCheckinPass(userId: string)</function>
+            <function>signPass(passContent: PassContent)</function>
+            <function>validateCertificates()</function>
+          </key_functions>
+          <integration_points>
+            <point>Reutilizar QR_SECRET_KEY existente</point>
+            <point>Usar mismo formato de HMAC</point>
+            <point>Integrar con user profile data</point>
+          </integration_points>
+          <estimated_time>2-3 días</estimated_time>
+        </task>
+        
+        <task priority="3" complexity="medium">
+          <name>Crear endpoint API para descarga</name>
+          <description>Endpoint para generar y descargar .pkpass files</description>
+          <file_location>src/app/api/apple-wallet/pass/route.ts</file_location>
+          <endpoint_spec>
+            <method>POST</method>
+            <path>/api/apple-wallet/pass</path>
+            <auth>Bearer token required</auth>
+            <response>application/vnd.apple.pkpass</response>
+          </endpoint_spec>
+          <error_handling>
+            <error code="401">Usuario no autenticado</error>
+            <error code="400">Datos de usuario incompletos</error>
+            <error code="500">Error de generación de pass</error>
+          </error_handling>
+          <estimated_time>1 día</estimated_time>
+        </task>
+        
+        <task priority="4" complexity="medium">
+          <name>Crear templates de pass</name>
+          <description>Diseños y assets para Apple Wallet</description>
+          <file_location>public/apple-wallet/templates/</file_location>
+          <assets_required>
+            <asset>pass.json (configuración base)</asset>
+            <asset>logo.png, logo@2x.png, logo@3x.png</asset>
+            <asset>icon.png, icon@2x.png, icon@3x.png</asset>
+            <asset>strip.png, strip@2x.png (opcional)</asset>
+          </assets_required>
+          <design_specs>
+            <spec>Logo: 160x50px (1x), colores de marca</spec>
+            <spec>Icon: 29x29px (1x), versión simplificada</spec>
+            <spec>Strip: 375x144px (1x), imagen de fondo</spec>
+          </design_specs>
+          <estimated_time>1-2 días</estimated_time>
+        </task>
+        
+        <task priority="5" complexity="low">
+          <name>Testing de generación</name>
+          <description>Pruebas unitarias y de integración</description>
+          <test_cases>
+            <case>Generación exitosa con usuario válido</case>
+            <case>Error con certificados inválidos</case>
+            <case>Error con datos de usuario faltantes</case>
+            <case>Validación de QR generado vs actual</case>
+          </test_cases>
+          <estimated_time>1 día</estimated_time>
+        </task>
+      </tasks>
+      
+      <validation_criteria>
+        <criterion>Pass se genera sin errores</criterion>
+        <criterion>QR en pass idéntico al web QR</criterion>
+        <criterion>Pass se instala correctamente en iOS</criterion>
+        <criterion>Tests unitarios pasan al 100%</criterion>
+      </validation_criteria>
+    </phase_2>
+
+    <!-- FASE 3: FRONTEND INTEGRATION -->
+    <phase_3 title="Frontend User Interface" duration="3-4 días">
+      <tasks>
+        <task priority="1" complexity="medium">
+          <name>Crear componente AddToWallet</name>
+          <description>Botón y lógica para agregar pass a Apple Wallet</description>
+          <file_location>src/components/client/AddToWalletButton.tsx</file_location>
+          <functionality>
+            <feature>Detección de iOS device</feature>
+            <feature>Detección de Apple Wallet capability</feature>
+            <feature>Loading states durante generación</feature>
+            <feature>Error handling con mensajes útiles</feature>
+            <feature>Success feedback</feature>
+          </functionality>
+          <integration>
+            <point>Agregar a CheckinView junto al QR actual</point>
+            <point>Mantener QR web visible siempre</point>
+            <point>No reemplazar funcionalidad existente</point>
+          </integration>
+          <estimated_time>1.5 días</estimated_time>
+        </task>
+        
+        <task priority="2" complexity="low">
+          <name>Integrar en CheckinView</name>
+          <description>Agregar botón al view de check-in existente</description>
+          <file_location>src/components/client/views/CheckinView.tsx</file_location>
+          <placement>
+            <location>Debajo del QR code actual</location>
+            <condition>Solo visible en iOS</condition>
+            <fallback>No mostrar en Android/Desktop</fallback>
+          </placement>
+          <estimated_time>1 día</estimated_time>
+        </task>
+        
+        <task priority="3" complexity="low">
+          <name>Crear hook useWalletIntegration</name>
+          <description>Hook para manejo de estado y lógica de wallet</description>
+          <file_location>src/hooks/useWalletIntegration.ts</file_location>
+          <functionality>
+            <function>detectWalletSupport()</function>
+            <function>generatePass()</function>
+            <function>handleWalletError()</function>
+            <function>trackWalletUsage()</function>
+          </functionality>
+          <estimated_time>1 día</estimated_time>
+        </task>
+        
+        <task priority="4" complexity="low">
+          <name>Styling y UX</name>
+          <description>Diseño consistente con app actual</description>
+          <design_guidelines>
+            <guideline>Usar colores de marca existentes</guideline>
+            <guideline>Iconografía de Apple Wallet oficial</guideline>
+            <guideline>Estados de loading claros</guideline>
+            <guideline>Mensajes de error útiles</guideline>
+          </design_guidelines>
+          <estimated_time>0.5 días</estimated_time>
+        </task>
+      </tasks>
+      
+      <validation_criteria>
+        <criterion>Botón solo aparece en iOS</criterion>
+        <criterion>Pass se descarga automáticamente</criterion>
+        <criterion>UX consistente con app actual</criterion>
+        <criterion>Error states manejados correctamente</criterion>
+      </validation_criteria>
+    </phase_3>
+
+    <!-- FASE 4: TESTING Y VALIDACIÓN -->
+    <phase_4 title="Testing & Validation" duration="4-5 días">
+      <tasks>
+        <task priority="1" complexity="high">
+          <name>Testing de compatibilidad con scanner</name>
+          <description>Verificar que scanner actual funciona con QR de wallet</description>
+          <test_scenarios>
+            <scenario>Escanear QR de web - funcionamiento normal</scenario>
+            <scenario>Escanear QR de wallet - mismo resultado</scenario>
+            <scenario>Comparar respuestas de validación</scenario>
+            <scenario>Verificar transacciones de DB idénticas</scenario>
+          </test_scenarios>
+          <success_criteria>
+            <criterion>Scanner no puede distinguir origen del QR</criterion>
+            <criterion>Mismos datos en audit log</criterion>
+            <criterion>Mismas reglas de negocio aplicadas</criterion>
+          </success_criteria>
+          <estimated_time>2 días</estimated_time>
+        </task>
+        
+        <task priority="2" complexity="medium">
+          <name>Testing en dispositivos iOS</name>
+          <description>Pruebas en diferentes versiones de iOS</description>
+          <device_matrix>
+            <device>iPhone SE (iOS 15+)</device>
+            <device>iPhone 12/13 (iOS 16+)</device>
+            <device>iPhone 14/15 (iOS 17+)</device>
+            <device>iPad (iOS 16+)</device>
+          </device_matrix>
+          <test_cases>
+            <case>Instalación de pass exitosa</case>
+            <case>QR visible y escaneable</case>
+            <case>Pass info correcta</case>
+            <case>Actualización de pass (si aplicable)</case>
+          </test_cases>
+          <estimated_time>1.5 días</estimated_time>
+        </task>
+        
+        <task priority="3" complexity="medium">
+          <name>Testing de edge cases</name>
+          <description>Casos límite y manejo de errores</description>
+          <edge_cases>
+            <case>Usuario sin datos completos</case>
+            <case>Certificados expirados</case>
+            <case>Red lenta/intermitente</case>
+            <case>Pass dañado/corrupto</case>
+            <case>Multiple downloads del mismo pass</case>
+          </edge_cases>
+          <estimated_time>1 día</estimated_time>
+        </task>
+        
+        <task priority="4" complexity="low">
+          <name>Performance testing</name>
+          <description>Verificar impacto en performance de la app</description>
+          <metrics>
+            <metric>Tiempo de generación de pass (&lt;3 segundos)</metric>
+            <metric>Tamaño de pass file (&lt;500KB)</metric>
+            <metric>Impacto en bundle size (&lt;50KB)</metric>
+            <metric>Memory usage durante generación</metric>
+          </metrics>
+          <estimated_time>0.5 días</estimated_time>
+        </task>
+      </tasks>
+      
+      <validation_criteria>
+        <criterion>100% compatibilidad con sistema actual</criterion>
+        <criterion>Pass funciona en todos los dispositivos iOS target</criterion>
+        <criterion>Performance dentro de límites aceptables</criterion>
+        <criterion>Error handling robusto</criterion>
+      </validation_criteria>
+    </phase_4>
+
+    <!-- FASE 5: DEPLOYMENT Y MONITORING -->
+    <phase_5 title="Deployment & Monitoring" duration="2-3 días">
+      <tasks>
+        <task priority="1" complexity="medium">
+          <name>Configuración de producción</name>
+          <description>Setup de certificados y variables en producción</description>
+          <production_setup>
+            <certificate_storage>Variables de entorno seguras</certificate_storage>
+            <backup_certificates>Almacenar copias de seguridad</backup_certificates>
+            <monitoring>Alerts para errores de generación</monitoring>
+          </production_setup>
+          <estimated_time>1 día</estimated_time>
+        </task>
+        
+        <task priority="2" complexity="low">
+          <name>Feature flag implementation</name>
+          <description>Control gradual de rollout</description>
+          <feature_flags>
+            <flag>ENABLE_APPLE_WALLET (global)</flag>
+            <flag>APPLE_WALLET_BETA_USERS (subset)</flag>
+            <flag>APPLE_WALLET_BRANCH_RESTRICTION (por sucursal)</flag>
+          </feature_flags>
+          <estimated_time>0.5 días</estimated_time>
+        </task>
+        
+        <task priority="3" complexity="medium">
+          <name>Analytics implementation</name>
+          <description>Tracking de uso y efectividad</description>
+          <events_to_track>
+            <event>wallet_pass_requested</event>
+            <event>wallet_pass_generated_success</event>
+            <event>wallet_pass_generated_error</event>
+            <event>wallet_pass_downloaded</event>
+            <event>wallet_qr_scanned_success</event>
+          </events_to_track>
+          <estimated_time>0.5 días</estimated_time>
+        </task>
+        
+        <task priority="4" complexity="low">
+          <name>Documentation</name>
+          <description>Documentación técnica y de usuario</description>
+          <documentation_types>
+            <doc>API documentation</doc>
+            <doc>Troubleshooting guide</doc>
+            <doc>User guide (como usar wallet)</doc>
+            <doc>Admin guide (monitoring)</doc>
+          </documentation_types>
+          <estimated_time>1 día</estimated_time>
+        </task>
+      </tasks>
+      
+      <validation_criteria>
+        <criterion>Deployment exitoso sin downtime</criterion>
+        <criterion>Monitoring activo y funcionando</criterion>
+        <criterion>Feature flags operativos</criterion>
+        <criterion>Documentación completa</criterion>
+      </validation_criteria>
+    </phase_5>
+  </implementation_phases>
+
+  <!-- ================================ -->
+  <!-- ESPECIFICACIÓN TÉCNICA DETALLADA -->
+  <!-- ================================ -->
+  <technical_specification>
+    <pass_configuration>
+      <base_pass_json>
+        <formatVersion>1</formatVersion>
+        <passTypeIdentifier>pass.com.fuegorewards.checkin</passTypeIdentifier>
+        <teamIdentifier>YOUR_TEAM_ID</teamIdentifier>
+        <organizationName>Fuego Rewards</organizationName>
+        <description>Check-in QR Code</description>
+        <logoText>Fuego Rewards</logoText>
+        <foregroundColor>rgb(255, 255, 255)</foregroundColor>
+        <backgroundColor>rgb(215, 53, 39)</backgroundColor>
+        <labelColor>rgb(255, 255, 255)</labelColor>
+      </base_pass_json>
+      
+      <dynamic_fields>
+        <serialNumber>user_{userId}_checkin</serialNumber>
+        <barcode>
+          <format>PKBarcodeFormatQR</format>
+          <message>user_{userId}_{hmacSignature}</message>
+          <messageEncoding>iso-8859-1</messageEncoding>
+          <altText>Check-in Code for {userName}</altText>
+        </barcode>
+        <generic>
+          <primaryFields>
+            <field>
+              <key>member-name</key>
+              <label>Member</label>
+              <value>{firstName} {lastName}</value>
+            </field>
+          </primaryFields>
+          <secondaryFields>
+            <field>
+              <key>member-id</key>
+              <label>Member ID</label>
+              <value>{userId}</value>
+            </field>
+            <field>
+              <key>total-visits</key>
+              <label>Total Visits</label>
+              <value>{totalCheckins}</value>
+            </field>
+          </secondaryFields>
+          <auxiliaryFields>
+            <field>
+              <key>current-streak</key>
+              <label>Current Streak</label>
+              <value>{currentStreak} days</value>
+            </field>
+          </auxiliaryFields>
+          <backFields>
+            <field>
+              <key>instructions</key>
+              <label>How to Use</label>
+              <value>Show this QR code to staff to check in and earn rewards</value>
+            </field>
+            <field>
+              <key>support</key>
+              <label>Support</label>
+              <value>Contact us at support@fuegorewards.com</value>
+            </field>
+          </backFields>
+        </generic>
+      </dynamic_fields>
+    </pass_configuration>
+
+    <api_specification>
+      <endpoint_generate_pass>
+        <method>POST</method>
+        <path>/api/apple-wallet/pass</path>
+        <headers>
+          <header>Authorization: Bearer {jwt_token}</header>
+          <header>Content-Type: application/json</header>
+        </headers>
+        <request_body>
+          <field name="userId" type="string" required="true"/>
+          <field name="includeStats" type="boolean" default="true"/>
+        </request_body>
+        <responses>
+          <response status="200">
+            <content_type>application/vnd.apple.pkpass</content_type>
+            <headers>
+              <header>Content-Disposition: attachment; filename="fuego-rewards-checkin.pkpass"</header>
+              <header>Content-Length: {fileSize}</header>
+            </headers>
+          </response>
+          <response status="400">
+            <content_type>application/json</content_type>
+            <body>{"error": "Invalid user data", "details": "..."}</body>
+          </response>
+          <response status="401">
+            <content_type>application/json</content_type>
+            <body>{"error": "Unauthorized", "message": "Valid JWT required"}</body>
+          </response>
+          <response status="500">
+            <content_type>application/json</content_type>
+            <body>{"error": "Pass generation failed", "details": "..."}</body>
+          </response>
+        </responses>
+      </endpoint_generate_pass>
+      
+      <endpoint_pass_info>
+        <method>GET</method>
+        <path>/api/apple-wallet/pass/{userId}/info</path>
+        <description>Get pass information without generating actual pass</description>
+        <responses>
+          <response status="200">
+            <body>
+              <field name="canGenerate" type="boolean"/>
+              <field name="userInfo" type="object"/>
+              <field name="lastGenerated" type="string"/>
+            </body>
+          </response>
+        </responses>
+      </endpoint_pass_info>
+    </api_specification>
+
+    <qr_format_specification>
+      <current_web_qr>
+        <generation_logic>
+          const qrContent = `user_${userId}_${generateHMAC(userId, QR_SECRET_KEY)}`
+        </generation_logic>
+        <example>user_123_a1b2c3d4e5f6g7h8</example>
+        <validation>Backend verifica HMAC con mismo QR_SECRET_KEY</validation>
+      </current_web_qr>
+      
+      <wallet_qr>
+        <generation_logic>
+          const qrContent = `user_${userId}_${generateHMAC(userId, QR_SECRET_KEY)}`
+        </generation_logic>
+        <example>user_123_a1b2c3d4e5f6g7h8</example>
+        <validation>IDÉNTICA - mismo endpoint, misma lógica</validation>
+      </wallet_qr>
+      
+      <validation_endpoint>
+        <path>/api/checkin/validate-qr</path>
+        <method>POST</method>
+        <input>{"qrCode": "user_123_a1b2c3d4e5f6g7h8", "branchId": "branch_456"}</input>
+        <processing>
+          <step>Parse userId from QR</step>
+          <step>Verify HMAC signature</step>
+          <step>Apply business rules (rate limiting, etc.)</step>
+          <step>Execute check-in transaction</step>
+          <step>Return result</step>
+        </processing>
+        <compatibility>100% - no changes needed</compatibility>
+      </validation_endpoint>
+    </qr_format_specification>
+  </technical_specification>
+
+  <!-- ================================ -->
+  <!-- SECURITY CONSIDERATIONS -->
+  <!-- ================================ -->
+  <security_considerations>
+    <certificate_management>
+      <storage_security>
+        <environment_variables>Store certificates as base64 encoded env vars</environment_variables>
+        <encryption>Encrypt certificate files at rest</encryption>
+        <access_control>Limit access to pass generation service only</access_control>
+        <rotation_plan>Annual certificate renewal process</rotation_plan>
+      </storage_security>
+      
+      <runtime_security>
+        <memory_cleanup>Clear certificate data from memory after use</memory_cleanup>
+        <error_handling>Never expose certificate errors to client</error_handling>
+        <logging_restriction>Log pass generation events, not certificate details</logging_restriction>
+      </runtime_security>
+    </certificate_management>
+
+    <qr_security_continuity>
+      <hmac_consistency>
+        <secret_reuse>Use existing QR_SECRET_KEY without changes</secret_reuse>
+        <algorithm_consistency>Same HMAC algorithm (SHA-256)</algorithm_consistency>
+        <format_preservation>Exact same QR string format</format_preservation>
+      </hmac_consistency>
+      
+      <validation_security>
+        <endpoint_reuse>Use existing validation endpoint</endpoint_reuse>
+        <business_rules>All existing security rules apply</business_rules>
+        <rate_limiting>Same rate limiting as web QR</rate_limiting>
+        <audit_logging>Same audit trail format</audit_logging>
+      </validation_security>
+    </qr_security_continuity>
+
+    <additional_security_measures>
+      <pass_tampering_protection>
+        <apple_signature>PKPass signed by Apple certificates</apple_signature>
+        <integrity_check>Pass modification detection by iOS</integrity_check>
+        <revocation_capability>Ability to revoke compromised passes</revocation_capability>
+      </pass_tampering_protection>
+      
+      <user_privacy>
+        <data_minimization>Only include necessary user data in pass</data_minimization>
+        <pii_protection>No sensitive data in pass beyond name and member ID</pii_protection>
+        <gdpr_compliance>Pass data handling compliant with privacy laws</gdpr_compliance>
+      </user_privacy>
+    </additional_security_measures>
+  </security_considerations>
+
+  <!-- ================================ -->
+  <!-- MONITORING AND ANALYTICS -->
+  <!-- ================================ -->
+  <monitoring_analytics>
+    <operational_monitoring>
+      <pass_generation_metrics>
+        <metric>passes_generated_total</metric>
+        <metric>passes_generated_success_rate</metric>
+        <metric>passes_generation_duration_avg</metric>
+        <metric>passes_generation_errors_by_type</metric>
+      </pass_generation_metrics>
+      
+      <certificate_monitoring>
+        <metric>certificate_expiry_days_remaining</metric>
+        <metric>certificate_validation_failures</metric>
+        <metric>apple_service_connectivity_status</metric>
+      </certificate_monitoring>
+      
+      <user_adoption_metrics>
+        <metric>wallet_passes_downloaded_total</metric>
+        <metric>wallet_vs_web_qr_usage_ratio</metric>
+        <metric>wallet_qr_scan_success_rate</metric>
+        <metric>user_retention_with_wallet_pass</metric>
+      </user_adoption_metrics>
+    </operational_monitoring>
+
+    <business_intelligence>
+      <adoption_analytics>
+        <metric>ios_users_with_wallet_pass_percentage</metric>
+        <metric>wallet_pass_usage_frequency</metric>
+        <metric>checkin_method_preference_trends</metric>
+        <metric>geographic_wallet_adoption_patterns</metric>
+      </adoption_analytics>
+      
+      <performance_analytics>
+        <metric>wallet_vs_web_checkin_speed_comparison</metric>
+        <metric>user_satisfaction_scores_by_checkin_method</metric>
+        <metric>support_ticket_reduction_post_wallet</metric>
+        <metric>staff_scanning_efficiency_improvement</metric>
+      </performance_analytics>
+    </business_intelligence>
+
+    <alerting_system>
+      <critical_alerts>
+        <alert>Certificate expiry (30 days warning)</alert>
+        <alert>Pass generation failure rate > 5%</alert>
+        <alert>Apple Wallet service unavailable</alert>
+        <alert>QR validation discrepancy detected</alert>
+      </critical_alerts>
+      
+      <business_alerts>
+        <alert>Wallet adoption rate below target</alert>
+        <alert>Unusual pass generation volume</alert>
+        <alert>Regional wallet performance degradation</alert>
+      </business_alerts>
+    </alerting_system>
+  </monitoring_analytics>
+
+  <!-- ================================ -->
+  <!-- ROLLOUT STRATEGY -->
+  <!-- ================================ -->
+  <rollout_strategy>
+    <gradual_rollout>
+      <phase_alpha title="Internal Testing" duration="1 week">
+        <target_audience>Internal team and beta testers</target_audience>
+        <feature_flags>APPLE_WALLET_ALPHA_USERS</feature_flags>
+        <success_criteria>
+          <criterion>Pass generation works 100%</criterion>
+          <criterion>QR scanning identical to web</criterion>
+          <criterion>No production issues</criterion>
+        </success_criteria>
+      </phase_alpha>
+      
+      <phase_beta title="Limited User Group" duration="2 weeks">
+        <target_audience>10% of iOS users</target_audience>
+        <feature_flags>APPLE_WALLET_BETA_USERS</feature_flags>
+        <success_criteria>
+          <criterion>Adoption rate > 30%</criterion>
+          <criterion>Error rate < 1%</criterion>
+          <criterion>Positive user feedback</criterion>
+        </success_criteria>
+      </phase_beta>
+      
+      <phase_production title="Full iOS Rollout" duration="1 week">
+        <target_audience>All iOS users</target_audience>
+        <feature_flags>ENABLE_APPLE_WALLET</feature_flags>
+        <success_criteria>
+          <criterion>System stability maintained</criterion>
+          <criterion>Performance within targets</criterion>
+          <criterion>User adoption growing</criterion>
+        </success_criteria>
+      </phase_production>
+    </gradual_rollout>
+
+    <rollback_plan>
+      <rollback_triggers>
+        <trigger>Pass generation error rate > 10%</trigger>
+        <trigger>System performance degradation</trigger>
+        <trigger>User complaints > threshold</trigger>
+        <trigger>Scanner compatibility issues</trigger>
+      </rollback_triggers>
+      
+      <rollback_procedure>
+        <step>Disable ENABLE_APPLE_WALLET flag</step>
+        <step>Hide wallet buttons from UI</step>
+        <step>Investigate root cause</step>
+        <step>Fix issues in development</step>
+        <step>Re-test before re-enabling</step>
+      </rollback_procedure>
+    </rollback_plan>
+  </rollout_strategy>
+
+  <!-- ================================ -->
+  <!-- SUCCESS CRITERIA -->
+  <!-- ================================ -->
+  <success_criteria>
+    <technical_success>
+      <criterion name="zero_breaking_changes">
+        <description>Existing QR system continues working without any changes</description>
+        <measurement>Scanner validation tests pass 100%</measurement>
+        <target>100% compatibility</target>
+      </criterion>
+      
+      <criterion name="pass_generation_reliability">
+        <description>Apple Wallet passes generate successfully</description>
+        <measurement>Success rate of pass generation API</measurement>
+        <target>>99% success rate</target>
+      </criterion>
+      
+      <criterion name="performance_impact">
+        <description>No negative impact on app performance</description>
+        <measurement>App load time and bundle size changes</measurement>
+        <target><2% increase in bundle size, <100ms additional load time</target>
+      </criterion>
+    </technical_success>
+
+    <user_experience_success>
+      <criterion name="user_adoption">
+        <description>iOS users adopt Apple Wallet integration</description>
+        <measurement>Percentage of iOS users who download wallet pass</measurement>
+        <target>>40% adoption within 3 months</target>
+      </criterion>
+      
+      <criterion name="user_satisfaction">
+        <description>Users prefer wallet QR over web QR</description>
+        <measurement>User surveys and usage analytics</measurement>
+        <target>>4.5/5 satisfaction rating</target>
+      </criterion>
+      
+      <criterion name="usage_efficiency">
+        <description>Wallet QR is faster and more convenient</description>
+        <measurement>Time to present QR code (wallet vs web)</measurement>
+        <target>50% faster average time to QR presentation</target>
+      </criterion>
+    </user_experience_success>
+
+    <business_success>
+      <criterion name="operational_efficiency">
+        <description>Reduced support load and improved staff efficiency</description>
+        <measurement>Support tickets and staff scanning speed</measurement>
+        <target>20% reduction in QR-related support tickets</target>
+      </criterion>
+      
+      <criterion name="user_retention">
+        <description>Wallet users show higher engagement</description>
+        <measurement>Check-in frequency and app retention</measurement>
+        <target>15% higher retention for wallet users</target>
+      </criterion>
+      
+      <criterion name="brand_perception">
+        <description>Enhanced brand perception through modern features</description>
+        <measurement>App store reviews and user feedback</measurement>
+        <target>Increase in positive mentions of convenience features</target>
+      </criterion>
+    </business_success>
+  </success_criteria>
+
+  <!-- ================================ -->
+  <!-- RISK MITIGATION -->
+  <!-- ================================ -->
+  <risk_mitigation>
+    <technical_risks>
+      <risk name="Certificate Expiry" probability="medium" impact="high">
+        <description>Apple certificates expire causing pass generation to fail</description>
+        <mitigation>
+          <action>Set up automated monitoring 90 days before expiry</action>
+          <action>Document renewal process clearly</action>
+          <action>Test certificate renewal in staging first</action>
+          <action>Maintain backup certificates</action>
+        </mitigation>
+        <contingency>Manual certificate renewal process with 48h turnaround</contingency>
+      </risk>
+      
+      <risk name="Apple Service Outage" probability="low" impact="medium">
+        <description>Apple Wallet services unavailable</description>
+        <mitigation>
+          <action>Graceful fallback to web QR always available</action>
+          <action>Clear error messaging to users</action>
+          <action>Retry mechanism for pass generation</action>
+        </mitigation>
+        <contingency>Users continue using web QR without service interruption</contingency>
+      </risk>
+      
+      <risk name="Scanner Incompatibility" probability="low" impact="high">
+        <description>Existing scanners fail to read wallet QR codes</description>
+        <mitigation>
+          <action>Extensive testing with actual scanning hardware</action>
+          <action>Maintain exact QR format compatibility</action>
+          <action>Phased rollout to detect issues early</action>
+        </mitigation>
+        <contingency>Immediate rollback capability via feature flags</contingency>
+      </risk>
+    </technical_risks>
+
+    <business_risks>
+      <risk name="Low User Adoption" probability="medium" impact="medium">
+        <description>Users don't see value in wallet integration</description>
+        <mitigation>
+          <action>Clear onboarding and education</action>
+          <action>Highlight convenience benefits</action>
+          <action>Gather user feedback continuously</action>
+        </mitigation>
+        <contingency>Iterate on UX based on feedback, maintain web QR as primary</contingency>
+      </risk>
+      
+      <risk name="Development Complexity" probability="medium" impact="medium">
+        <description>Implementation takes longer than expected</description>
+        <mitigation>
+          <action>Detailed technical planning and estimation</action>
+          <action>Proof of concept before full implementation</action>
+          <action>Clear scope definition and change control</action>
+        </mitigation>
+        <contingency>Phase delivery to release core functionality first</contingency>
+      </risk>
+    </business_risks>
+  </risk_mitigation>
+
+  <!-- ================================ -->
+  <!-- MAINTENANCE PLAN -->
+  <!-- ================================ -->
+  <maintenance_plan>
+    <ongoing_maintenance>
+      <certificate_management>
+        <frequency>Annual</frequency>
+        <tasks>
+          <task>Renew Apple Developer account</task>
+          <task>Update Pass Type ID certificate</task>
+          <task>Test certificate installation</task>
+          <task>Update production environment</task>
+        </tasks>
+        <estimated_effort>4-6 hours annually</estimated_effort>
+      </certificate_management>
+      
+      <monitoring_maintenance>
+        <frequency>Monthly</frequency>
+        <tasks>
+          <task>Review pass generation metrics</task>
+          <task>Check certificate expiry alerts</task>
+          <task>Analyze user adoption trends</task>
+          <task>Update monitoring thresholds if needed</task>
+        </tasks>
+        <estimated_effort>2 hours monthly</estimated_effort>
+      </monitoring_maintenance>
+      
+      <system_updates>
+        <frequency>As needed</frequency>
+        <tasks>
+          <task>Update passkit-generator library</task>
+          <task>Address iOS compatibility changes</task>
+          <task>Update pass templates/design</task>
+          <task>Optimize performance based on metrics</task>
+        </tasks>
+        <estimated_effort>Variable, 4-8 hours per update</estimated_effort>
+      </system_updates>
+    </ongoing_maintenance>
+
+    <support_procedures>
+      <user_support>
+        <common_issues>
+          <issue>Pass won't download</issue>
+          <issue>QR code not scanning</issue>
+          <issue>Pass not appearing in wallet</issue>
+          <issue>Outdated pass information</issue>
+        </common_issues>
+        <troubleshooting_steps>
+          <step>Verify iOS version compatibility</step>
+          <step>Check Apple Wallet app availability</step>
+          <step>Confirm user authentication</step>
+          <step>Generate new pass if needed</step>
+        </troubleshooting_steps>
+      </user_support>
+      
+      <technical_support>
+        <escalation_path>
+          <level1>Frontend/customer support team</level1>
+          <level2>Backend development team</level2>
+          <level3>DevOps/infrastructure team</level3>
+          <level4>Apple Developer support</level4>
+        </escalation_path>
+        <documentation>
+          <doc>Troubleshooting guide</doc>
+          <doc>Common error codes reference</doc>
+          <doc>Certificate renewal procedures</doc>
+          <doc>Contact information for Apple support</doc>
+        </documentation>
+      </technical_support>
+    </support_procedures>
+  </maintenance_plan>
+</apple_wallet_implementation_plan>

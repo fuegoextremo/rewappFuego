@@ -27,7 +27,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
               {/* Banners de estado */}
               <AdminPreviewBanner />
               
-              {/* Header compacto estilo app */}
+              {/* Header compacto estilo app 
               <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-100">
                 <div className="px-4 py-3">
                   <h1 className="text-lg font-semibold">
@@ -38,7 +38,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
                     </p>
                   </div>
                 </header>
-
+*/}
                 {/* Contenido */}
                 <main className="pb-16">
                   {/* Banner de error dentro del main */}

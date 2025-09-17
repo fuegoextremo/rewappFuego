@@ -141,12 +141,12 @@ export default function ProfileView() {
 
       {/* Content */}
       <div className="max-w-md mx-auto px-4 space-y-6">
-        {/* Streak Prizes List */}
+        {/* Streak Prizes List 
         <StreakPrizesList 
           showCompleted={true}
           maxItems={3}
           className="mb-6"
-        />
+        />*/}
 
         {/* Botón principal de edición */}
         <button

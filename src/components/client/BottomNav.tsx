@@ -4,6 +4,7 @@ import { useSettings } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
 import { useBlockedDispatch } from '@/hooks/useBlockedDispatch'
 import { Home, FerrisWheel, QrCode, Ticket, User } from 'lucide-react'
+import { useEffect } from 'react'
 
 const items = [
   { view: 'home', label: 'Inicio', icon: Home },
@@ -25,6 +26,11 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
   
   const primaryColor = settings.company_theme_primary || '#D73527'
   const availableSpins = user?.available_spins ?? 0
+  
+  // 📜 Auto-scroll al top cuando cambia de sección
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentView])
   
   
   return (

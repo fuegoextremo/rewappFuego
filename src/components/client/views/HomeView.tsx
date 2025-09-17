@@ -5,6 +5,7 @@ import { StreakSection } from '@/components/client/StreakSection'
 import { CTAButton } from '@/components/client/CTAButton'
 import { UnauthorizedBanner } from '@/components/shared/UnauthorizedBanner'
 import { RecentActivity } from '@/components/client/RecentActivity'
+import { StreakPrizesList } from '@/components/client/StreakPrizesList'
 import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { Goal, FerrisWheel } from 'lucide-react'
 import Image from 'next/image'
@@ -81,6 +82,14 @@ export default function HomeView() {
 
       {/* Sección de racha - Movida arriba para mayor prominencia */}
       <StreakSection {...streakProps} />
+
+      {/* Streak Prizes List */}
+      <div className="px-4">
+        <StreakPrizesList 
+          showCompleted={true}
+          maxItems={5}
+        />
+      </div>
 
       {/* Botón CTA principal */}
       <div 

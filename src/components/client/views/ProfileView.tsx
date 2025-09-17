@@ -7,6 +7,7 @@ import { UserCircle, Edit, Lock, LogOut, AlertTriangle, Phone, Cake } from 'luci
 import ChangePasswordForm from '@/components/client/ChangePasswordForm'
 import EditProfileForm from '@/components/client/EditProfileForm'
 import BottomSheet from '@/components/ui/BottomSheet'
+import { StreakPrizesList } from '@/components/client/StreakPrizesList'
 import { useRouter } from 'next/navigation'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { useDeactivateAccount } from '@/hooks/queries/useUserQueries'
@@ -140,6 +141,13 @@ export default function ProfileView() {
 
       {/* Content */}
       <div className="max-w-md mx-auto px-4 space-y-6">
+        {/* Streak Prizes List */}
+        <StreakPrizesList 
+          showCompleted={true}
+          maxItems={3}
+          className="mb-6"
+        />
+
         {/* Botón principal de edición */}
         <button
           onClick={() => setActiveSheet('edit')}

@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <component name="StreakPrizesList">
+    <description>
+      Componente que muestra todos los premios de racha disponibles con progreso visual.
+      Cada premio muestra progreso actual vs objetivo con barras circulares.
+    </description>
+
+    <design>
+      <layout>
+        <container className="space-y-3 p-4">
+          <item className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <content className="flex items-center justify-between">
+              <left className="flex items-center space-x-3 flex-1">
+                <icon className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                  <!-- Usar imagen del premio o icono placeholder -->
+                </icon>
+                <text className="flex-1">
+                  <title className="font-semibold text-gray-900 line-clamp-1"/>
+                  <description className="text-sm text-gray-600 line-clamp-2"/>
+                  <streak-warning className="text-xs text-red-500 mt-1" conditional="si la racha está en riesgo">
+                    <!-- Ejemplo: "¡Faltan 10 días para que se rompa tu racha!" -->
+                  </streak-warning>
+                </text>
+              </left>
+              <right className="ml-4">
+                <circular-progress className="w-16 h-16 relative">
+                  <!-- Solo progreso circular, sin barra horizontal -->
+                </circular-progress>
+              </right>
+            </content>
+          </item>
+        </container>
+      </layout>
+    </design>
+
+    <data-sources>
+      <redux>
+        <streaks-data>
+          <!-- Usar datos existentes de rachas -->
+          <source>useUser() - current_streak, total_checkins</source>
+          <source>useSettings() - streak rewards configuration</source>
+        </streaks-data>
+        
+        <available-info>
+          <user-current-streak>user?.current_streak || 0</user-current-streak>
+          <user-total-checkins>user?.total_checkins || 0</user-total-checkins>
+          <user-last-checkin>user?.last_checkin_date</user-last-checkin>
+          <settings-streaks>settings?.streak_rewards_config</settings-streaks>
+          <streak-expiry-days>settings?.streak_expiry_days || 12</streak-expiry-days>
+          <show-streak-prizes>settings?.show_streak_prizes_list || process.env.SHOW_STREAK_PRIZES === 'true'</show-streak-prizes>
+        </available-info>
+      </redux>
+
+      <streak-rewards-structure>
+        <!-- Basado en la estructura existente de streak rewards -->
+        <reward>
+          <streak_days>number - días consecutivos requeridos</streak_days>
+          <reward_type>string - tipo de premio</reward_type>
+          <reward_value>string - valor/descripción del premio</reward_value>
+          <reward_image>string - URL de imagen del premio</reward_image>
+          <is_completed>boolean - si ya fue obtenido</is_completed>
+        </reward>
+      </streak-rewards-structure>
+    </data-sources>
+
+    <logic>
+      <prize-calculation>
+        <current-progress>
+          <streak-based-prizes>
+            <!-- Para premios basados en racha consecutiva -->
+            <progress>min(current_streak, required_days)</progress>
+            <total>required_days</total>
+            <percentage>(progress / total) * 100</percentage>
+          </streak-based-prizes>
+          
+          <checkin-based-prizes>
+            <!-- Para premios basados en check-ins totales -->
+            <progress>min(total_checkins, required_checkins)</progress>
+            <total>required_checkins</total>
+            <percentage>(progress / total) * 100</percentage>
+          </checkin-based-prizes>
+        </current-progress>
+
+        <display-logic>
+          <completed-prize>
+            <show-checkmark>true</show-checkmark>
+            <show-prize-image>true</show-prize-image>
+            <disable-progress-animation>true</disable-progress-animation>
+          </completed-prize>
+          
+          <in-progress-prize>
+            <show-progress-circle>true</show-progress-circle>
+            <animate-progress>true</animate-progress>
+          </in-progress-prize>
+
+          <streak-expiry-warning>
+            <!-- Calcular días restantes para que se rompa la racha -->
+            <days-since-last-checkin>calculateDaysSince(last_checkin_date)</days-since-last-checkin>
+            <days-until-streak-breaks>streak_expiry_days - days_since_last_checkin</days-until-streak-breaks>
+            <show-warning>days_until_streak_breaks <= 3 && current_streak > 0</show-warning>
+            <warning-message>"¡Faltan {days_until_streak_breaks} días para que se rompa tu racha!"</warning-message>
+          </streak-expiry-warning>
+        </display-logic>
+      </prize-calculation>
+    </logic>
+
+    <components-to-create>
+      <main-component>StreakPrizesList.tsx</main-component>
+      <sub-components>
+        <component>StreakPrizeItem.tsx - Item individual de la lista</component>
+        <component>CircularProgress.tsx - Progreso circular reutilizable</component>
+      </sub-components>
+    </components-to-create>
+
+    <props-interface>
+      <StreakPrizesList>
+        <showCompleted>boolean - mostrar premios ya obtenidos</showCompleted>
+        <maxItems>number - limitar cantidad de items mostrados</maxItems>
+        <className>string - clases CSS adicionales</className>
+      </StreakPrizesList>
+
+      <StreakPrizeItem>
+        <prize>StreakReward - datos del premio</prize>
+        <currentProgress>number - progreso actual</currentProgress>
+        <isCompleted>boolean - si está completado</isCompleted>
+        <daysUntilStreakBreaks>number - días restantes para romper racha</daysUntilStreakBreaks>
+        <showStreakWarning>boolean - mostrar advertencia de racha</showStreakWarning>
+      </StreakPrizeItem>
+    </props-interface>
+
+    <styling>
+      <design-tokens>
+        <colors>
+          <primary>settings.company_theme_primary</primary>
+          <completed>#10B981 - verde para completados</completed>
+          <in-progress>primary color - para progreso activo</in-progress>
+          <pending>#E5E7EB - gris para pendientes</pending>
+          <warning>#EF4444 - rojo para advertencias de racha</warning>
+        </colors>
+        
+        <spacing>
+          <card-padding>p-4</card-padding>
+          <card-gap>space-y-3</card-gap>
+          <icon-size>w-12 h-12</icon-size>
+          <progress-size>w-16 h-16</progress-size>
+        </spacing>
+      </design-tokens>
+    </styling>
+
+    <interactions>
+      <!-- Sin modal de detalles - componente simple de solo lectura -->
+      <on-click>
+        <action>none - solo visual, sin interacciones</action>
+      </on-click>
+      
+      <animations>
+        <progress-fill>smooth transition when progress updates</progress-fill>
+        <completion-celebration>subtle animation when prize is completed</completion-celebration>
+      </animations>
+    </interactions>
+
+    <integration>
+      <usage-locations>
+        <location>Profile view - sección de "Mis Logros"</location>
+        <location>Home view - vista resumida (3-5 items)</location>
+        <location>Modal dedicado - vista completa de todos los premios</location>
+      </usage-locations>
+
+      <data-updates>
+        <realtime>Actualización automática vía RealtimeProvider EXISTENTE - sin modificaciones</realtime>
+        <static-prizes>Configuración de premios estática desde settings</static-prizes>
+        <user-progress>Solo se actualiza current_streak, total_checkins vía realtime existente</user-progress>
+        <no-new-endpoints>No requiere nuevos endpoints ni modificaciones realtime</no-new-endpoints>
+      </data-updates>
+    </integration>
+
+    <technical-considerations>
+      <performance>
+        <memoization>useMemo para cálculos de progreso</memoization>
+        <virtualization>No necesaria inicialmente - pocos items</virtualization>
+        <no-additional-queries>Reutiliza datos ya disponibles en Redux</no-additional-queries>
+      </performance>
+
+      <data-strategy>
+        <zero-impact>No modifica realtime existente</zero-impact>
+        <reuse-existing>Usa hooks useUser() y useSettings() existentes</reuse-existing>
+        <pure-frontend>Solo cálculos de progreso en frontend</pure-frontend>
+        <static-config>Premios definidos en configuración, no en DB dinámica</static-config>
+      </data-strategy>
+
+      <accessibility>
+        <progress-announcements>aria-label con progreso actual</progress-announcements>
+        <keyboard-navigation>tab navigation entre items</keyboard-navigation>
+        <screen-reader>descripción clara de cada premio y progreso</screen-reader>
+      </accessibility>
+
+      <responsive>
+        <mobile>single column, iconos más pequeños</mobile>
+        <desktop>posible grid de 2 columnas</desktop>
+      </responsive>
+    </technical-considerations>
+
+    <configuration>
+      <visibility-control>
+        <mvp-approach>
+          <env-variable>SHOW_STREAK_PRIZES=true/false en .env.local</env-variable>
+          <fallback>process.env.SHOW_STREAK_PRIZES === 'true'</fallback>
+        </mvp-approach>
+        
+        <future-approach>
+          <superadmin-setting>show_streak_prizes_list en system_settings</superadmin-setting>
+          <admin-ui>Switch toggle en configuraciones del superadmin</admin-ui>
+          <description>"Mostrar lista de premios de racha a usuarios"</description>
+        </future-approach>
+      </visibility-control>
+
+      <streak-expiry-settings>
+        <current-logic>12 días por defecto para romper racha</current-logic>
+        <configurable>streak_expiry_days en system_settings</configurable>
+        <warning-threshold>Mostrar advertencia cuando falten 3 días o menos</warning-threshold>
+      </streak-expiry-settings>
+    </configuration>
+
+    <conditional-rendering>
+      <component-level>
+        <condition>!showStreakPrizesList ? null : &lt;StreakPrizesList /&gt;</condition>
+        <hook>const showComponent = useSetting('show_streak_prizes_list') || process.env.SHOW_STREAK_PRIZES === 'true'</hook>
+      </component-level>
+      
+      <item-level>
+        <streak-warning>Solo mostrar si current_streak > 0 y days_until_break <= 3</streak-warning>
+        <completed-prizes>Mostrar según prop showCompleted</completed-prizes>
+      </item-level>
+    </conditional-rendering>
+  </component>
+</plan>

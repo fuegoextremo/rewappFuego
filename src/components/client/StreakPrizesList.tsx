@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useUser, useSettings, useSetting } from '@/store/hooks'
+import { useUser, useSetting } from '@/store/hooks'
 import { StreakPrizeItem } from './StreakPrizeItem'
 import { useStreakPrizesRedux } from '@/hooks/useReduxStreaks'
 
@@ -17,27 +17,12 @@ export function StreakPrizesList({
   className = '' 
 }: StreakPrizesListProps) {
   const user = useUser()
-  const settings = useSettings()
   const { data: realStreakPrizes, isLoading } = useStreakPrizesRedux()
   
   // Check if component should be visible
   const showComponent = useSetting('show_streak_prizes_list') || process.env.NEXT_PUBLIC_SHOW_STREAK_PRIZES === 'true'
   
   const currentStreak = user?.current_streak || 0
-  const lastCheckinDate = user?.streakData?.last_check_in
-  const streakExpiryDays = settings.streak_expiry_days || 12
-  
-  // Calculate days until streak breaks
-  const daysUntilStreakBreaks = useMemo(() => {
-    if (!lastCheckinDate || currentStreak === 0) return null
-    
-    const lastCheckin = new Date(lastCheckinDate)
-    const today = new Date()
-    const daysSinceLastCheckin = Math.floor((today.getTime() - lastCheckin.getTime()) / (1000 * 60 * 60 * 24))
-    const daysUntilBreak = Number(streakExpiryDays) - daysSinceLastCheckin
-    
-    return Math.max(0, daysUntilBreak)
-  }, [lastCheckinDate, currentStreak, streakExpiryDays])
   
   // Process real streak rewards from database or fallback to static ones
   const streakRewards = useMemo(() => {
@@ -105,11 +90,6 @@ export function StreakPrizesList({
     return filtered
   }, [streakRewards, showCompleted, maxItems])
   
-  // Show streak warning if applicable
-  const showStreakWarning = daysUntilStreakBreaks !== null && 
-                           daysUntilStreakBreaks <= 3 && 
-                           currentStreak > 0
-  
   // Don't render if disabled, no items, or still loading
   if (!showComponent || displayedRewards.length === 0 || isLoading) {
     return null
@@ -129,8 +109,6 @@ export function StreakPrizesList({
           prize={reward}
           currentProgress={Math.min(currentStreak, reward.streak_days)}
           isCompleted={reward.is_completed}
-          daysUntilStreakBreaks={daysUntilStreakBreaks ?? undefined}
-          showStreakWarning={showStreakWarning}
         />
       ))}
     </div>

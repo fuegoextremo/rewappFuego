@@ -19,16 +19,12 @@ interface StreakPrizeItemProps {
   prize: StreakReward
   currentProgress: number
   isCompleted: boolean
-  daysUntilStreakBreaks?: number
-  showStreakWarning?: boolean
 }
 
 export function StreakPrizeItem({
   prize,
   currentProgress,
-  isCompleted,
-  daysUntilStreakBreaks,
-  showStreakWarning = false
+  isCompleted
 }: StreakPrizeItemProps) {
   const settings = useSettings()
   
@@ -73,13 +69,6 @@ export function StreakPrizeItem({
             <p className="text-xs text-gray-600 truncate">
               {prizeDescription}
             </p>
-            
-            {/* Streak Warning - Más compacto */}
-            {showStreakWarning && daysUntilStreakBreaks !== undefined && (
-              <p className="text-xs text-red-500 truncate">
-                ¡Faltan {daysUntilStreakBreaks} días para que se rompa tu racha!
-              </p>
-            )}
           </div>
         </div>
         

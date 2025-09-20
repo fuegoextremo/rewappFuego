@@ -288,7 +288,6 @@ export function AppShell({ children }: AppShellProps) {
         }}
       >
         <motion.div 
-          className="pt-4"
           animate={{ 
             opacity: isRefreshing ? 0.7 : 1
           }}

@@ -52,14 +52,21 @@ export function useUserStreakRedux(userId: string) {
 // 🔥 Hook que reemplaza useStreakPrizes de React Query
 export function useStreakPrizesRedux() {
   const dispatch = useAppDispatch()
-  const { streakPrizes, streakPrizesLoaded } = useSelector((state: RootState) => state.auth)
+  const { streakPrizes, streakPrizesLoaded, streakPrizesLastLoaded } = useSelector((state: RootState) => state.auth)
   
-  // Cargar premios si no están cargados
+  // Cargar premios si no están cargados O si han pasado más de 5 minutos
   useEffect(() => {
-    if (!streakPrizesLoaded) {
+    const now = Date.now()
+    const fiveMinutesAgo = now - (5 * 60 * 1000) // 5 minutos en ms
+    const needsRefresh = !streakPrizesLoaded || 
+                        !streakPrizesLastLoaded || 
+                        streakPrizesLastLoaded < fiveMinutesAgo
+    
+    if (needsRefresh) {
+      console.log('🔄 Refreshing streak prizes data...')
       dispatch(loadStreakPrizes())
     }
-  }, [streakPrizesLoaded, dispatch])
+  }, [streakPrizesLoaded, streakPrizesLastLoaded, dispatch])
   
   return {
     data: streakPrizes,

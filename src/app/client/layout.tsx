@@ -42,7 +42,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
                 {/* Contenido */}
                 <main className="pb-16">
                   {/* Banner de error dentro del main */}
-                  <div className="px-4 pt-4">
+                  <div className="px-4">
                     <UnauthorizedBanner />
                   </div>
                   {children}

@@ -237,7 +237,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   
   if (isLoading) {
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-gray-200 p-6">
         <div className="animate-pulse space-y-6">
           <div className="text-center">
             <div className="h-32 bg-gray-100 rounded-xl mx-auto w-full"></div>
@@ -255,7 +255,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   // 🎯 Error handling
   if (error) {
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-red-200 p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-red-200 p-6">
         <div className="text-center text-red-600">
           Error cargando datos de racha. Intenta de nuevo.
         </div>
@@ -267,7 +267,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   if (!streakStage) {
     console.warn('⚠️ streakStage es null pero no estamos loading - posible issue de React Query')
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-gray-200 p-6">
         <div className="text-center text-gray-500">
           Reintentando carga de datos...
         </div>
@@ -280,12 +280,12 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   return (
     <div className={`relative overflow-hidden rounded-2xl ${
       streakStage.stage.includes('perdida') 
-        ? 'bg-white text-gray-700' 
-        : 'bg-white text-gray-900'
+        ? 'text-gray-700' 
+        : 'text-gray-900'
     }`}>
 
       {/* Imagen/Icono de la racha */}
-      <div className="relative z-10 mb-6">
+      <div className="relative z-10 mb-6 ">
         {/* 🎯 Detección automática: Rive vs Imagen normal */}
         {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
           <>
@@ -294,14 +294,14 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
               <SimpleRiveLoop 
                 key={stableImageKey} // ✨ Key estable basado solo en la imagen
                 src={streakStage.image} 
-                className="w-full aspect-square rounded-xl overflow-hidden bg-gray-50"
+                className="w-full aspect-[4/3] rounded-xl overflow-hidden"
                 onError={handleRiveError}
               />
             ) : (
               // 🖼️ Renderizar imagen normal
-              <div className="relative w-full aspect-square overflow-hidden bg-gray-50">
+              <div className="relative w-full aspect-[4/3] overflow-hidden">
                 {imageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                  <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
                   </div>
                 )}
@@ -309,7 +309,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
                   src={streakStage.image} 
                   alt="Racha" 
                   fill
-                  className={`object-cover transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                  className={`object-contain transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
                   sizes="(max-width: 768px) 100vw, 50vw"
                   onLoad={handleImageLoad}
                   onError={handleImageError}
@@ -325,42 +325,19 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
       </div>
 
       {/* Contenido */}
-      <div className="relative z-10 p-6 pt-0">
-        {/* Título y descripción */}
-        <div className="text-center mb-6">
-          <h3 className={`text-xl font-bold mb-2 ${
-            streakStage.stage.includes('perdida') ? 'text-gray-700' : 'text-gray-900'
-          }`}>{streakStage.stage}</h3>
-          {streakStage.nextReward && (
-            <p className={`text-sm ${
-              streakStage.stage.includes('perdida') ? 'text-gray-500' : 'text-gray-600'
-            }`}>
-              Próximo premio: <span style={{color:primaryColor}} className="font-semibold">{streakStage.nextReward}</span>
-            </p>
-          )}
-        </div>
-
-        {/* Barra de progreso */}
-        {streakStage.nextGoal && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>{currentCount} visitas</span>
-              <span>{streakStage.nextGoal} visitas</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="h-2 rounded-full transition-all duration-500 ease-out"
-                style={{ 
-                  width: `${streakStage.progress}%`,
-                  backgroundColor: primaryColor
-                }}
-              ></div>
-            </div>
-            <div className="text-center text-xs text-gray-500">
-              {Math.round(streakStage.progress)}% completado
-            </div>
+      <div className="relative z-10 px-6 pt-0">
+        {/* Número de racha y texto */}
+        <div className="text-center">
+          {/* Número de racha actual - Tamaño grande (50px) */}
+          <div className="text-5xl font-bold text-gray-900 mb-2">
+            {currentCount}
           </div>
-        )}
+          
+          {/* Texto "Racha actual" - Tamaño 16px */}
+          <div className="text-base text-gray-600 font-medium">
+            Racha actual
+          </div>
+        </div>
 
         {/* Botón de reiniciar si la racha está completa */}
         {streakStage.canRestart && !error && (

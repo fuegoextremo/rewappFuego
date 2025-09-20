@@ -4,10 +4,10 @@ import { QueryClient } from '@tanstack/react-query'
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Cache por 5 minutos por defecto
-      staleTime: 5 * 60 * 1000,
-      // Mantener datos en cache por 10 minutos
-      gcTime: 10 * 60 * 1000,
+      // SIN CACHE - Redux es fuente única de verdad
+      staleTime: 0,
+      // Mantener datos en cache solo 1 minuto (mínimo)
+      gcTime: 1 * 60 * 1000,
       // Retry solo 1 vez en caso de error
       retry: 1,
       // No refetch automático en window focus (evita consultas innecesarias)

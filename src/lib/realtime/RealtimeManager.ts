@@ -179,6 +179,12 @@ export class RealtimeManager {
         table: 'check_ins'
       }, (payload: RealtimePayload) => {
         RealtimeLogger.debug('check-ins', 'Raw checkin event recibido', { payload })
+        console.log('🟡 CHECK-IN EVENT recibido:', {
+          eventType: payload.eventType,
+          userId: payload.new?.user_id,
+          currentUserId: this.currentUserId,
+          isMyEvent: payload.new?.user_id === this.currentUserId
+        });
         this.handleCheckinChange(payload)
       })
       .on('postgres_changes', {
@@ -187,6 +193,12 @@ export class RealtimeManager {
         table: 'streaks',
         filter: `user_id=eq.${userId}`
       }, (payload: RealtimePayload) => {
+        console.log('🟢 STREAK EVENT recibido:', {
+          eventType: payload.eventType,
+          userId: payload.new?.user_id,
+          currentUserId: this.currentUserId,
+          currentCount: payload.new?.current_count
+        });
         this.handleStreakChange(payload)
       })
       .on('postgres_changes', {
@@ -345,6 +357,16 @@ export class RealtimeManager {
         import('@/store/slices/authSlice').then(({ updateUserStreakData }) => {
           const streakCount = payload.new?.current_count as number
           if (typeof streakCount === 'number' && streakCount >= 0) {
+            
+            // 🔍 LOG DETALLADO: Estado antes y después
+            console.log('🟦 REALTIME → REDUX: ANTES DE ACTUALIZAR');
+            console.log('📊 Datos del realtime:', {
+              current_count: streakCount,
+              completed_count: payload.new?.completed_count,
+              is_just_completed: payload.new?.is_just_completed,
+              user_id: payload.new?.user_id
+            });
+            
             // 🔥 OPTIMIZADO: Solo una actualización completa, evita doble re-render
             const streakData = {
               current_count: streakCount,
@@ -353,9 +375,12 @@ export class RealtimeManager {
               expires_at: payload.new?.expires_at as string | null,
               last_check_in: payload.new?.last_check_in as string | null
             }
+            
             this.reduxDispatch!(updateUserStreakData(streakData))
-            console.log('🔥 RealtimeManager: ✅ Actualizando streak data completo:', streakData)
-            console.log('🔥 RealtimeManager: ✅ Actualizando streakData completo:', streakData)
+            
+            console.log('� REALTIME → REDUX: DESPUÉS DE ACTUALIZAR');
+            console.log('✅ Streak data enviado a Redux:', streakData);
+            console.log('� Current_count que debería aparecer en UI:', streakCount);
           }
         })
       }

@@ -177,12 +177,12 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
 
         {/* Mensaje de días restantes para mantener la racha */}
         {daysUntilStreakBreaks !== null && daysUntilStreakBreaks > 0 && currentStreak > 0 && (
-          <div className="mt-3 text-center">
+          <div className="mt-8 text-center">
             <p 
               className="text-sm font-medium"
               style={{ color: `${primaryColor}B3` }} // B3 = 70% opacity in hex
             >
-              Visita antes de {daysUntilStreakBreaks}d para no perder la racha
+              Visita antes de <strong>{daysUntilStreakBreaks}d</strong> para no perder la racha
             </p>
           </div>
         )}

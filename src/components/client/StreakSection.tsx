@@ -131,6 +131,15 @@ const areStreakPropsEqual = (prevProps: Props, nextProps: Props) => {
 
 const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
   console.log('🔍 StreakSection render:', { currentCount, externalLoading });
+  console.log('🔍 StreakSection - RENDERIZADO CON currentCount:', currentCount, 'type:', typeof currentCount);
+  
+  // 🔍 LOG DETALLADO: Comparación de props
+  console.log('🟨 STREAKSECTION PROPS RECIBIDOS:', {
+    currentCount: currentCount,
+    currentCountType: typeof currentCount,
+    externalLoading: externalLoading,
+    timestamp: new Date().toLocaleTimeString()
+  });
   
   const [imageLoading, setImageLoading] = useState(false)
   const [previousImageUrl, setPreviousImageUrl] = useState<string>('')
@@ -285,7 +294,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
     }`}>
 
       {/* Imagen/Icono de la racha */}
-      <div className="relative z-10 mb-6 ">
+      <div className="relative z-10">
         {/* 🎯 Detección automática: Rive vs Imagen normal */}
         {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
           <>
@@ -325,7 +334,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
       </div>
 
       {/* Contenido */}
-      <div className="relative z-10 px-6 pt-0">
+      <div className="relative z-10 px-6">
         {/* Número de racha y texto */}
         <div className="text-center">
           {/* Número de racha actual - Tamaño grande (50px) */}
@@ -370,3 +379,6 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
 }, areStreakPropsEqual);
 
 export const StreakSection = StreakSectionComponent;
+
+// Temporalmente sin memo para debug
+// export const StreakSection = memo(StreakSectionComponent, areStreakPropsEqual);

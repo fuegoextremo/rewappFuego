@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getUserProfile, getUserCheckins, getUserStats, updateUserProfile, deactivateUserAccount } from '@/lib/api/user'
 import { queryKeys } from '@/lib/queryClient'
+import { useAppDispatch, useUser } from '@/store/hooks'
+import { setUser } from '@/store/slices/authSlice'
 
 // 🎯 HOOKS DE REACT QUERY PARA DATOS DE USUARIO
 

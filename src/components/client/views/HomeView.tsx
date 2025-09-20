@@ -8,8 +8,8 @@ import { RecentActivity } from "@/components/client/RecentActivity";
 import { StreakPrizesList } from "@/components/client/StreakPrizesList";
 import { StreakPrizesProgress } from "@/components/client/StreakPrizesProgress";
 import { FloatingHeader } from "@/components/client/FloatingHeader";
-//import { useUserRealtime } from '@/hooks/useUserRealtime'
-import { useUserStreakRedux } from "@/hooks/useReduxStreaks";
+import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
+import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { FerrisWheel, Flame } from "lucide-react";
 import Image from "next/image";
 import { useMemo } from "react";
@@ -23,11 +23,8 @@ export default function HomeView() {
   // Crear dispatch wrapper que respeta el bloqueo
   const safeDispatch = blockedDispatch(dispatch);
 
-  // ✨ Cargar datos de streak (incluyendo last_check_in)
-  useUserStreakRedux(user?.id || "");
-
   // ✨ Solo obtener el estado de conexión (la conexión es automática)
-  //const { isConnected } = useUserRealtime()
+  const { isConnected } = useUserRealtime()
 
   // 🔧 OPTIMIZACIÓN: Memoizar props para StreakSection
   const streakProps = useMemo(
@@ -39,9 +36,58 @@ export default function HomeView() {
   );
 
   console.log(
-    "🔍 HomeView render - user.current_streak:",
-    user?.current_streak
+    "🔍 HomeView render - user?.current_streak:",
+    user?.current_streak,
+    "- realtime connected:", isConnected,
+    "- timestamp:", new Date().toLocaleTimeString()
   );
+  
+  // 🔍 LOG ADICIONAL: Estado completo del usuario
+  console.log('🟦 REDUX STATE en HomeView:', {
+    current_streak: user?.current_streak,
+    available_spins: user?.available_spins,
+    total_checkins: user?.total_checkins,
+    userId: user?.id,
+    realtimeConnected: isConnected
+  });
+
+  // 🧪 TESTING TEMPORAL: Función para simular datos obsoletos
+  if (typeof window !== 'undefined') {
+    (window as any).testObsoleteData = () => {
+      console.log('🧪 Simulando datos obsoletos...')
+      console.log('🔍 Usuario actual antes:', {
+        current_streak: user?.current_streak,
+        available_spins: user?.available_spins
+      })
+      
+      // ✅ Crear usuario completo con datos modificados
+      const modifiedUser = {
+        ...user,
+        current_streak: 5,
+        available_spins: 2
+      }
+      
+      console.log('🔍 Usuario modificado a enviar:', {
+        current_streak: modifiedUser.current_streak,
+        available_spins: modifiedUser.available_spins
+      })
+      
+      // ✅ Usar dispatch directo en lugar de safeDispatch
+      dispatch({
+        type: 'auth/setUser',
+        payload: modifiedUser
+      })
+      
+      console.log('🧪 Dispatch directo ejecutado con datos obsoletos')
+    }
+    
+    (window as any).testCurrentState = () => {
+      console.log('🔍 Estado actual:', {
+        current_streak: user?.current_streak,
+        available_spins: user?.available_spins
+      })
+    }
+  }
 
   if (!user) {
     return (
@@ -73,14 +119,30 @@ export default function HomeView() {
       {/* Floating Header - Fixed at top */}
       <FloatingHeader />
 
+      {/* Confetti temporalmente deshabilitado */}
+      {/* <ConfettiCelebration /> */}
+
       <div>
         <div 
-          className="pb-20"
+          className="pb-20 relative"
           style={{ background: `linear-gradient(180deg, ${primaryColor} 0%, #FFF 100%)` }}
         >
+          {/* Explosión de partículas desde el centro */}
+          <ParticleExplosion color="#ffffff" particleCount={50} />
+          
           {/* Header con saludo personalizado */}
-          <div className="pt-20 px-4 mb-6">
-            <p className="text-xl font-bold text-white mb-2">{greeting}</p>
+          <div className="pt-20 px-4 mb-2 relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xl font-bold text-white">{greeting}</p>
+              
+              {/* ✨ Indicador de conexión realtime */}
+              {isConnected && (
+                <div className="ml-2 flex items-center gap-1 text-xs text-green-100 bg-green-500/20 px-2 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 bg-green-300 rounded-full animate-pulse"></div>
+                  En vivo
+                </div>
+              )}
+            </div>
             <p className="text-white text-sm">
               ¡Visita {companyName}! 😄{" "}
               <strong>Registra tus visitas para aumentar tu racha </strong>y
@@ -89,7 +151,9 @@ export default function HomeView() {
           </div>
 
           {/* Sección de racha - Movida arriba para mayor prominencia */}
-          <StreakSection {...streakProps} />
+          <div className="relative z-10">
+            <StreakSection {...streakProps} />
+          </div>
         </div>
 
         {/* Contenedor principal con sombra hacia arriba */}

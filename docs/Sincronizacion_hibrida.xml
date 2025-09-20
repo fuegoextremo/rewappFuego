@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan_sincronizacion_hibrida>
+  
+  <!-- FASE 1: MEJORAR PROTECCIÓN DE CACHE -->
+  <fase id="1" titulo="Optimizar lógica de cache en use-app-actions">
+    <descripcion>
+      Modificar la condición de protección para verificar que TODOS los datos críticos 
+      estén presentes antes de saltar la recarga
+    </descripcion>
+    <archivo>src/hooks/use-app-actions.ts</archivo>
+    <lineas>22-25</lineas>
+    <cambio_tipo>enhancement</cambio_tipo>
+    <logica_actual>
+      if (!forceReload && user?.id === userId && user.total_checkins !== undefined)
+    </logica_actual>
+    <logica_nueva>
+      if (!forceReload && user?.id === userId && 
+          user.total_checkins !== undefined && 
+          user.current_streak !== undefined &&
+          user.available_spins !== undefined)
+    </logica_nueva>
+    <beneficio>Previene uso de datos incompletos, permite sincronización cuando faltan campos críticos</beneficio>
+  </fase>
+
+  <!-- FASE 2: SINCRONIZACIÓN INICIAL INTELIGENTE -->
+  <fase id="2" titulo="Implementar sync inicial en RealtimeInitializer">
+    <descripcion>
+      Agregar useEffect que detecte datos incompletos y ejecute loadUserData automáticamente
+    </descripcion>
+    <archivo>src/components/providers/RealtimeInitializer.tsx</archivo>
+    <ubicacion>Después de useRealtimeManager()</ubicacion>
+    <cambio_tipo>new_feature</cambio_tipo>
+    <implementacion>
+      <importar>useUser, useAppDispatch from '@/store/hooks'</importar>
+      <importar>loadUserProfile from '@/store/slices/authSlice'</importar>
+      <logica>
+        useEffect(() => {
+          if (user?.id && (
+            user.current_streak === undefined || 
+            user.available_spins === undefined ||
+            user.total_checkins === undefined
+          )) {
+            console.log('🔄 Datos incompletos detectados, sincronizando...')
+            dispatch(loadUserProfile(user.id))
+          }
+        }, [user?.id, user?.current_streak, user?.available_spins, user?.total_checkins])
+      </logica>
+    </implementacion>
+    <beneficio>Datos siempre frescos al montar app, soluciona navegación directa y recargas</beneficio>
+  </fase>
+
+  <!-- FASE 3: MEJORAR PULL-TO-REFRESH -->
+  <fase id="3" titulo="Integrar datos críticos en pull-to-refresh">
+    <descripcion>
+      Incluir loadUserProfile en handleRefresh para que pull-to-refresh también refresque datos realtime
+    </descripcion>
+    <archivo>src/components/client/AppShell.tsx</archivo>
+    <lineas>60-75</lineas>
+    <cambio_tipo>enhancement</cambio_tipo>
+    <logica_agregar>
+      // Refrescar datos del usuario (críticos realtime)
+      dispatch(loadUserProfile(user.id)),
+    </logica_agregar>
+    <ubicacion>Dentro del Promise.all() existente</ubicacion>
+    <beneficio>Pull-to-refresh se vuelve útil para datos realtime, coherencia con sync inicial</beneficio>
+    <nota>Mantiene la filosofía actual pero extiende funcionalidad</nota>
+  </fase>
+
+  <!-- FASE 4: DEBUGGING Y MONITOREO -->
+  <fase id="4" titulo="Agregar logging inteligente">
+    <descripcion>
+      Añadir logs informativos para monitorear comportamiento de sincronización
+    </descripcion>
+    <ubicaciones>
+      <archivo>src/hooks/use-app-actions.ts</archivo>
+      <archivo>src/components/providers/RealtimeInitializer.tsx</archivo>
+    </ubicaciones>
+    <cambio_tipo>debugging</cambio_tipo>
+    <logs_agregar>
+      - "🔄 Sincronización inicial: datos incompletos detectados"
+      - "✅ Cache hit: datos completos, usando Redux"
+      - "🔄 Pull-to-refresh: incluyendo datos críticos"
+      - "✅ Sincronización completada: datos frescos cargados"
+    </logs_agregar>
+    <beneficio>Visibilidad del comportamiento, debugging fácil</beneficio>
+  </fase>
+
+  <!-- FASE 5: TESTING Y VALIDACIÓN -->
+  <fase id="5" titulo="Testing completo del flujo">
+    <descripcion>
+      Probar todos los escenarios críticos para validar funcionamiento
+    </descripcion>
+    <escenarios_testing>
+      <escenario id="1">Navegación directa a URL con app cerrada</escenario>
+      <escenario id="2">Recarga de página (F5)</escenario>
+      <escenario id="3">Pérdida y reconexión de red</escenario>
+      <escenario id="4">Pull-to-refresh manual</escenario>
+      <escenario id="5">Cambio de datos en otro dispositivo (realtime)</escenario>
+      <escenario id="6">Logout/login (control baseline)</escenario>
+    </escenarios_testing>
+    <metricas_validacion>
+      - Datos siempre frescos al cargar
+      - Realtime funciona para updates posteriores
+      - No consultas duplicadas innecesarias
+      - Pull-to-refresh útil y funcional
+    </metricas_validacion>
+  </fase>
+
+  <!-- CONFIGURACIÓN PULL-TO-REFRESH -->
+  <pull_to_refresh_strategy>
+    <filosofia>
+      SÍ incluir datos críticos en pull-to-refresh porque:
+      - Mantiene coherencia con sincronización inicial
+      - Ofrece refresh manual cuando usuario lo necesita
+      - No contradice realtime (es complementario)
+      - Hace la función realmente útil
+    </filosofia>
+    <implementacion>
+      Agregar dispatch(loadUserProfile(user.id)) en el Promise.all() existente
+      junto con las invalidaciones actuales de datos estáticos
+    </implementacion>
+    <beneficio>
+      Pull-to-refresh se convierte en "refresh completo" incluyendo tanto 
+      datos estáticos como datos críticos realtime
+    </beneficio>
+  </pull_to_refresh_strategy>
+
+  <!-- RESULTADO ESPERADO -->
+  <resultado_final>
+    <escenario name="navegacion_directa">✅ Datos frescos automáticamente</escenario>
+    <escenario name="recarga_pagina">✅ Datos frescos automáticamente</escenario>
+    <escenario name="cambios_realtime">✅ Updates instantáneos vía realtime</escenario>
+    <escenario name="pull_to_refresh">✅ Refresh completo (estáticos + críticos)</escenario>
+    <escenario name="perdida_conexion">✅ Re-sync al reconectar</escenario>
+    <compatibilidad>✅ Mantiene toda la lógica y principios actuales</compatibilidad>
+  </resultado_final>
+
+</plan_sincronizacion_hibrida>

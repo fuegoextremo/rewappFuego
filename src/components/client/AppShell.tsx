@@ -7,6 +7,7 @@ import { queryKeys } from '@/lib/queryClient'
 import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
+import { loadUserProfile } from '@/store/slices/authSlice'
 import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
 
@@ -54,12 +55,14 @@ export function AppShell({ children }: AppShellProps) {
     dispatch(setRefreshing(true))
     
     try {
-      console.log('🔄 Iniciando pull-to-refresh optimizado...')
+      console.log('🔄 Iniciando pull-to-refresh híbrido (estáticos + críticos)...')
       
-      // 🚀 FASE 2.2: Solo invalidar datos que NO vienen por Realtime
-      // Datos estáticos/semi-estáticos que necesitan refresh manual
+      // 🎯 SINCRONIZACIÓN HÍBRIDA: Incluir datos críticos + datos estáticos
       await Promise.all([
-        // Sistema (settings, branches, premios) - cambian raramente
+        // 🔥 DATOS CRÍTICOS: Refrescar datos del usuario (realtime)
+        dispatch(loadUserProfile(user.id)).unwrap(),
+        
+        // 📊 DATOS ESTÁTICOS: Sistema (settings, branches, premios) - cambian raramente
         queryClient.invalidateQueries({ queryKey: queryKeys.system.settings }),
         queryClient.invalidateQueries({ queryKey: queryKeys.system.branches }),
         queryClient.invalidateQueries({ queryKey: queryKeys.system.prizes }),
@@ -72,13 +75,7 @@ export function AppShell({ children }: AppShellProps) {
         queryClient.invalidateQueries({ queryKey: queryKeys.user.checkins(user.id) }),
       ])
       
-      // 📝 NOTA: NO invalidamos datos que vienen por RealtimeManager:
-      // ❌ user.stats (viene por postgres_changes)
-      // ❌ user_spins (viene por postgres_changes) 
-      // ❌ coupons activos (vienen por postgres_changes)
-      // ❌ user.profile (se actualiza por mutations específicas)
-      
-      console.log('✅ Pull-to-refresh completado - solo datos estáticos refrescados')
+      console.log('✅ Pull-to-refresh híbrido completado - datos críticos + estáticos refrescados')
     } catch (error) {
       console.error('❌ Error en pull-to-refresh:', error)
     } finally {

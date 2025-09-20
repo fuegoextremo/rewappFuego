@@ -80,7 +80,6 @@ interface AuthState {
   recentActivityLoaded: boolean  // 🆕 Flag para evitar loop infinito
   streakPrizes: StreakPrize[]
   streakPrizesLoaded: boolean
-  streakPrizesLastLoaded: number | null  // 🆕 Timestamp de última carga
 }
 
 // 🏁 ESTADO INICIAL
@@ -105,8 +104,7 @@ const initialState: AuthState = {
   recentActivityError: null,
   recentActivityLoaded: false,  // 🆕 Inicial: no se ha cargado
   streakPrizes: [],
-  streakPrizesLoaded: false,
-  streakPrizesLastLoaded: null  // 🆕 Inicial: nunca se ha cargado
+  streakPrizesLoaded: false
 }
 
 // 🔄 ASYNC THUNKS
@@ -575,7 +573,6 @@ const authSlice = createSlice({
       .addCase(loadStreakPrizes.fulfilled, (state, action) => {
         state.streakPrizes = action.payload
         state.streakPrizesLoaded = true
-        state.streakPrizesLastLoaded = Date.now()  // 🆕 Guardar timestamp
       })
       .addCase(loadStreakPrizes.rejected, (state, action) => {
         state.streakPrizesLoaded = false

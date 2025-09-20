@@ -1,6 +1,6 @@
 'use client'
 
-import { useSettings } from '@/store/hooks'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 import { useRecentActivityRedux } from '@/hooks/useReduxStreaks'
 import { formatCheckInDateTime, type CheckIn } from '@/hooks/queries/useRecentActivity'
 
@@ -10,7 +10,7 @@ type Props = {
 
 export function RecentActivity({ userId }: Props) {
   const { data: checkIns = [], isLoading, error } = useRecentActivityRedux(userId)
-  const settings = useSettings()
+  const { data: settings } = useSystemSettings()
 
   // 🔍 Debug logging mejorado
   console.log('🔍 RecentActivity render:', { 
@@ -22,7 +22,7 @@ export function RecentActivity({ userId }: Props) {
     allCheckIns: checkIns.map(c => ({ id: c.id, date: c.check_in_date, created: c.created_at }))
   })
 
-  const primaryColor = settings.company_theme_primary || '#D73527'
+  const primaryColor = settings?.company_theme_primary || '#D73527'
 
   if (isLoading) {
     return (

@@ -1,15 +1,15 @@
 import Image from 'next/image'
-import { useSettings } from '@/store/hooks'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 
 interface FloatingHeaderProps {
   className?: string
 }
 
 export function FloatingHeader({ className = '' }: FloatingHeaderProps) {
-  const settings = useSettings()
+  const { data: settings } = useSystemSettings()
   
-  const companyName = settings.company_name || 'RewApp'
-  const logoUrl = settings.company_logo_url
+  const companyName = settings?.company_name || 'RewApp'
+  const logoUrl = settings?.company_logo_url
 
   return (
     <div 

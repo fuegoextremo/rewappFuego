@@ -1,6 +1,7 @@
-import { useAppDispatch, useUser, useSettings } from "@/store/hooks";
+import { useAppDispatch, useUser } from "@/store/hooks";
 import { setCurrentView } from "@/store/slices/uiSlice";
 import { useBlockedDispatch } from "@/hooks/useBlockedDispatch";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 import { StreakSection } from "@/components/client/StreakSection";
 import { CTAButton } from "@/components/client/CTAButton";
 import { UnauthorizedBanner } from "@/components/shared/UnauthorizedBanner";
@@ -18,7 +19,7 @@ export default function HomeView() {
   const dispatch = useAppDispatch();
   const blockedDispatch = useBlockedDispatch();
   const user = useUser();
-  const settings = useSettings();
+  const { data: settings, isLoading: settingsLoading } = useSystemSettings();
 
   // Crear dispatch wrapper que respeta el bloqueo
   const safeDispatch = blockedDispatch(dispatch);
@@ -108,8 +109,8 @@ export default function HomeView() {
   // Generar saludo personalizado
   const userName = user.first_name ? user.first_name : "Usuario";
   const greeting = `Hola, ${userName}`;
-  const companyName = settings.company_name || "Fuego Rewards";
-  const primaryColor = settings.company_theme_primary || "#D73527";
+  const companyName = settings?.company_name || "Fuego Rewards";
+  const primaryColor = settings?.company_theme_primary || "#D73527";
   {
     /*const hasStreak = (user.current_streak || 0) > 0*/
   }
@@ -118,9 +119,6 @@ export default function HomeView() {
     <>
       {/* Floating Header - Fixed at top */}
       <FloatingHeader />
-
-      {/* Confetti temporalmente deshabilitado */}
-      {/* <ConfettiCelebration /> */}
 
       <div>
         <div 
@@ -224,7 +222,7 @@ export default function HomeView() {
         </div>
 
         {/* Logo del establecimiento */}
-        {settings.company_logo_url && (
+        {settings?.company_logo_url && (
           <div className="text-center py-6">
             <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden bg-gray-100 flex items-center justify-center p-2">
               <Image

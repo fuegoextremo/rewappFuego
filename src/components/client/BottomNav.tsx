@@ -1,6 +1,6 @@
 'use client'
 import { useCurrentView, useAppDispatch, useUser } from '@/store/hooks'
-import { useSettings } from '@/store/hooks'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 import { setCurrentView } from '@/store/slices/uiSlice'
 import { useBlockedDispatch } from '@/hooks/useBlockedDispatch'
 import { Home, FerrisWheel, QrCode, Ticket, User } from 'lucide-react'
@@ -18,13 +18,13 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
   const dispatch = useAppDispatch()
   const blockedDispatch = useBlockedDispatch()
   const currentView = useCurrentView()
-  const settings = useSettings()
+  const { data: settings } = useSystemSettings()
   const user = useUser()
   
   // Crear dispatch wrapper que respeta el bloqueo
   const safeDispatch = blockedDispatch(dispatch)
   
-  const primaryColor = settings.company_theme_primary || '#D73527'
+  const primaryColor = settings?.company_theme_primary || '#D73527'
   const availableSpins = user?.available_spins ?? 0
   
   // 📜 Auto-scroll al top cuando cambia de sección

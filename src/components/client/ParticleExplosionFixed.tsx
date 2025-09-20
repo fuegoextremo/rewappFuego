@@ -11,7 +11,7 @@ export function ParticleExplosion({
 }: ParticleExplosionProps) {
   return (
     <>
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Generar partículas */}
         {Array.from({ length: particleCount }, (_, i) => {
           // Calcular ángulo para distribución circular
@@ -25,10 +25,10 @@ export function ParticleExplosion({
               key={i}
               className="particle"
               style={{
-                '--start-x': '50vw',
-                '--start-y': '50vh',
-                '--end-x': `calc(50vw + ${x}px)`,
-                '--end-y': `calc(50vh + ${y}px)`,
+                '--start-x': '50%',
+                '--start-y': '60%',
+                '--end-x': `calc(50% + ${x}px)`,
+                '--end-y': `calc(50% + ${y}px)`,
                 '--size': `${Math.random() * 16 + 12}px`,
                 '--duration': `${(Math.random() * 1.5 + 2.5)}s`,
                 '--delay': `${Math.random() * -2}s`,
@@ -40,7 +40,7 @@ export function ParticleExplosion({
 
       <style jsx>{`
         .particle {
-          position: fixed;
+          position: absolute;
           background: ${color};
           width: var(--size);
           height: var(--size);

@@ -2,7 +2,10 @@
 
 import { useMemo } from 'react'
 import Image from 'next/image'
-import { useUser, useSettings } from '@/store/hooks'
+import React from 'react'
+import { useUser } from '@/store/hooks'
+import { useSystemSettings } from '@/hooks/use-system-settings'
+import { useAdvancedStreaks } from '@/hooks/useAdvancedStreaks'
 import { useStreakPrizesRedux } from '@/hooks/useReduxStreaks'
 
 interface StreakPrizesProgressProps {
@@ -11,13 +14,13 @@ interface StreakPrizesProgressProps {
 
 export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps) {
   const user = useUser()
-  const settings = useSettings()
+  const { data: settings } = useSystemSettings()
   const { data: streakPrizes, isLoading } = useStreakPrizesRedux()
   
   const currentStreak = user?.current_streak || 0
-  const primaryColor = settings.company_theme_primary || '#D73527'
+  const primaryColor = settings?.company_theme_primary || '#D73527'
   const lastCheckinDate = user?.streakData?.last_check_in
-  const streakBreakDays = settings.streak_break_days || 12
+  const streakBreakDays = settings?.streak_break_days || 12
 
   // Calcular días hasta que se rompa la racha
   const daysUntilStreakBreaks = useMemo(() => {

@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import Image from 'next/image'
 import { CircularProgress } from '@/components/shared/CircularProgress'
-import { useSettings } from '@/store/hooks'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 import { CheckCircle, Gift } from 'lucide-react'
 
 interface StreakReward {
@@ -26,9 +26,9 @@ export function StreakPrizeItem({
   currentProgress,
   isCompleted
 }: StreakPrizeItemProps) {
-  const settings = useSettings()
+  const { data: settings } = useSystemSettings()
   
-  const primaryColor = settings.company_theme_primary || '#D73527'
+  const primaryColor = settings?.company_theme_primary || '#D73527'
   
   // Memoized calculations
   const { progressColor, prizeTitle, prizeDescription } = useMemo(() => {

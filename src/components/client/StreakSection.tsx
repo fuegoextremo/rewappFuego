@@ -287,7 +287,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${
+    <div className={`px-4 max-w-lg mx-auto relative overflow-hidden rounded-2xl ${
       streakStage.stage.includes('perdida') 
         ? 'text-gray-700' 
         : 'text-gray-900'

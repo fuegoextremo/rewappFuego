@@ -1,4 +1,4 @@
-import { useAppDispatch, useUser } from "@/store/hooks";
+import { useAppDispatch, useUser, useSettings } from "@/store/hooks";
 import { setCurrentView } from "@/store/slices/uiSlice";
 import { useBlockedDispatch } from "@/hooks/useBlockedDispatch";
 import { useSystemSettings } from "@/hooks/use-system-settings";
@@ -13,13 +13,15 @@ import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
 import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { FerrisWheel, Flame } from "lucide-react";
 import Image from "next/image";
-import { useMemo } from "react";
 
 export default function HomeView() {
   const dispatch = useAppDispatch();
   const blockedDispatch = useBlockedDispatch();
   const user = useUser();
   const { data: settings, isLoading: settingsLoading } = useSystemSettings();
+  
+  // 🔧 Redux settings para el contador de racha (sincrónicos)
+  const reduxSettings = useSettings();
 
   // Crear dispatch wrapper que respeta el bloqueo
   const safeDispatch = blockedDispatch(dispatch);
@@ -27,19 +29,11 @@ export default function HomeView() {
   // ✨ Solo obtener el estado de conexión (la conexión es automática)
   const { isConnected } = useUserRealtime()
 
-  // 🔧 OPTIMIZACIÓN: Memoizar props para StreakSection
-  const streakProps = useMemo(
-    () => ({
-      currentCount: user?.current_streak || 0,
-      isLoading: false,
-    }),
-    [user?.current_streak]
-  );
-
   console.log(
     "🔍 HomeView render - user?.current_streak:",
     user?.current_streak,
     "- realtime connected:", isConnected,
+    "- redux settings loaded:", Object.keys(reduxSettings).length > 0,
     "- timestamp:", new Date().toLocaleTimeString()
   );
   
@@ -129,7 +123,7 @@ export default function HomeView() {
           <ParticleExplosion color="#ffffff" particleCount={50} />
           
           {/* Header con saludo personalizado */}
-          <div className="pt-20 px-4 mb-2 relative z-10">
+          <div className="pt-20 px-8 mb-2 relative z-10">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xl font-bold text-white">{greeting}</p>
               
@@ -150,7 +144,10 @@ export default function HomeView() {
 
           {/* Sección de racha - Movida arriba para mayor prominencia */}
           <div className="relative z-10">
-            <StreakSection {...streakProps} />
+            <StreakSection 
+              currentCount={user?.current_streak || 0} 
+              isLoading={false} 
+            />
           </div>
         </div>
 

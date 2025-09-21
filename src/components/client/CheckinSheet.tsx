@@ -3,6 +3,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useUser } from '@/store/hooks'
+import { useSystemSettings } from '@/hooks/use-system-settings'
+import confetti from 'canvas-confetti'
 import UserQR from './UserQR'
 import BottomSheet from '@/components/ui/BottomSheet'
 
@@ -13,12 +16,35 @@ export default function CheckinSheet({
   open: boolean
   onClose: () => void
 }) {
+  const user = useUser()
+  const { data: settings } = useSystemSettings()
+
   // 🎯 Escuchar cuando se realiza un check-in exitoso para cerrar automáticamente
   useEffect(() => {
     if (!open) return
 
     const handleCheckinSuccess = () => {
       console.log('🎉 CheckinSheet: Check-in exitoso detectado, cerrando automáticamente')
+      
+      // 🏆 Verificar si se completó un premio de racha
+      const currentStreak = user?.current_streak || 0
+      const prizeLevels = [3, 5, 10, 15, 20, 25, 30]
+      
+      if (prizeLevels.includes(currentStreak)) {
+        console.log(`🎉 ¡Premio de racha completado: ${currentStreak} días consecutivos!`)
+        
+        // Activar confetti simple para premio de racha
+        setTimeout(() => {
+          const primaryColor = settings?.company_theme_primary || "#D73527"
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: [primaryColor, '#FFD700', '#FFA500', '#ffffff']
+          })
+        }, 500)
+      }
+      
       onClose() // Cerrar inmediatamente junto con el toast
     }
 
@@ -28,7 +54,7 @@ export default function CheckinSheet({
     return () => {
       window.removeEventListener('checkin-success', handleCheckinSuccess)
     }
-  }, [open, onClose])
+  }, [open, onClose, user?.current_streak, settings?.company_theme_primary])
   return (
     <BottomSheet
       isOpen={open}

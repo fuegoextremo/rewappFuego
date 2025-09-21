@@ -635,21 +635,37 @@ export class RealtimeManager {
       this.currentUserId = null // Limpiar para forzar nueva conexión
       this.connect(userIdToReconnect)
       
-      // 🔄 SINCRONIZACIÓN: Invalidar queries críticas para refrescar datos que pudieron cambiar
-      if (this.queryClient) {
-        console.log('🔄 Invalidando queries para sincronizar datos tras resume...')
-        this.queryClient.invalidateQueries({ queryKey: ['user', 'spins', userIdToReconnect] })
-        this.queryClient.invalidateQueries({ queryKey: ['user', 'streaks', userIdToReconnect] })
-        this.queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userIdToReconnect] })
-        RealtimeLogger.info('page-visibility', 'Queries invalidadas para sincronización post-resume', { userId: userIdToReconnect })
-      }
+      // 🔄 SIMPLE SYNC: Siempre sincronizar datos frescos al reconectar
+      this.syncFreshDataAfterResume(userIdToReconnect)
       
       console.log('🔄 Reconexión completa con canal nuevo')
     } else {
       console.log('🔄 Resume sin userId - esperando conexión inicial')
     }
   }
-  
+
+  // 🔄 SIMPLE SYNC: Siempre fetch datos frescos al reconectar (OPCIÓN 1)
+  private syncFreshDataAfterResume(userId: string) {
+    console.log('🔄 SYNC: Obteniendo datos frescos después de reconexión')
+    
+    // 1. Sincronizar Redux (datos críticos para UI)
+    if (this.reduxDispatch) {
+      import('@/store/slices/authSlice').then(({ loadUserProfile }) => {
+        this.reduxDispatch!(loadUserProfile(userId))
+        console.log('🔄 Redux: loadUserProfile ejecutado para datos frescos')
+      })
+    }
+    
+    // 2. Mantener sincronización de React Query (datos auxiliares)
+    if (this.queryClient) {
+      console.log('🔄 React Query: Invalidando queries para datos frescos...')
+      this.queryClient.invalidateQueries({ queryKey: ['user', 'spins', userId] })
+      this.queryClient.invalidateQueries({ queryKey: ['user', 'streaks', userId] })
+      this.queryClient.invalidateQueries({ queryKey: ['user', 'coupons', userId] })
+      RealtimeLogger.info('page-visibility', 'Datos sincronizados después de reconexión', { userId })
+    }
+  }
+
   // Cleanup para evitar memory leaks
   private cleanupPageVisibility() {
     if (typeof window !== 'undefined') {

@@ -470,9 +470,22 @@ const authSlice = createSlice({
       expires_at: string | null, 
       last_check_in: string | null 
     }>>) => {
-      if (state.user?.streakData) {
+      if (state.user) {
+        // 🛡️ Garantizar inicialización robusta de streakData
+        if (!state.user.streakData) {
+          state.user.streakData = {
+            current_count: state.user.current_streak || 0, // ← Usar valor existente como base
+            completed_count: 0,
+            is_just_completed: false,
+            expires_at: null,
+            last_check_in: null
+          }
+        }
+        
+        // 🔄 Actualizar datos completos
         state.user.streakData = { ...state.user.streakData, ...action.payload }
-        // Sincronizar current_streak si se actualiza
+        
+        // 🎯 SIEMPRE sincronizar current_streak (campo crítico para UI)
         if (action.payload.current_count !== undefined) {
           state.user.current_streak = action.payload.current_count
         }

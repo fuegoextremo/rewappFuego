@@ -34,8 +34,8 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
   
   
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-30 px-4 pb-6">
-      <div className="mx-auto max-w-md bg-white rounded-2xl shadow-lg border border-gray-100">
+    <nav className="fixed bottom-0 inset-x-0 z-30 px-4 pb-4">
+      <div className="mx-auto max-w-md bg-white/30 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30">
         <ul className="grid grid-cols-5 py-2">
           {items.map((item) => {
             const active = currentView === item.view
@@ -47,7 +47,7 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
                   <button
                     type="button"
                     onClick={onCheckinClick}
-                    className="w-full flex flex-col items-center py-3 text-xs focus:outline-none"
+                    className="w-full flex flex-col items-center text-xs focus:outline-none"
                     aria-label="Mostrar QR de check-in"
                   >
                     <div 
@@ -84,12 +84,12 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
                         </div>
                       )}
                     </div>
-                    <span 
+                    {/* <span 
                       className={`mt-1 ${active ? 'font-medium' : ''} transition-colors`}
                       style={{ color: active ? primaryColor : '#374151' }}
                     >
                       {item.label}
-                    </span>
+                    </span> */}
                   </button>
                 )}
               </li>

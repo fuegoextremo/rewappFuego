@@ -12,7 +12,7 @@ import { createClientBrowser } from '@/lib/supabase/client'
  */
 export function useAppActions() {
   const dispatch = useAppDispatch()
-  const { user, isLoading } = useAppSelector(state => state.auth)
+  const { user, isInitialLoading, isSilentRefreshing } = useAppSelector(state => state.auth)  // 🔄 ACTUALIZADO
   const settings = useAppSelector(state => state.settings)
   
   // 👤 CARGAR DATOS DEL USUARIO
@@ -104,7 +104,9 @@ export function useAppActions() {
 
   return {
     // 📊 Estado
-    isLoading,
+    isLoading: isInitialLoading || isSilentRefreshing,  // 🔄 Retrocompatibilidad
+    isInitialLoading,     // 🆕 Estado específico
+    isSilentRefreshing,   // 🆕 Estado específico
     user,
     settings,
     

@@ -12,7 +12,13 @@ export const useAuth = () => useAppSelector(state => state.auth)
 // 🔧 OPTIMIZADO: Selector con shallow comparison para evitar re-renders innecesarios
 export const useUser = () => useSelector((state: RootState) => state.auth.user, shallowEqual)
 export const useIsAuthenticated = () => useAppSelector(state => state.auth.isAuthenticated)
-export const useAuthLoading = () => useAppSelector(state => state.auth.isLoading)
+// 🔄 RETROCOMPATIBILIDAD: useAuthLoading sigue funcionando
+export const useAuthLoading = () => useAppSelector(state => 
+  state.auth.isInitialLoading || state.auth.isSilentRefreshing
+)
+// 🆕 NUEVOS SELECTORES específicos
+export const useIsInitialLoading = () => useAppSelector(state => state.auth.isInitialLoading)
+export const useIsSilentRefreshing = () => useAppSelector(state => state.auth.isSilentRefreshing)
 export const useAuthError = () => useAppSelector(state => state.auth.error)
 
 // 🎨 SELECTORES DE UI

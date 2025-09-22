@@ -5,7 +5,7 @@ import { useAppDispatch, useAuth } from '@/store/hooks'
 import { 
   loadUserProfile, 
   setUser, 
-  setLoading, 
+  setInitialLoading,    // 🆕 NUEVO import
   logout as logoutAction,
   // 🔥 NUEVOS: Cargar datos que estaban en React Query
   loadRecentActivity,
@@ -17,7 +17,7 @@ import { loadSettings } from '@/store/slices/settingsSlice'
 // 🔗 HOOK PRINCIPAL DE AUTENTICACIÓN
 export function useAuthManager() {
   const dispatch = useAppDispatch()
-  const { user, isLoading, isAuthenticated, error } = useAuth()
+  const { user, isInitialLoading, isSilentRefreshing, isAuthenticated, error } = useAuth()  // 🔄 ACTUALIZADO
   const router = useRouter()
   
   // 🎯 OPTIMIZACIÓN: Ref estable para evitar loop con user como dependencia
@@ -101,10 +101,10 @@ export function useAuthManager() {
       }
     )
 
-    // Verificar sesión inicial
+    // Verificar sesión inicial - 🎯 INITIAL LOADING (primera carga de la app)
     const checkInitialSession = async () => {
       try {
-        dispatch(setLoading(true))
+        dispatch(setInitialLoading(true))  // ✨ CAMBIO CLAVE: SÍ mostrar "Verificando sesión"
         
         const { data: { session }, error } = await supabase.auth.getSession()
         
@@ -134,7 +134,7 @@ export function useAuthManager() {
         console.error('Error en verificación inicial:', error)
         dispatch(setUser(null))
       } finally {
-        dispatch(setLoading(false))
+        dispatch(setInitialLoading(false))  // ✨ CAMBIO CLAVE
       }
     }
 
@@ -158,7 +158,9 @@ export function useAuthManager() {
   return {
     user,
     isAuthenticated,
-    isLoading,
+    isInitialLoading,      // 🆕 Nuevo campo
+    isSilentRefreshing,    // 🆕 Nuevo campo
+    isLoading: isInitialLoading || isSilentRefreshing,  // 🔄 Retrocompatibilidad
     error,
     logout
   }

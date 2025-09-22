@@ -40,8 +40,8 @@ export function AppShell({ children }: AppShellProps) {
   const openCheckin = useOpenCheckin()
   const queryClient = useQueryClient()
   
-  // 🔐 AUTH MANAGER
-  const { isLoading } = useAuthManager()
+  // 🔐 AUTH MANAGER - 🎯 SOLO isInitialLoading para "Verificando sesión"
+  const { isInitialLoading } = useAuthManager()  // ✨ CAMBIO CLAVE
   
   // 🎨 LOCAL STATE
   const [isRefreshing, setIsRefreshingLocal] = useState(false)
@@ -149,8 +149,8 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, [])
 
-  // Mostrar loading mientras se verifica la autenticación
-  if (isLoading) {
+  // Mostrar loading mientras se verifica la autenticación - 🎯 SOLO INITIAL LOADING
+  if (isInitialLoading) {  // ✨ CAMBIO CLAVE: no más "Verificando sesión" en refresh
     return (
       <div className="min-h-dvh bg-white text-gray-900 flex items-center justify-center">
         <div className="text-center space-y-4">

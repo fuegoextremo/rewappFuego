@@ -60,7 +60,8 @@ export interface CouponRow {
 
 interface AuthState {
   user: User | null
-  isLoading: boolean
+  isInitialLoading: boolean      // 🆕 Solo para login inicial y casos críticos
+  isSilentRefreshing: boolean    // 🆕 Para refresh en background
   isAuthenticated: boolean
   error: string | null
   coupons: {
@@ -85,7 +86,8 @@ interface AuthState {
 // 🏁 ESTADO INICIAL
 const initialState: AuthState = {
   user: null,
-  isLoading: false,
+  isInitialLoading: false,      // 🆕 Solo para login inicial
+  isSilentRefreshing: false,    // 🆕 Para refresh en background  
   isAuthenticated: false,
   error: null,
   coupons: {
@@ -306,8 +308,16 @@ const authSlice = createSlice({
       state.isAuthenticated = !!action.payload
       state.error = null
     },
+    setInitialLoading: (state, action: PayloadAction<boolean>) => {
+      state.isInitialLoading = action.payload
+    },
+    setSilentRefreshing: (state, action: PayloadAction<boolean>) => {
+      state.isSilentRefreshing = action.payload
+    },
+    // 🔄 RETROCOMPATIBILIDAD: setLoading mantiene ambos estados sincronizados 
     setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload
+      state.isInitialLoading = action.payload
+      state.isSilentRefreshing = action.payload
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload
@@ -494,28 +504,35 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Load User Profile
+      // Load User Profile - 🔄 SIEMPRE SILENT REFRESH (usado por Realtime)
       .addCase(loadUserProfile.pending, (state) => {
-        state.isLoading = true
+        state.isSilentRefreshing = true  // 🎯 NO mostrar "Verificando sesión"
         state.error = null
       })
       .addCase(loadUserProfile.fulfilled, (state, action) => {
-        state.isLoading = false
+        state.isSilentRefreshing = false
         state.user = action.payload
         state.isAuthenticated = true
         state.error = null
+        
+        // 🔔 DISPARAR EVENTO para notificar que los datos se actualizaron
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user-data-refreshed', {
+            detail: { userId: action.payload.id, source: 'loadUserProfile' }
+          }))
+        }
       })
       .addCase(loadUserProfile.rejected, (state, action) => {
-        state.isLoading = false
+        state.isSilentRefreshing = false
         state.error = action.error.message || 'Error loading user profile'
       })
-      // Perform Checkin
+      // Perform Checkin - 🎯 INITIAL LOADING (usuario lo solicita)
       .addCase(performCheckin.pending, (state) => {
-        state.isLoading = true
+        state.isInitialLoading = true  // 🎯 SÍ mostrar loading
         state.error = null
       })
       .addCase(performCheckin.fulfilled, (state, action) => {
-        state.isLoading = false
+        state.isInitialLoading = false
         // Actualizar estadísticas del usuario después del checkin exitoso
         if (state.user && action.payload.success) {
           state.user.total_checkins = (state.user.total_checkins || 0) + 1
@@ -524,17 +541,18 @@ const authSlice = createSlice({
         }
       })
       .addCase(performCheckin.rejected, (state, action) => {
-        state.isLoading = false
+        state.isInitialLoading = false
         state.error = action.payload as string || 'Error performing checkin'
       })
-      // Logout
+      // Logout - 🎯 INITIAL LOADING (acción explícita del usuario)
       .addCase(logout.pending, (state) => {
-        state.isLoading = true
+        state.isInitialLoading = true  // 🎯 SÍ mostrar loading
       })
       .addCase(logout.fulfilled, (state) => {
         state.user = null
         state.isAuthenticated = false
-        state.isLoading = false
+        state.isInitialLoading = false
+        state.isSilentRefreshing = false  // 🔄 Limpiar ambos estados
         state.error = null
         // 🆕 Resetear TODOS los datos de usuario al logout
         state.recentActivity = []
@@ -555,7 +573,7 @@ const authSlice = createSlice({
         }
       })
       .addCase(logout.rejected, (state, action) => {
-        state.isLoading = false
+        state.isInitialLoading = false  // 🔄 Actualizar estado correcto
         state.error = action.error.message || 'Error during logout'
       })
       
@@ -610,11 +628,13 @@ const authSlice = createSlice({
 })
 
 // 📤 EXPORT ACTIONS
-export const { 
-  setUser, 
-  setLoading, 
-  setError, 
-  clearError, 
+export const {
+  setUser,
+  setInitialLoading,      // 🆕 Nuevo action
+  setSilentRefreshing,    // 🆕 Nuevo action  
+  setLoading,            // 🔄 Retrocompatible
+  setError,
+  clearError,
   updateAvailableSpins,
   incrementTotalCheckins,
   updateCurrentStreak,
@@ -636,5 +656,15 @@ export const {
   updateUserStreakData
 } = authSlice.actions
 
-// 📤 EXPORT REDUCER
+// � SELECTORS CON RETROCOMPATIBILIDAD
+export const selectIsLoading = (state: { auth: AuthState }) => 
+  state.auth.isInitialLoading || state.auth.isSilentRefreshing
+
+export const selectIsInitialLoading = (state: { auth: AuthState }) => 
+  state.auth.isInitialLoading
+
+export const selectIsSilentRefreshing = (state: { auth: AuthState }) => 
+  state.auth.isSilentRefreshing
+
+// �📤 EXPORT REDUCER
 export default authSlice.reducer

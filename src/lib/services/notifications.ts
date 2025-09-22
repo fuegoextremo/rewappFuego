@@ -112,6 +112,11 @@ export class NotificationService {
 
     this.showSuccess(message, 4000, "🎯 Check-in")
     
+    // 🎉 Disparar confetti para cualquier checkin exitoso
+    window.dispatchEvent(new CustomEvent('streak-reward-confetti', {
+      detail: { threshold: 'checkin', prizeName: 'Check-in exitoso' }
+    }))
+    
     // Ejecutar callback al mismo tiempo que aparece el toast
     if (onComplete) {
       onComplete()
@@ -127,6 +132,11 @@ export class NotificationService {
       : `🎫 ¡Cupón obtenido por completar ${threshold} visitas!`
 
     this.showSuccess(message, 5000, "🏆 Premio por Visitas")
+    
+    // 🎉 Disparar evento para confetti (manejado por AppShell)
+    window.dispatchEvent(new CustomEvent('streak-reward-confetti', {
+      detail: { threshold, prizeName }
+    }))
   }
 
   /**

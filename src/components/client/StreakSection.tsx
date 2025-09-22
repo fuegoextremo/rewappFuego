@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useMemo, useCallback, memo } from 'react'
 import Image from 'next/image'
+import { useSelector } from 'react-redux'
+import type { RootState } from '@/store'
 import { useSystemSettings } from '@/hooks/use-system-settings'
-import { createClientBrowser } from '@/lib/supabase/client'
 import { isRiveFile } from '@/lib/utils/fileTypes'
 import SimpleRiveLoop from './SimpleRiveLoop'
+import { motion } from 'framer-motion'
 
 export type StreakStage = {
   image: string
@@ -143,12 +145,16 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   
   const [imageLoading, setImageLoading] = useState(false)
   const [previousImageUrl, setPreviousImageUrl] = useState<string>('')
-  const [streakPrizes, setStreakPrizes] = useState<StreakPrize[]>([])
-  const [prizesLoading, setPrizesLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   
+  // 🔄 CAMBIO SEGURO: Usar Redux para streakPrizes (datos estáticos)
+  const streakPrizes = useSelector((state: RootState) => state.auth.streakPrizes)
+  
+  // ⚠️ MANTENER: useSystemSettings por precaución (datos dinámicos)
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   
+  // 🔄 Local state solo para errores (no loading de prizes)
+  const [error] = useState<string | null>(null)
+
   // 🔧 OPTIMIZADO: Memoizar solo las propiedades que necesitamos para evitar re-renders
   const stableSettings = useMemo(() => {
     if (!settings) return undefined
@@ -180,37 +186,8 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
     setImageLoading(false);
   }, [])
 
-  // ✨ Cargar premios de racha una sola vez (datos semi-estáticos)
-  useEffect(() => {
-    let isMounted = true
-    
-    async function loadPrizes() {
-      try {
-        const supabase = createClientBrowser()
-        const { data: prizes, error: prizesError } = await supabase
-          .from('prizes')
-          .select('id, name, streak_threshold, image_url')
-          .eq('type', 'streak')
-          .eq('is_active', true)
-          .order('streak_threshold', { ascending: true })
-
-        if (prizesError) throw prizesError
-        
-        if (isMounted) {
-          setStreakPrizes(prizes || [])
-          setPrizesLoading(false)
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Error loading prizes')
-          setPrizesLoading(false)
-        }
-      }
-    }
-
-    loadPrizes()
-    return () => { isMounted = false }
-  }, [])
+  // 🔄 ELIMINAR: Ya no necesitamos cargar prizes localmente (vienen de Redux)
+  // useEffect para cargar prizes eliminado - ahora vienen de Redux store
 
   // ✨ Calcular el stage reactivamente cuando cambian los datos
   const streakStage = useMemo(() => {
@@ -224,6 +201,12 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
     }
     return null
   }, [currentCount, streakPrizes, stableSettings]) // 🎯 OPTIMIZADO: Usa stableSettings
+
+  // 💎 Calcular número máximo de threshold
+  const maxThreshold = useMemo(() => {
+    const validPrizes = streakPrizes.filter(p => p.streak_threshold !== null && p.streak_threshold > 0)
+    return validPrizes.length > 0 ? Math.max(...validPrizes.map(p => p.streak_threshold || 0)) : 0
+  }, [streakPrizes])
 
   // ✨ OPTIMIZACIÓN: Mover side-effects a useEffect
   useEffect(() => {
@@ -241,23 +224,29 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
     return key;
   }, [streakStage?.image])
 
-  // Loading states
-  const isLoading = externalLoading || settingsLoading || prizesLoading
+    // 🔄 NUEVO: Solo settingsLoading (prizesLoading eliminado - vienen de Redux)
+  const isLoading = externalLoading || settingsLoading
   
+  // 🎨 PASO 2: Reemplazar skeleton con Framer Motion (como CouponsView)
   if (isLoading) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-gray-200 p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="text-center">
-            <div className="h-32 bg-gray-100 rounded-xl mx-auto w-full"></div>
+      <motion.div 
+        className="px-4 max-w-lg mx-auto relative overflow-hidden rounded-2xl border border-gray-200"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        {/* 🎨 Placeholder bonito sin skeleton molesto */}
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-center justify-center">
+            <div className="w-full aspect-square bg-gray-100 rounded-xl"></div>
           </div>
-          <div className="space-y-3">
-            <div className="h-8 bg-gray-200 rounded-lg mx-auto w-3/4"></div>
-            <div className="h-6 bg-gray-150 rounded-lg mx-auto w-1/2"></div>
+          <div className="flex flex-col justify-center space-y-2">
+            <div className="text-5xl font-bold text-gray-300">--</div>
+            <div className="text-base text-gray-400">Cargando...</div>
           </div>
-          <div className="h-20 bg-gray-100 rounded-xl w-full"></div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
@@ -276,7 +265,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   if (!streakStage) {
     console.warn('⚠️ streakStage es null pero no estamos loading - posible issue de React Query')
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-gray-200 p-6">
+      <div className="relative overflow-hidden rounded-2xl p-6">
         <div className="text-center text-gray-500">
           Reintentando carga de datos...
         </div>
@@ -287,92 +276,90 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   const primaryColor = settings?.company_theme_primary || '#D73527'
 
   return (
-    <div className={`px-4 max-w-lg mx-auto relative overflow-hidden rounded-2xl ${
-      streakStage.stage.includes('perdida') 
-        ? 'text-gray-700' 
-        : 'text-gray-900'
-    }`}>
-
-      {/* Imagen/Icono de la racha */}
-      <div className="relative z-10">
-        {/* 🎯 Detección automática: Rive vs Imagen normal */}
-        {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
-          <>
-            {isRiveFile(streakStage.image) ? (
-              // 🎭 Renderizar animación Rive SIN AnimatePresence
-              <SimpleRiveLoop 
-                key={stableImageKey} // ✨ Key estable basado solo en la imagen
-                src={streakStage.image} 
-                className="w-full aspect-[4/3] rounded-xl overflow-hidden"
-                onError={handleRiveError}
-              />
-            ) : (
-              // 🖼️ Renderizar imagen normal
-              <div className="relative w-full aspect-[4/3] overflow-hidden">
-                {imageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                  </div>
-                )}
-                <Image 
+    <div className="px-4 max-w-lg mx-auto relative overflow-hidden rounded-2xl">
+      {/* 🎨 NUEVO DISEÑO: 2 columnas */}
+      <div className="grid grid-cols-2 gap-6">
+        
+        {/* 🖼️ Columna Izquierda: Imagen/Animación */}
+        <div className="flex items-center justify-center">
+          {(streakStage.image.startsWith('http') || streakStage.image.startsWith('/')) ? (
+            <>
+              {isRiveFile(streakStage.image) ? (
+                // 🎭 Renderizar animación Rive
+                <SimpleRiveLoop 
+                  key={stableImageKey}
                   src={streakStage.image} 
-                  alt="Racha" 
-                  fill
-                  className={`object-contain transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                  priority={true}
+                  className="w-full aspect-square rounded-xl overflow-hidden"
+                  onError={handleRiveError}
                 />
-              </div>
-            )}
-          </>
-        ) : (
-          // 😀 Emoji fallback
-          <div className="text-6xl text-center p-6 bg-gray-50">{streakStage.image}</div>
-        )}
-      </div>
-
-      {/* Contenido */}
-      <div className="relative z-10 px-6">
-        {/* Número de racha y texto */}
-        <div className="text-center">
-          {/* Número de racha actual - Tamaño grande (50px) */}
-          <div className="text-5xl font-bold text-gray-900 mb-2">
-            {currentCount}
-          </div>
-          
-          {/* Texto "Racha actual" - Tamaño 16px */}
-          <div className="text-base text-gray-600 font-medium">
-            Racha actual
-          </div>
+              ) : (
+                // 🖼️ Renderizar imagen normal
+                <div className="relative w-full aspect-square overflow-hidden">
+                  {imageLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  <Image 
+                    src={streakStage.image} 
+                    alt="Racha" 
+                    fill
+                    className={`object-contain transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    onLoad={handleImageLoad}
+                    onError={handleImageError}
+                    priority={true}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            // 😀 Emoji fallback
+            <div className="text-6xl text-center p-6 bg-gray-50 rounded-xl">{streakStage.image}</div>
+          )}
         </div>
 
-        {/* Botón de reiniciar si la racha está completa */}
-        {streakStage.canRestart && !error && (
-          <div className="text-center mt-4">
-            <button 
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white"
-              style={{ 
-                backgroundColor: primaryColor
-              }}
-            >
-              ¡Empezar nueva racha!
-            </button>
+        {/* 📊 Columna Derecha: Stats */}
+        <div className="flex flex-col justify-center">
+          {/* Número de racha con máximo - Formato: 0/20 */}
+          <div className="text-5xl font-bold text-gray-900 mb-2">
+            {currentCount}
+            {maxThreshold > 0 && (
+              <span className="text-gray-900 font-regular">/{maxThreshold}</span>
+            )}
           </div>
-        )}
+          
+          {/* Texto "Racha actual" */}
+          <div className="text-base text-gray-800 font-medium">
+            Racha actual
+          </div>
 
-        {/* Botón de recargar si hay error de datos */}
-        {error && (
-          <div className="text-center mt-4">
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-gray-500 text-white hover:bg-gray-600"
-            >
-              Recargar página
-            </button>
-          </div>
-        )}
+          {/* Botón de reiniciar si la racha está completa */}
+          {streakStage.canRestart && !error && (
+            <div className="mt-4">
+              <button 
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white"
+                style={{ 
+                  backgroundColor: primaryColor
+                }}
+              >
+                ¡Empezar nueva racha!
+              </button>
+            </div>
+          )}
+
+          {/* Botón de recargar si hay error de datos */}
+          {error && (
+            <div className="mt-4">
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-gray-500 text-white hover:bg-gray-600"
+              >
+                Recargar página
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

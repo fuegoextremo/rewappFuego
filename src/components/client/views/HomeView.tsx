@@ -13,6 +13,7 @@ import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
 import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { FerrisWheel, Flame } from "lucide-react";
 import Image from "next/image";
+import { motion } from 'framer-motion';
 
 export default function HomeView() {
   const dispatch = useAppDispatch();
@@ -114,16 +115,26 @@ export default function HomeView() {
       {/* Floating Header - Fixed at top */}
       <FloatingHeader />
 
-      <div>
+      <motion.div
+        className="space-y-0"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <div 
-          className="pb-20 relative"
+          className="pb-5 relative"
           style={{ background: `linear-gradient(180deg, ${primaryColor} 0%, #FFF 100%)` }}
         >
           {/* Explosión de partículas desde el centro */}
           <ParticleExplosion color="#ffffff" particleCount={50} />
           
           {/* Header con saludo personalizado */}
-          <div className="pt-20 px-8 mb-2 relative z-10">
+          <motion.div 
+            className="pt-20 px-8 mb-2 relative z-10"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <div className="flex items-center justify-between mb-2">
               <p className="text-xl font-bold text-white">{greeting}</p>
               
@@ -140,21 +151,29 @@ export default function HomeView() {
               <strong>Registra tus visitas para aumentar tu racha </strong>y
               participa en la ruleta para ganar increíbles premios.
             </p>
-          </div>
+          </motion.div>
 
           {/* Sección de racha - Movida arriba para mayor prominencia */}
-          <div className="relative z-10">
+          <motion.div 
+            className="relative z-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <StreakSection 
               currentCount={user?.current_streak || 0} 
               isLoading={false} 
             />
-          </div>
+          </motion.div>
         </div>
 
         {/* Contenedor principal con sombra hacia arriba */}
-        <div
+        <motion.div
           className="mx-4 rounded-[20px] relative -mt-12 bg-white"
           style={{ boxShadow: "0 -20px 25px rgba(0, 0, 0, 0.1)" }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
         >
           <div className="p-3 space-y-6">
             {/* Botón CTA principal */}
@@ -199,10 +218,15 @@ export default function HomeView() {
             {/* Progreso de premios de racha */}
             <StreakPrizesProgress />
           </div>
-        </div>
+        </motion.div>
 
         {/* Actividad reciente - Componente funcional */}
-        <div className="rounded-lg">
+        <motion.div 
+          className="rounded-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
           <div className="p-4">
             <h3 className="text-lg font-bold text-gray-900">
               Actividad reciente
@@ -211,12 +235,17 @@ export default function HomeView() {
           <div className="p-2">
             <RecentActivity userId={user.id} />
           </div>
-        </div>
+        </motion.div>
 
         {/* Streak Prizes List */}
-        <div className="px-4">
+        <motion.div 
+          className="px-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
           <StreakPrizesList showCompleted={true} maxItems={5} />
-        </div>
+        </motion.div>
 
         {/* Logo del establecimiento */}
         {settings?.company_logo_url && (
@@ -245,7 +274,7 @@ export default function HomeView() {
             priority={false}
           />
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

@@ -25,7 +25,7 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* 
     shouldDisableRiveListeners: false,
     // 🎨 Configuración de layout para proporción 1200x1000 (6:5)
     layout: new Layout({
-      fit: Fit.Contain,     // Mantiene la proporción original 6:5, sin distorsión
+      fit: Fit.Cover,     // Mantiene la proporción original 6:5, sin distorsión
       alignment: Alignment.Center  // Centra el contenido
     })
   });
@@ -141,7 +141,7 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* 
 
   return (
   <div className="w-full">                   {/* Responsivo hasta 384px */}
-    <div className="relative w-full aspect-[5/6]">             {/* Proporción exacta 1200:1000 */}
+    <div className="relative w-full aspect-[4/6]">             {/* Proporción exacta 1200:1000 */}
       <RiveComponent
         className="absolute inset-0 w-full h-full"
       />

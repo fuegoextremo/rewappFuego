@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<migration_plan>
+  <header>
+    <title>🏆 Migración Streak Prizes: Redux → React Query</title>
+    <version>1.0</version>
+    <author>GitHub Copilot</author>
+    <date>2025-09-21</date>
+    <objective>Migrar streak prizes de Redux a React Query para consistencia arquitectónica y mejor UX</objective>
+  </header>
+
+  <current_state>
+    <description>
+      Los streak prizes están actualmente en Redux (authSlice.streakPrizes) mientras que roulette prizes 
+      usan React Query. Esto causa inconsistencias en caching y actualización de datos.
+    </description>
+    
+    <architecture>
+      <redux>
+        <data>streakPrizes: StreakPrize[]</data>
+        <loading>streakPrizesLoaded: boolean</loading>
+        <thunk>loadStreakPrizes()</thunk>
+        <cache_behavior>Manual invalidation, persiste hasta logout</cache_behavior>
+      </redux>
+      
+      <react_query>
+        <data>roulettePrizes via useRoulettePrizes()</data>
+        <cache_behavior>Auto-invalidation, staleTime: 5min, gcTime: 15min</cache_behavior>
+      </react_query>
+    </architecture>
+  </current_state>
+
+  <migration_phases>
+    <!-- FASE 1: Preparación sin breaking changes -->
+    <phase number="1" name="Preparación" risk="LOW">
+      <description>Crear infraestructura React Query sin afectar código existente</description>
+      
+      <tasks>
+        <task id="1.1" priority="HIGH">
+          <title>Crear useStreakQueries.ts</title>
+          <description>Hook React Query para streak prizes con misma interface que Redux</description>
+          <files_to_create>
+            <file>src/hooks/queries/useStreakQueries.ts</file>
+          </files_to_create>
+          <implementation>
+            <code>
+// Misma estructura que useRouletteQueries.ts
+export function useStreakPrizes() {
+  return useQuery({
+    queryKey: queryKeys.streaks.prizes,
+    queryFn: async (): Promise&lt;StreakPrize[]&gt; => {
+      const supabase = createClientBrowser()
+      const { data, error } = await supabase
+        .from('prizes')
+        .select('id, name, description, streak_threshold, image_url, validity_days')
+        .eq('type', 'streak')
+        .eq('is_active', true)
+        .order('streak_threshold', { ascending: true })
+      
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+}
+            </code>
+          </implementation>
+        </task>
+
+        <task id="1.2" priority="MEDIUM">
+          <title>Actualizar queryKeys</title>
+          <description>Verificar que queryKeys.streaks.prizes esté configurado correctamente</description>
+          <files_to_modify>
+            <file>src/lib/queryClient.ts</file>
+          </files_to_modify>
+        </task>
+
+        <task id="1.3" priority="LOW">
+          <title>Crear hook de transición</title>
+          <description>Hook temporal que permite switchear entre Redux y React Query</description>
+          <files_to_create>
+            <file>src/hooks/useStreakPrizesTransition.ts</file>
+          </files_to_create>
+          <implementation>
+            <code>
+// Hook temporal para testing
+export function useStreakPrizesTransition(useReactQuery = false) {
+  const reduxPrizes = useStreakPrizes() // Redux
+  const { data: queryPrizes, isLoading } = useStreakPrizesQuery() // React Query
+  
+  return useReactQuery 
+    ? { data: queryPrizes, isLoading }
+    : { data: reduxPrizes, isLoading: false }
+}
+            </code>
+          </implementation>
+        </task>
+      </tasks>
+      
+      <validation>
+        <criteria>useStreakQueries hook funciona correctamente en aislamiento</criteria>
+        <criteria>No breaking changes en funcionalidad existente</criteria>
+      </validation>
+    </phase>
+
+    <!-- FASE 2: Migración de componentes -->
+    <phase number="2" name="Migración Componentes" risk="MEDIUM">
+      <description>Migrar componentes uno por uno manteniendo funcionalidad</description>
+      
+      <components_affected>
+        <component name="StreakSection.tsx" impact="HIGH" realtime_dependency="NO">
+          <description>Componente principal que muestra progreso de streaks</description>
+          <changes>Cambiar useStreakPrizes() de Redux hook a React Query hook</changes>
+          <testing_required>Verificar cálculos de progreso y siguiente meta</testing_required>
+        </component>
+
+        <component name="StreakPrizesList.tsx" impact="MEDIUM" realtime_dependency="NO">
+          <description>Lista de premios con checkmarks de completado</description>
+          <changes>Cambiar source de datos de Redux a React Query</changes>
+          <testing_required>Verificar estado completado/pendiente</testing_required>
+        </component>
+
+        <component name="StreakPrizesProgress.tsx" impact="MEDIUM" realtime_dependency="NO">
+          <description>Círculos de progreso visual</description>
+          <changes>Cambiar source de datos de Redux a React Query</changes>
+          <testing_required>Verificar posicionamiento y colores</testing_required>
+        </component>
+
+        <component name="HomeView.tsx" impact="LOW" realtime_dependency="NO">
+          <description>Vista principal que consume StreakSection</description>
+          <changes>Ningún cambio directo, hereda de StreakSection</changes>
+          <testing_required>Verificar que sigue funcionando correctamente</testing_required>
+        </component>
+      </components_affected>
+
+      <tasks>
+        <task id="2.1" priority="HIGH">
+          <title>Migrar StreakSection.tsx</title>
+          <description>Cambiar de useStreakPrizes (Redux) a useStreakPrizes (React Query)</description>
+          <files_to_modify>
+            <file>src/components/client/StreakSection.tsx</file>
+          </files_to_modify>
+          <changes>
+            <change>Cambiar import de Redux hook a React Query hook</change>
+            <change>Manejar loading state de React Query</change>
+            <change>Mantener misma lógica de cálculos</change>
+          </changes>
+        </task>
+
+        <task id="2.2" priority="HIGH">
+          <title>Migrar StreakPrizesList.tsx</title>
+          <files_to_modify>
+            <file>src/components/client/StreakPrizesList.tsx</file>
+          </files_to_modify>
+        </task>
+
+        <task id="2.3" priority="HIGH">
+          <title>Migrar StreakPrizesProgress.tsx</title>
+          <files_to_modify>
+            <file>src/components/client/StreakPrizesProgress.tsx</file>
+          </files_to_modify>
+        </task>
+      </tasks>
+
+      <validation>
+        <criteria>Todos los componentes renderizan correctamente</criteria>
+        <criteria>Cálculos de progreso mantienen exactamente mismos resultados</criteria>
+        <criteria>Loading states funcionan suavemente</criteria>
+        <criteria>Pull-to-refresh actualiza datos correctamente</criteria>
+      </validation>
+    </phase>
+
+    <!-- FASE 3: Limpieza Redux -->
+    <phase number="3" name="Limpieza Redux" risk="LOW">
+      <description>Remover código Redux innecesario sin afectar realtime</description>
+      
+      <realtime_preservation>
+        <description>
+          CRÍTICO: NO tocar datos realtime del usuario (current_streak, max_streak, etc.)
+          Solo remover streak prizes que son datos semi-estáticos.
+        </description>
+        
+        <keep_in_redux>
+          <data>user.current_streak</data>
+          <data>user.max_streak</data>
+          <data>user.total_checkins</data>
+          <data>user.available_spins</data>
+          <data>user.profile data</data>
+          <thunk>loadUserProfile()</thunk>
+          <thunk>updateUserProfile()</thunk>
+        </keep_in_redux>
+
+        <remove_from_redux>
+          <data>streakPrizes: StreakPrize[]</data>
+          <data>streakPrizesLoaded: boolean</data>
+          <thunk>loadStreakPrizes()</thunk>
+          <reducer>setStreakPrizes</reducer>
+        </remove_from_redux>
+      </realtime_preservation>
+
+      <tasks>
+        <task id="3.1" priority="MEDIUM">
+          <title>Remover streakPrizes de authSlice</title>
+          <description>Eliminar state, actions y reducers relacionados con streak prizes</description>
+          <files_to_modify>
+            <file>src/store/slices/authSlice.ts</file>
+          </files_to_modify>
+          <changes>
+            <change>Remover streakPrizes y streakPrizesLoaded del state</change>
+            <change>Remover loadStreakPrizes async thunk</change>
+            <change>Remover setStreakPrizes action</change>
+            <change>Remover reducers relacionados</change>
+          </changes>
+        </task>
+
+        <task id="3.2" priority="LOW">
+          <title>Limpiar hooks de Redux</title>
+          <description>Remover useStreakPrizes de Redux hooks</description>
+          <files_to_modify>
+            <file>src/store/hooks/index.ts</file>
+          </files_to_modify>
+        </task>
+
+        <task id="3.3" priority="LOW">
+          <title>Actualizar AppShell.tsx</title>
+          <description>Remover dispatch(loadStreakPrizes) del pull-to-refresh</description>
+          <files_to_modify>
+            <file>src/components/client/AppShell.tsx</file>
+          </files_to_modify>
+          <changes>
+            <change>Remover loadStreakPrizes import</change>
+            <change>Confiar en queryClient.invalidateQueries para streak prizes</change>
+          </changes>
+        </task>
+      </tasks>
+
+      <validation>
+        <criteria>Realtime data (user streaks) sigue funcionando perfectamente</criteria>
+        <criteria>No errores de TypeScript por referencias faltantes</criteria>
+        <criteria>Bundle size se reduce por menos código Redux</criteria>
+      </validation>
+    </phase>
+
+    <!-- FASE 4: Optimización y Testing -->
+    <phase number="4" name="Optimización" risk="LOW">
+      <description>Mejorar performance y UX con las nuevas capacidades de React Query</description>
+      
+      <tasks>
+        <task id="4.1" priority="MEDIUM">
+          <title>Optimizar cache settings</title>
+          <description>Ajustar staleTime y gcTime según patterns de uso</description>
+          <implementation>
+            <code>
+// Ajustar según comportamiento observado
+staleTime: 3 * 60 * 1000,  // 3 min si admin cambia frecuentemente
+refetchOnWindowFocus: true, // Si queremos refresh al regresar a app
+            </code>
+          </implementation>
+        </task>
+
+        <task id="4.2" priority="LOW">
+          <title>Agregar prefetching</title>
+          <description>Pre-cargar streak prizes en login para UX más rápida</description>
+          <files_to_modify>
+            <file>src/hooks/useAuthManager.ts</file>
+          </files_to_modify>
+        </task>
+
+        <task id="4.3" priority="LOW">
+          <title>Error boundaries</title>
+          <description>Manejar errores de network gracefully</description>
+          <files_to_modify>
+            <file>src/components/client/StreakSection.tsx</file>
+          </files_to_modify>
+        </task>
+      </tasks>
+    </phase>
+  </migration_phases>
+
+  <risk_analysis>
+    <risks>
+      <risk level="HIGH" probability="LOW">
+        <description>Romper cálculos de progreso de streaks</description>
+        <mitigation>Testing exhaustivo en Fase 2, mantener misma lógica exacta</mitigation>
+      </risk>
+
+      <risk level="MEDIUM" probability="LOW">
+        <description>Afectar funcionalidad realtime de user streaks</description>
+        <mitigation>Solo tocar streak prizes, jamás tocar user.current_streak ni realtime</mitigation>
+      </risk>
+
+      <risk level="LOW" probability="MEDIUM">
+        <description>Problemas temporales de cache durante migración</description>
+        <mitigation>Migración gradual por componente, rollback fácil</mitigation>
+      </risk>
+    </risks>
+
+    <rollback_strategy>
+      <description>
+        Cada fase es reversible. Si hay problemas, se puede revertir al commit anterior.
+        El hook de transición permite switch rápido entre Redux y React Query.
+      </description>
+    </rollback_strategy>
+  </risk_analysis>
+
+  <benefits>
+    <benefit>Consistencia arquitectónica con roulette prizes</benefit>
+    <benefit>Auto-refresh al regresar a ventana</benefit>
+    <benefit>Pull-to-refresh funciona automáticamente</benefit>
+    <benefit>Mejor performance con stale-while-revalidate</benefit>
+    <benefit>Menos código Redux boilerplate</benefit>
+    <benefit>Cache más inteligente y configurable</benefit>
+  </benefits>
+
+  <timeline>
+    <phase_duration phase="1">2-3 horas</phase_duration>
+    <phase_duration phase="2">3-4 horas</phase_duration>
+    <phase_duration phase="3">1-2 horas</phase_duration>
+    <phase_duration phase="4">1-2 horas</phase_duration>
+    <total_time>7-11 horas</total_time>
+  </timeline>
+
+  <success_criteria>
+    <criterion>Todos los streak components funcionan idénticamente</criterion>
+    <criterion>Pull-to-refresh actualiza streak prizes correctamente</criterion>
+    <criterion>Realtime user data (current_streak) no se ve afectado</criterion>
+    <criterion>Performance igual o mejor que antes</criterion>
+    <criterion>No breaking changes para end users</criterion>
+  </success_criteria>
+</migration_plan>

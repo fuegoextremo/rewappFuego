@@ -1,15 +1,16 @@
 'use client'
 
-import { Suspense, lazy, useState, useCallback } from 'react'
+import { Suspense, lazy, useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/queryClient'
 import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
-import { loadUserProfile } from '@/store/slices/authSlice'
+import { loadUserProfile, loadStreakPrizes } from '@/store/slices/authSlice'
 import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
+import confetti from 'canvas-confetti'
 
 // Componentes de las vistas principales con lazy loading
 const HomeView = lazy(() => import('@/components/client/views/HomeView'))
@@ -61,6 +62,9 @@ export function AppShell({ children }: AppShellProps) {
       await Promise.all([
         // 🔥 DATOS CRÍTICOS: Refrescar datos del usuario (realtime)
         dispatch(loadUserProfile(user.id)).unwrap(),
+        
+        // 🏆 STREAK PRIZES: Forzar reload desde Redux (temporal hasta migración a React Query)
+        dispatch(loadStreakPrizes()).unwrap(),
         
         // 📊 DATOS ESTÁTICOS: Sistema (settings, branches, premios) - cambian raramente
         queryClient.invalidateQueries({ queryKey: queryKeys.system.settings }),
@@ -119,6 +123,31 @@ export function AppShell({ children }: AppShellProps) {
     }
     setStartY(null) // 🎯 Limpiar la posición inicial
   }, [pullDistance, isRefreshing, handleRefresh])
+
+  // 🎉 Confetti event listener - Escucha eventos de premios por streak
+  useEffect(() => {
+    const handleStreakRewardConfetti = (event: CustomEvent) => {
+      const { threshold, prizeName } = event.detail
+      console.log('🎉 Confetti disparado desde AppShell para:', threshold, prizeName)
+      
+      // Confetti desde el contexto visual correcto
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#FFD700', '#FFA500', '#D73527', '#ffffff'],
+        zIndex: 9999
+      })
+    }
+
+    // Escuchar el evento personalizado
+    window.addEventListener('streak-reward-confetti', handleStreakRewardConfetti as EventListener)
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('streak-reward-confetti', handleStreakRewardConfetti as EventListener)
+    }
+  }, [])
 
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {

@@ -9,7 +9,7 @@ import { RecentActivity } from "@/components/client/RecentActivity";
 import { StreakPrizesList } from "@/components/client/StreakPrizesList";
 import { StreakPrizesProgress } from "@/components/client/StreakPrizesProgress";
 import { FloatingHeader } from "@/components/client/FloatingHeader";
-import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
+//import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
 import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { FerrisWheel, Flame } from "lucide-react";
 import Image from "next/image";
@@ -125,8 +125,8 @@ export default function HomeView() {
           className="pb-5 relative"
           style={{ background: `linear-gradient(180deg, ${primaryColor} 0%, #FFF 100%)` }}
         >
-          {/* Explosión de partículas desde el centro */}
-          <ParticleExplosion color="#ffffff" particleCount={50} />
+          {/* Explosión de partículas desde el centro 
+          <ParticleExplosion color="#ffffff" particleCount={50} />*/}
           
           {/* Header con saludo personalizado */}
           <motion.div 

@@ -25,10 +25,10 @@ export function ParticleExplosion({
               key={i}
               className="particle"
               style={{
-                '--start-x': '50%',
+                '--start-x': '35%',
                 '--start-y': '60%',
-                '--end-x': `calc(50% + ${x}px)`,
-                '--end-y': `calc(50% + ${y}px)`,
+                '--end-x': `calc(35% + ${x}px)`,
+                '--end-y': `calc(60% + ${y}px)`,
                 '--size': `${Math.random() * 16 + 12}px`,
                 '--duration': `${(Math.random() * 1.5 + 2.5)}s`,
                 '--delay': `${Math.random() * -2}s`,

@@ -87,7 +87,7 @@ export function ParticleEnergy({ color = "#ffffff" }: ParticleEnergyProps) {
         .particles-container {
           position: absolute;
           top: calc(50% - 100px);
-          left: calc(50% - 100px);
+          left: calc(35% - 100px);
           width: 200px;
           height: 200px;
         }

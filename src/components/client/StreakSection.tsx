@@ -293,23 +293,42 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
                   onError={handleRiveError}
                 />
               ) : (
-                // 🖼️ Renderizar imagen normal
+                // 🖼️ Renderizar imagen normal con efecto 3D sutil
                 <div className="relative w-full aspect-square overflow-hidden">
                   {imageLoading && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-8 h-8 rounded-full animate-spin"></div>
                     </div>
                   )}
-                  <Image 
-                    src={streakStage.image} 
-                    alt="Racha" 
-                    fill
-                    className={`object-contain transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
-                    priority={true}
-                  />
+                  <motion.div
+                    animate={{
+                      y: [0, -12, 0, -6, 0],
+                      rotateX: [0, 8, 0, -8, 0, 4, 0],
+                      rotateY: [0, 12, 0, -12, 0, 6, 0],
+                      rotateZ: [0, 2, 0, -2, 0],
+                    }}
+                    transition={{
+                      duration: 10,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    style={{ 
+                      transformStyle: "preserve-3d",
+                      perspective: "800px"
+                    }}
+                    className="w-full h-full"
+                  >
+                    <Image 
+                      src={streakStage.image} 
+                      alt="Racha" 
+                      fill
+                      className={`object-contain transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      onLoad={handleImageLoad}
+                      onError={handleImageError}
+                      priority={true}
+                    />
+                  </motion.div>
                 </div>
               )}
             </>

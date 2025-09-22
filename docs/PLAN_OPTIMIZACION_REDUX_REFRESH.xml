@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan_optimizacion_redux_refresh>
+  <metadata>
+    <fecha_creacion>2025-09-22</fecha_creacion>
+    <objetivo>Optimizar Redux refresh para eliminar "Verificando sesión" y hacer recargas silenciosas</objetivo>
+    <restricciones>
+      <restriccion>No intervenir con Realtime</restriccion>
+      <restriccion>No generar caches innecesarios</restriccion>
+      <restriccion>No romper funcionalidad existente</restriccion>
+      <restriccion>Mantener compatibilidad con pull-to-refresh</restriccion>
+    </restricciones>
+  </metadata>
+
+  <!-- ETAPA 1: PREPARACIÓN Y BASELINE -->
+  <etapa id="1" nombre="Preparación y Testing Baseline">
+    <descripcion>Establecer línea base y preparar entorno de testing</descripcion>
+    <tareas>
+      <tarea id="1.1" prioridad="alta">
+        <nombre>Documentar comportamiento actual</nombre>
+        <descripcion>Registrar todos los puntos donde aparece "Verificando sesión" y flujos de loading</descripcion>
+        <archivos_afectados>
+          <archivo>src/store/slices/authSlice.ts</archivo>
+          <archivo>src/components/client/AppShell.tsx</archivo>
+          <archivo>src/hooks/useAuthManager.ts</archivo>
+        </archivos_afectados>
+        <validacion>Lista completa de casos de loading identificados</validacion>
+      </tarea>
+      
+      <tarea id="1.2" prioridad="alta">
+        <nombre>Crear test cases de comportamiento</nombre>
+        <descripcion>Definir scenarios de testing para validar que no se rompa nada</descripcion>
+        <scenarios>
+          <scenario>Login inicial desde cero</scenario>
+          <scenario>Refresh al volver a la app (focus)</scenario>
+          <scenario>Pull to refresh manual</scenario>
+          <scenario>Refresh en background</scenario>
+          <scenario>Manejo de errores de auth</scenario>
+        </scenarios>
+        <validacion>Test matrix documentada y funcional</validacion>
+      </tarea>
+    </tareas>
+    <criterios_completitud>
+      <criterio>Comportamiento actual 100% documentado</criterio>
+      <criterio>Test scenarios definidos y validados</criterio>
+      <criterio>No regresiones en funcionalidad existente</criterio>
+    </criterios_completitud>
+  </etapa>
+
+  <!-- ETAPA 2: IMPLEMENTACIÓN OPCIÓN A -->
+  <etapa id="2" nombre="Opción A - Separación de Loading States">
+    <descripcion>Implementar estados de loading separados (isInitialLoading vs isSilentRefreshing)</descripcion>
+    <ventajas>
+      <ventaja>Rápido de implementar</ventaja>
+      <ventaja>Bajo riesgo</ventaja>
+      <ventaja>Mantiene arquitectura actual</ventaja>
+      <ventaja>Fácil de revertir</ventaja>
+    </ventajas>
+    
+    <tareas>
+      <tarea id="2.1" prioridad="alta">
+        <nombre>Modificar authSlice con nuevos estados</nombre>
+        <descripcion>Agregar isInitialLoading y isSilentRefreshing al estado</descripcion>
+        <cambios_especificos>
+          <cambio>Reemplazar isLoading por isInitialLoading + isSilentRefreshing</cambio>
+          <cambio>Actualizar reducers para manejar ambos estados</cambio>
+          <cambio>Mantener retrocompatibilidad con isLoading como computed</cambio>
+        </cambios_especificos>
+        <archivos_afectados>
+          <archivo>src/store/slices/authSlice.ts</archivo>
+        </archivos_afectados>
+        <validacion>Estados funcionando independientemente</validacion>
+      </tarea>
+      
+      <tarea id="2.2" prioridad="alta">
+        <nombre>Actualizar componentes UI</nombre>
+        <descripcion>Modificar componentes para usar isInitialLoading en lugar de isLoading</descripcion>
+        <cambios_especificos>
+          <cambio>AppShell: solo mostrar "Verificando sesión" en isInitialLoading</cambio>
+          <cambio>Mantener isSilentRefreshing para indicadores sutiles (opcional)</cambio>
+        </cambios_especificos>
+        <archivos_afectados>
+          <archivo>src/components/client/AppShell.tsx</archivo>
+          <archivo>src/hooks/useAuthManager.ts</archivo>
+        </archivos_afectados>
+        <validacion>UI silenciosa en refresh, visible solo en carga inicial</validacion>
+      </tarea>
+      
+      <tarea id="2.3" prioridad="media">
+        <nombre>Testing completo Opción A</nombre>
+        <descripcion>Validar todos los scenarios con la nueva implementación</descripcion>
+        <tests_especificos>
+          <test>Login inicial muestra loading</test>
+          <test>Refresh silencioso no muestra loading</test>
+          <test>Pull-to-refresh mantiene comportamiento</test>
+          <test>Errores se manejan correctamente</test>
+          <test>Realtime sigue funcionando</test>
+        </tests_especificos>
+        <validacion>Todos los tests pasan sin regresiones</validacion>
+      </tarea>
+    </tareas>
+    
+    <criterios_completitud>
+      <criterio>isInitialLoading solo se activa en primer login</criterio>
+      <criterio>isSilentRefreshing no muestra UI de loading</criterio>
+      <criterio>Pull-to-refresh mantiene funcionalidad</criterio>
+      <criterio>No hay regresiones en auth flow</criterio>
+      <criterio>Realtime no se ve afectado</criterio>
+    </criterios_completitud>
+  </etapa>
+
+  <!-- ETAPA 3: IMPLEMENTACIÓN OPCIÓN B (ALTERNATIVA) -->
+  <etapa id="3" nombre="Opción B - Hook de Background Refresh">
+    <descripcion>Crear hook especializado para refresh silencioso en background</descripcion>
+    <nota>ALTERNATIVA a Opción A - solo implementar si A no satisface o se quiere comparar</nota>
+    <ventajas>
+      <ventaja>Más control granular</ventaja>
+      <ventaja>Separación clara de responsabilidades</ventaja>
+      <ventaja>Reutilizable para otros casos</ventaja>
+    </ventajas>
+    
+    <tareas>
+      <tarea id="3.1" prioridad="alta">
+        <nombre>Crear useBackgroundRefresh hook</nombre>
+        <descripcion>Hook que maneja refresh silencioso sin afectar UI principal</descripcion>
+        <funcionalidades>
+          <funcionalidad>refreshSilently() - actualiza datos sin loading UI</funcionalidad>
+          <funcionalidad>isBackgroundRefreshing - estado interno</funcionalidad>
+          <funcionalidad>onFocus listener automático</funcionalidad>
+          <funcionalidad>Error handling silencioso</funcionalidad>
+        </funcionalidades>
+        <archivos_nuevos>
+          <archivo>src/hooks/useBackgroundRefresh.ts</archivo>
+        </archivos_nuevos>
+        <validacion>Hook funciona independientemente</validacion>
+      </tarea>
+      
+      <tarea id="3.2" prioridad="alta">
+        <nombre>Integrar hook en AppShell</nombre>
+        <descripcion>Reemplazar lógica de refresh existente con el nuevo hook</descripcion>
+        <cambios_especificos>
+          <cambio>Usar useBackgroundRefresh en lugar de handleRefresh directo</cambio>
+          <cambio>Mantener pull-to-refresh como loading visible</cambio>
+          <cambio>onFocus refresh automático y silencioso</cambio>
+        </cambios_especificos>
+        <archivos_afectados>
+          <archivo>src/components/client/AppShell.tsx</archivo>
+        </archivos_afectados>
+        <validacion>Refresh automático funciona silenciosamente</validacion>
+      </tarea>
+      
+      <tarea id="3.3" prioridad="media">
+        <nombre>Testing completo Opción B</nombre>
+        <descripcion>Validar que el hook no interfiere con flujos existentes</descripcion>
+        <tests_especificos>
+          <test>Background refresh no muestra loading</test>
+          <test>Pull-to-refresh sigue mostrando loading</test>
+          <test>Error handling funciona correctamente</test>
+          <test>No hay conflictos con Realtime</test>
+          <test>Performance no se degrada</test>
+        </tests_especificos>
+        <validacion>Hook funciona sin interferencias</validacion>
+      </tarea>
+    </tareas>
+    
+    <criterios_completitud>
+      <criterio>useBackgroundRefresh funciona independientemente</criterio>
+      <criterio>No hay conflictos con Redux actions existentes</criterio>
+      <criterio>Performance igual o mejor que Opción A</criterio>
+      <criterio>Reutilizable para futuros casos</criterio>
+    </criterios_completitud>
+  </etapa>
+
+  <!-- ETAPA 4: COMPARACIÓN A vs B -->
+  <etapa id="4" nombre="Evaluación y Comparación A vs B">
+    <descripcion>Comparar ambas implementaciones y elegir la mejor</descripcion>
+    <tareas>
+      <tarea id="4.1" prioridad="alta">
+        <nombre>Testing lado a lado</nombre>
+        <descripcion>Probar ambas opciones con los mismos scenarios</descripcion>
+        <metricas_comparacion>
+          <metrica>Complejidad de código</metrica>
+          <metrica>Performance</metrica>
+          <metrica>Facilidad de mantenimiento</metrica>
+          <metrica>Riesgo de regresiones</metrica>
+          <metrica>Experiencia de usuario</metrica>
+        </metricas_comparacion>
+        <validacion>Matriz de comparación completa</validacion>
+      </tarea>
+      
+      <tarea id="4.2" prioridad="media">
+        <nombre>Decisión final</nombre>
+        <descripcion>Elegir qué opción implementar definitivamente</descripcion>
+        <criterios_decision>
+          <criterio>Menor riesgo de romper funcionalidad</criterio>
+          <criterio>Mejor experiencia de usuario</criterio>
+          <criterio>Más fácil de mantener a largo plazo</criterio>
+          <criterio>Compatibilidad con arquitectura actual</criterio>
+        </criterios_decision>
+        <validacion>Decisión documentada con justificación</validacion>
+      </tarea>
+    </tareas>
+  </etapa>
+
+  <!-- ETAPA 5: IMPLEMENTACIÓN OPCIÓN C -->
+  <etapa id="5" nombre="Opción C - Componentes Optimistas">
+    <descripcion>Aplicar componentes optimistas a la opción elegida (A o B)</descripcion>
+    <nota>Se aplica sobre la opción ganadora de la etapa anterior</nota>
+    
+    <tareas>
+      <tarea id="5.1" prioridad="media">
+        <nombre>Identificar componentes críticos</nombre>
+        <descripcion>Encontrar componentes que se beneficiarían de mostrar data existente durante refresh</descripcion>
+        <componentes_objetivo>
+          <componente>StreakSection - mostrar streaks anteriores durante refresh</componente>
+          <componente>ProfileHeader - mantener avatar y nombre</componente>
+          <componente>RewardsSection - mostrar premios anteriores</componente>
+        </componentes_objetivo>
+        <validacion>Lista de componentes prioritarios identificada</validacion>
+      </tarea>
+      
+      <tarea id="5.2" prioridad="media">
+        <nombre>Implementar renderizado optimista</nombre>
+        <descripcion>Modificar componentes para mostrar data anterior durante refresh silencioso</descripcion>
+        <patron_implementacion>
+          <paso>Usar data anterior si existe</paso>
+          <paso>Mostrar indicador sutil de actualización (opcional)</paso>
+          <paso>Actualizar smoothly cuando lleguen nuevos datos</paso>
+          <paso>Manejar casos de error gracefully</paso>
+        </patron_implementacion>
+        <archivos_afectados>
+          <archivo>src/components/client/StreakSection.tsx</archivo>
+          <archivo>src/components/client/ProfileHeader.tsx</archivo>
+          <archivo>src/components/client/RewardsSection.tsx</archivo>
+        </archivos_afectados>
+        <validacion>Componentes muestran data existente durante refresh</validacion>
+      </tarea>
+      
+      <tarea id="5.3" prioridad="baja">
+        <nombre>Pulimiento y optimización</nombre>
+        <descripcion>Mejorar transiciones y handling de edge cases</descripcion>
+        <mejoras>
+          <mejora>Transiciones suaves entre estados</mejora>
+          <mejora>Indicadores sutiles de actualización</mejora>
+          <mejora>Mejor manejo de errores de network</mejora>
+        </mejoras>
+        <validacion>UX fluida y sin interrupciones</validacion>
+      </tarea>
+    </tareas>
+    
+    <criterios_completitud>
+      <criterio>Componentes nunca muestran loading durante refresh silencioso</criterio>
+      <criterio>Data anterior se mantiene visible hasta que lleguen nuevos datos</criterio>
+      <criterio>Transiciones son suaves y no jarring</criterio>
+      <criterio>Error states no rompen la experiencia</criterio>
+    </criterios_completitud>
+  </etapa>
+
+  <!-- TESTING Y VALIDACIÓN FINAL -->
+  <etapa id="6" nombre="Testing Final y Validación">
+    <descripcion>Validación completa de la solución implementada</descripcion>
+    <tareas>
+      <tarea id="6.1" prioridad="alta">
+        <nombre>Testing de regresión completo</nombre>
+        <descripcion>Asegurar que no se rompió nada del flujo original</descripcion>
+        <tests_criticos>
+          <test>Login inicial completo funciona</test>
+          <test>Logout y relogin funciona</test>
+          <test>Pull-to-refresh funciona</test>
+          <test>Realtime sigue funcionando normalmente</test>
+          <test>Error handling funciona</test>
+          <test>Performance no se degradó</test>
+        </tests_criticos>
+        <validacion>Todos los flujos críticos funcionan</validacion>
+      </tarea>
+      
+      <tarea id="6.2" prioridad="alta">
+        <nombre>Validación de objetivo principal</nombre>
+        <descripcion>Confirmar que se eliminó "Verificando sesión" en refreshes</descripcion>
+        <tests_objetivo>
+          <test>Al volver a la app no aparece "Verificando sesión"</test>
+          <test>Data se actualiza silenciosamente</test>
+          <test>UX es fluida y sin interrupciones</test>
+          <test>Pull-to-refresh mantiene feedback visual</test>
+        </tests_objetivo>
+        <validacion>Objetivo principal 100% cumplido</validacion>
+      </tarea>
+    </tareas>
+  </etapa>
+
+  <!-- CONSIDERACIONES TÉCNICAS -->
+  <consideraciones_tecnicas>
+    <consideracion tipo="realtime">
+      <descripcion>No modificar ni interferir con el sistema Realtime existente</descripcion>
+      <implementacion>Todas las optimizaciones deben ser transparentes al sistema Realtime</implementacion>
+    </consideracion>
+    
+    <consideracion tipo="performance">
+      <descripcion>No crear caches innecesarios o duplicar data</descripcion>
+      <implementacion>Usar la data ya existente en Redux, no crear nuevas fuentes</implementacion>
+    </consideracion>
+    
+    <consideracion tipo="compatibilidad">
+      <descripcion>Mantener compatibilidad con pull-to-refresh</descripcion>
+      <implementacion>Pull-to-refresh debe seguir mostrando loading visual para feedback del usuario</implementacion>
+    </consideracion>
+    
+    <consideracion tipo="arquitectura">
+      <descripcion>No romper la arquitectura Redux existente</descripcion>
+      <implementacion>Trabajar dentro del sistema actual, no reemplazarlo</implementacion>
+    </consideracion>
+  </consideraciones_tecnicas>
+
+  <!-- CRITERIOS DE ÉXITO -->
+  <criterios_exito>
+    <criterio id="primario">Eliminar "Verificando sesión" en refreshes automáticos</criterio>
+    <criterio id="secundario">Mantener todos los flujos existentes funcionando</criterio>
+    <criterio id="terciario">UX más fluida al volver a la app</criterio>
+    <criterio id="tecnico">No afectar sistema Realtime</criterio>
+    <criterio id="performance">No degradar performance existente</criterio>
+  </criterios_exito>
+
+  <!-- ROLLBACK PLAN -->
+  <plan_rollback>
+    <trigger>Si cualquier etapa rompe funcionalidad crítica</trigger>
+    <pasos>
+      <paso>Revertir cambios de la etapa actual</paso>
+      <paso>Validar que funcionalidad original funciona</paso>
+      <paso>Re-evaluar approach si es necesario</paso>
+    </pasos>
+    <tiempo_estimado>15 minutos por rollback</tiempo_estimado>
+  </plan_rollback>
+</plan_optimizacion_redux_refresh>

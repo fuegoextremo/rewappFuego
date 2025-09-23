@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Gift, Trophy } from 'lucide-react'
 import { useAppDispatch } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
-import { useBlockedDispatch } from '@/hooks/useBlockedDispatch'
 
 type ResultSheetProps = {
   open: boolean
@@ -16,14 +16,9 @@ type ResultSheetProps = {
 
 export default function ResultSheet({ open, onClose, won, prizeName }: ResultSheetProps) {
   const dispatch = useAppDispatch()
-  const blockedDispatch = useBlockedDispatch()
-  
-  // Crear dispatch wrapper que respeta el bloqueo
-  const safeDispatch = blockedDispatch(dispatch)
-  
   const handleGoToCoupons = () => {
     onClose()
-    safeDispatch(setCurrentView('coupons'))
+    dispatch(setCurrentView('coupons'))
   }
   
   // cerrar con ESC
@@ -34,7 +29,8 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  return (
+  // Renderizar usando Portal para escapar del contexto de z-index
+  const content = (
     <AnimatePresence>
       {open && (
         <>
@@ -47,7 +43,7 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
               duration: 0.2,
               ease: "easeOut"
             }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 z-[9999] pointer-events-none"
             onClick={onClose}
           />
           
@@ -64,7 +60,7 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
               restDelta: 0.001,
               restSpeed: 0.001
             }}
-            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-h-[85vh] overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-[9999] max-h-[85vh] overflow-hidden pointer-events-auto"
             style={{ 
               transformOrigin: 'bottom',
               willChange: 'transform',
@@ -199,4 +195,9 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
       )}
     </AnimatePresence>
   )
+
+  // Renderizar el contenido usando Portal para escapar del contexto de z-index
+  if (typeof window === 'undefined') return null
+  
+  return createPortal(content, document.body)
 }

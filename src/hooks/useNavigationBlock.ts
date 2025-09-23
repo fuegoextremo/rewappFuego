@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useIsNavigationBlocked, useAppDispatch } from '@/store/hooks'
-import { forceUnlock } from '@/store/slices/rouletteSlice'
+import { useIsNavigationBlocked, useAppDispatch, useAppSelector } from '@/store/hooks'
+import { forceUnlock, selectShouldBeUnlocked } from '@/store/slices/rouletteSlice'
 import { useToast } from '@/hooks/use-toast'
 
 /**
@@ -11,9 +11,18 @@ import { useToast } from '@/hooks/use-toast'
  */
 export function useNavigationBlock() {
   const isBlocked = useIsNavigationBlocked()
+  const shouldBeUnlocked = useAppSelector(selectShouldBeUnlocked)
   const dispatch = useAppDispatch()
   const { toast } = useToast()
   const toastShownRef = useRef(false)
+
+  // 🎯 Auto-desbloqueo basado en lockDuration del slice
+  useEffect(() => {
+    if (isBlocked && shouldBeUnlocked) {
+      console.log('⏰ Timer expirado - Desbloqueando navegación automáticamente')
+      dispatch(forceUnlock())
+    }
+  }, [isBlocked, shouldBeUnlocked, dispatch])
 
   useEffect(() => {
     if (!isBlocked) {
@@ -54,11 +63,11 @@ export function useNavigationBlock() {
     // Prevenir navegación hacia atrás agregando entrada al historial
     window.history.pushState(null, '', window.location.href)
 
-    // 🔒 Auto-unlock de seguridad después de 10 segundos máximo
+    // 🔒 Auto-unlock de seguridad después de 15 segundos máximo (fallback si el timer automático falla)
     const safetyTimeout = setTimeout(() => {
-      console.warn('🚨 Auto-desbloqueando navegación por seguridad (timeout 10s)')
+      console.warn('🚨 Auto-desbloqueando navegación por seguridad (timeout 15s)')
       dispatch(forceUnlock())
-    }, 10000)
+    }, 15000)
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)

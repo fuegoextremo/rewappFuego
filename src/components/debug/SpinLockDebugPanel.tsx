@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useIsSpinning, useIsNavigationBlocked, useSpinStartTime, useLockDuration } from '@/store/hooks'
 
 /**
@@ -11,11 +12,28 @@ export function SpinLockDebugPanel() {
   const isNavigationBlocked = useIsNavigationBlocked()
   const spinStartTime = useSpinStartTime()
   const lockDuration = useLockDuration()
+  
+  // 🕐 Estado para forzar re-render cada segundo
+  const [currentTime, setCurrentTime] = useState(Date.now())
+
+  // 🔄 Actualizar tiempo cada 100ms cuando hay un spin activo
+  useEffect(() => {
+    if (!spinStartTime) {
+      setCurrentTime(Date.now())
+      return
+    }
+
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now())
+    }, 100) // 100ms para actualización suave
+
+    return () => clearInterval(interval)
+  }, [spinStartTime])
 
   // Solo mostrar en desarrollo
   if (process.env.NODE_ENV !== 'development') return null
 
-  const timeElapsed = spinStartTime ? Date.now() - spinStartTime : 0
+  const timeElapsed = spinStartTime ? currentTime - spinStartTime : 0
   const timeRemaining = spinStartTime ? Math.max(0, lockDuration - timeElapsed) : 0
 
   return (

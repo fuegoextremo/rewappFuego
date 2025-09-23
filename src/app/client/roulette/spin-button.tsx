@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+//import { Loader2 } from 'lucide-react'
 import { useUser, useSettings, useAppDispatch } from '@/store/hooks'
 import { startSpin, endSpin } from '@/store/slices/rouletteSlice'
 import { useNavigationBlock } from '@/hooks/useNavigationBlock'

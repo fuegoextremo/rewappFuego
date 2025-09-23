@@ -136,7 +136,7 @@ export function AppShell({ children }: AppShellProps) {
         spread: 80,
         origin: { y: 0.6 },
         colors: ['#FFD700', '#FFA500', '#D73527', '#ffffff'],
-        zIndex: 9999
+        zIndex: 5000
       })
     }
 

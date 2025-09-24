@@ -11,7 +11,7 @@ import { StreakPrizesProgress } from "@/components/client/StreakPrizesProgress";
 import { FloatingHeader } from "@/components/client/FloatingHeader";
 //import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
 import { useUserRealtime } from '@/hooks/useUserRealtime'
-import { FerrisWheel, Flame } from "lucide-react";
+import { FerrisWheel, Flame, History } from "lucide-react";
 import Image from "next/image";
 import { motion } from 'framer-motion';
 
@@ -19,7 +19,7 @@ export default function HomeView() {
   const dispatch = useAppDispatch();
   const blockedDispatch = useBlockedDispatch();
   const user = useUser();
-  const { data: settings, isLoading: settingsLoading } = useSystemSettings();
+  const { data: settings } = useSystemSettings();
   
   // 🔧 Redux settings para el contador de racha (sincrónicos)
   const reduxSettings = useSettings();
@@ -49,7 +49,7 @@ export default function HomeView() {
 
   // 🧪 TESTING TEMPORAL: Función para simular datos obsoletos
   if (typeof window !== 'undefined') {
-    (window as any).testObsoleteData = () => {
+    (window as unknown as Record<string, unknown>).testObsoleteData = () => {
       console.log('🧪 Simulando datos obsoletos...')
       console.log('🔍 Usuario actual antes:', {
         current_streak: user?.current_streak,
@@ -77,7 +77,7 @@ export default function HomeView() {
       console.log('🧪 Dispatch directo ejecutado con datos obsoletos')
     }
     
-    (window as any).testCurrentState = () => {
+    (window as unknown as Record<string, unknown>).testCurrentState = () => {
       console.log('🔍 Estado actual:', {
         current_streak: user?.current_streak,
         available_spins: user?.available_spins
@@ -117,7 +117,7 @@ export default function HomeView() {
 
       <motion.div
         className="space-y-0"
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
@@ -227,12 +227,13 @@ export default function HomeView() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="p-4">
+          <div className="mt-4 p-4 flex items-center gap-2">
+             <History size={26} style={{ color: primaryColor }} />
             <h3 className="text-lg font-bold text-gray-900">
               Actividad reciente
             </h3>
           </div>
-          <div className="p-2">
+          <div className="px-4 mb-10">
             <RecentActivity userId={user.id} />
           </div>
         </motion.div>
@@ -250,12 +251,12 @@ export default function HomeView() {
         {/* Logo del establecimiento */}
         {settings?.company_logo_url && (
           <div className="text-center py-6">
-            <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden bg-gray-100 flex items-center justify-center p-2">
+            <div className="w-60 h-60 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
               <Image
                 src={settings.company_logo_url}
                 alt={companyName}
-                width={160}
-                height={160}
+                width={180}
+                height={180}
                 className="object-contain w-full h-full"
                 priority
               />

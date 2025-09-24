@@ -121,7 +121,7 @@ export default function AnimatedCouponStack({
                 return (
                   <motion.div
                     key={coupon.id}
-                    className={`w-full ${index > 0 ? 'absolute inset-x-0 top-0' : 'relative'}`}
+                    className={` w-full ${index > 0 ? 'absolute inset-x-0 top-0' : 'relative'}`}
                     style={{ zIndex: coupons.length - index }}
                     initial={{ 
                       opacity: 1, // Siempre opacidad completa
@@ -145,7 +145,7 @@ export default function AnimatedCouponStack({
                     onClick={() => setIsExpanded(true)}
                   >
                     <div className="cursor-pointer">
-                      <CouponCard coupon={coupon} isInStack={true} stackIndex={index} />
+                      <CouponCard coupon={coupon} isInStack={true} />
                     </div>
                   </motion.div>
                 )

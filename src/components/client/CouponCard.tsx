@@ -16,7 +16,6 @@ type CouponRow = {
 interface CouponCardProps {
   coupon: CouponRow
   isInStack?: boolean
-  stackIndex?: number
   forceGrayStyle?: boolean // Nuevo prop para cupones caducados
 }
 
@@ -35,7 +34,8 @@ const getCouponColorVariant = (couponId: string, baseColor: string): string => {
     
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
+    let h: number, s: number;
+    const l = (max + min) / 2;
     
     if (max === min) {
       h = s = 0; // achromatic
@@ -111,7 +111,7 @@ const getTextColor = (backgroundColor: string): string => {
   return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
-export default function CouponCard({ coupon, isInStack = false, stackIndex = 0, forceGrayStyle = false }: CouponCardProps) {
+export default function CouponCard({ coupon, isInStack = false, forceGrayStyle = false }: CouponCardProps) {
   const { openRedeemModal } = useModal()
   const { data: settings } = useSystemSettings()
   
@@ -120,7 +120,6 @@ export default function CouponCard({ coupon, isInStack = false, stackIndex = 0, 
   const dynamicColor = getCouponColorVariant(coupon.id, baseColor)
   // 🎯 Si forceGrayStyle está activo, usar escala de grises
   const primaryColor = forceGrayStyle ? '#6b7280' : dynamicColor
-  const secondaryColor = settings?.company_theme_secondary || '#F97316'
   
   // � Calcular color de texto automáticamente para máximo contraste
   const textColor = getTextColor(primaryColor)
@@ -135,21 +134,39 @@ export default function CouponCard({ coupon, isInStack = false, stackIndex = 0, 
   const exp = coupon.expires_at ? dt.format(new Date(coupon.expires_at)) : 'Sin caducidad'
 
   return (
-    <article 
-      className={`relative ticket-shape overflow-hidden transition-all duration-300 select-none min-h-[140px] ${
-        active 
-          ? '' // Sin clases de texto por defecto, usar el color calculado
-          : 'bg-white text-gray-800 border border-gray-200'
-      }`}
+    <div 
+      className="relative"
       style={{
-        // 🎨 Fondo sólido para cupones activos (sin transparencias)
-        ...(active && {
-          backgroundColor: primaryColor,
-          color: textColor
-        })
+        // 🎫 Sombra en el contenedor wrapper
+        filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.11))',
       }}
     >
-      <div className="px-4 py-5 relative h-full flex flex-col justify-between">        
+      <article 
+        className={`relative ticket-shape overflow-hidden transition-all duration-300 select-none min-h-[200px] ${
+          active 
+            ? '' // Sin clases de texto por defecto, usar el color calculado
+            : 'bg-white text-gray-800'
+        }`}
+        style={{
+          // 🎨 Fondo sólido para cupones activos (sin transparencias)
+          ...(active && {
+            backgroundColor: primaryColor,
+            color: textColor
+          }),
+          // 🎫 Mask para crear círculos laterales perforados usando radial-gradient
+        WebkitMask: `
+          radial-gradient(circle 25px at 0px 50%, transparent 25px, black 25px),
+          radial-gradient(circle 25px at 100% 50%, transparent 25px, black 25px)
+        `,
+        mask: `
+          radial-gradient(circle 25px at 0px 50%, transparent 25px, black 25px),
+          radial-gradient(circle 25px at 100% 50%, transparent 25px, black 25px)
+        `,
+        WebkitMaskComposite: 'intersect',
+        maskComposite: 'intersect'
+      }}
+    >
+      <div className="px-9 py-5 relative h-full flex flex-col justify-between">        
         {/* Sección superior: información del premio */}
         <div className="flex items-start justify-between gap-3 relative z-10">
           <div className="min-w-0">
@@ -244,5 +261,6 @@ export default function CouponCard({ coupon, isInStack = false, stackIndex = 0, 
         </div>
       </div>
     </article>
+    </div>
   )
 }

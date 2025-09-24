@@ -69,7 +69,7 @@ export default function RouletteView() {
 
       <motion.div 
         className="space-y-0"
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
@@ -80,14 +80,15 @@ export default function RouletteView() {
         >
           {/* 🎰 Título de ruleta dentro del degradado */}
           <motion.div
-            className="pt-20 mb-6 relative z-10"
+            className="pt-24 mb-6 relative z-10"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <h2 className="text-3xl font-semibold mb-4 text-center text-white">Gira la ruleta</h2>
+            <h2 className="text-4xl font-semibold mb-4 px-8 text-white">La ruleta</h2>
             
-            <div className="text-center space-y-4">
+            <div className=" space-y-4">
+              <p className='px-8 text-white text-sm'>Cada giro de ruleta te da la oportunidad de ganar premios increíbles</p>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-lg text-white">Tienes</span>
                 <div 
@@ -113,8 +114,7 @@ export default function RouletteView() {
 
         {/* Contenedor principal con sombra hacia arriba - igual que HomeView */}
         <div
-          className="mx-4 rounded-[20px] relative -mt-12 bg-white space-y-6"
-          style={{ boxShadow: "0 -20px 25px rgba(0, 0, 0, 0.1)" }}
+          className="space-y-6"
         >
           <div className="p-6">
             {/* 🏆 Lista de premios disponibles */}
@@ -133,7 +133,7 @@ export default function RouletteView() {
               return (
                 <div
                   key={prize.id}
-                  className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm"
+                  className="rounded-2xl bg-gray-100 p-4"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -145,11 +145,11 @@ export default function RouletteView() {
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${rarity.color}`}>
                           {rarity.emoji} {rarity.label}
                         </span>
-                        {prize.validity_days && (
+                        {/*prize.validity_days && (
                           <span className="text-xs text-gray-500">
                             Válido por {prize.validity_days} días
                           </span>
-                        )}
+                        )*/}
                       </div>
                     </div>
                     <div className="text-xs text-gray-400 text-right">
@@ -184,7 +184,7 @@ export default function RouletteView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+            <div className="w-60 h-60 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
               <Image 
                 src={settings.company_logo_url} 
                 alt={settings.company_name || 'Logo de la empresa'}
@@ -200,7 +200,7 @@ export default function RouletteView() {
         {/* Banner inferior - Sin padding para pegarlo al bottom nav */}
         <motion.div 
           className="w-full"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 0 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >

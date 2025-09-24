@@ -7,12 +7,12 @@ import { UserCircle, Edit, Lock, LogOut, AlertTriangle, Phone, Cake } from 'luci
 import ChangePasswordForm from '@/components/client/ChangePasswordForm'
 import EditProfileForm from '@/components/client/EditProfileForm'
 import BottomSheet from '@/components/ui/BottomSheet'
-import { StreakPrizesList } from '@/components/client/StreakPrizesList'
 import { useRouter } from 'next/navigation'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { useDeactivateAccount } from '@/hooks/queries/useUserQueries'
 import { useExtendedProfileData } from '@/hooks/use-extended-profile'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
 
 type BottomSheetType = 'edit' | 'password' | 'delete' | null
 
@@ -100,9 +100,19 @@ export default function ProfileView() {
   }
 
   return (
-    <div className="min-h-screen">
+    <motion.div 
+      className="min-h-screen"
+      initial={{ opacity: 0, y: 0 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Header con Avatar - 40% de la pantalla */}
-      <div className="bg-white">
+      <motion.div 
+        className="bg-white"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div className="max-w-md mx-auto px-6 py-12 text-center">
           {/* Avatar circular grande */}
           <div className="relative inline-block mb-6">
@@ -137,29 +147,34 @@ export default function ProfileView() {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Content */}
+      {/* Content dividido en bloques como CouponsView */}
       <div className="max-w-md mx-auto px-4 space-y-6">
-        {/* Streak Prizes List 
-        <StreakPrizesList 
-          showCompleted={true}
-          maxItems={3}
-          className="mb-6"
-        />*/}
 
         {/* Botón principal de edición */}
-        <button
-          onClick={() => setActiveSheet('edit')}
-          className="w-full flex items-center justify-center space-x-3 text-white py-4 px-6 rounded-xl hover:opacity-90 transition-all shadow-sm"
-          style={{ backgroundColor: primaryColor }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
         >
-          <Edit className="w-5 h-5 antialiased" style={{ shapeRendering: 'geometricPrecision' }} />
-          <span className="font-semibold">Editar mi perfil</span>
-        </button>
+          <button
+            onClick={() => setActiveSheet('edit')}
+            className="w-full flex items-center justify-center space-x-3 text-white py-4 px-6 rounded-xl hover:opacity-90 transition-all shadow-sm"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <Edit className="w-5 h-5 antialiased" style={{ shapeRendering: 'geometricPrecision' }} />
+            <span className="font-semibold">Editar mi perfil</span>
+          </button>
+        </motion.div>
 
         {/* Lista de acciones */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <motion.div 
+          className="bg-white rounded-xl shadow-sm overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <button
             onClick={() => setActiveSheet('password')}
             className="w-full flex items-center space-x-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100"
@@ -185,10 +200,15 @@ export default function ProfileView() {
               <p className="text-sm text-gray-500">Salir de tu cuenta</p>
             </div>
           </button>
-        </div>
+        </motion.div>
 
         {/* Área peligrosa */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <motion.div 
+          className="bg-white rounded-xl shadow-sm overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
           <button
             onClick={() => setActiveSheet('delete')}
             className="w-full flex items-center space-x-4 p-4 hover:bg-red-50 transition-colors"
@@ -201,15 +221,15 @@ export default function ProfileView() {
               <p className="text-sm text-red-600">Desactivar permanentemente tu cuenta</p>
             </div>
           </button>
-        </div>
+        </motion.div>
 
-        {/* Logo del establecimiento */}
+        {/* Logo del establecimiento - SIN animación como solicitaste */}
         {settings?.company_logo_url && (
           <div className="text-center py-6">
-            <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+            <div className="w-60 h-60 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
               <Image 
                 src={settings.company_logo_url} 
-                alt={settings.company_name || 'Logo de la empresa'}
+                alt={settings.company_name || 'Logo de la empresa'} 
                 width={160}
                 height={160}
                 className="object-contain w-full h-full"
@@ -303,6 +323,6 @@ export default function ProfileView() {
           </div>
         </div>
       </BottomSheet>
-    </div>
+    </motion.div>
   )
 }

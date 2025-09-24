@@ -3,6 +3,8 @@
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { useRecentActivityRedux } from '@/hooks/useReduxStreaks'
 import { formatCheckInDateTime, type CheckIn } from '@/hooks/queries/useRecentActivity'
+import { Flame } from "lucide-react";
+
 
 type Props = {
   userId: string
@@ -57,7 +59,7 @@ export function RecentActivity({ userId }: Props) {
   if (checkIns.length === 0) {
     return (
       <div className="text-center py-8">
-        <div className="text-6xl mb-4">🔥</div>
+        <div className="text-6xl mb-4"> <Flame size={26} style={{ color: primaryColor }} /></div>
         <h3 className="text-lg font-bold text-gray-900 mb-2">Sin actividad aún</h3>
         <p className="text-sm text-gray-500 mb-4">
           Cuando muestres tu código QR en Fuego Extremo, verás aquí el registro de tus visitas y avances.
@@ -70,7 +72,7 @@ export function RecentActivity({ userId }: Props) {
   return (
     <div className="space-y-3">      
       {checkIns.map((checkIn: CheckIn) => (
-        <div key={checkIn.id} className="bg-white rounded-xl p-4 border border-gray-100">
+        <div key={checkIn.id} className="rounded-xl p-4 bg-gray-100">
           <div className="flex justify-between items-center">
             <div>
               <div className="font-medium text-gray-900">
@@ -87,7 +89,6 @@ export function RecentActivity({ userId }: Props) {
               >
                 +{checkIn.spins_earned || 0} giros
               </div>
-              <div className="text-xl">🔥</div>
             </div>
           </div>
         </div>

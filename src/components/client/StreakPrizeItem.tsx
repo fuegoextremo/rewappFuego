@@ -40,7 +40,7 @@ export function StreakPrizeItem({
   }, [isCompleted, primaryColor, prize])
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3">
+    <div className="rounded-xl bg-gray-100 p-3">
       <div className="flex items-center justify-between">
         {/* Left side: Icon + Text */}
         <div className="flex items-center space-x-3 flex-1 min-w-0">

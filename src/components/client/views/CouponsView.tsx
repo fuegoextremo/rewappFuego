@@ -31,7 +31,7 @@ export default function CouponsView() {
   return (
     <motion.div 
       className="space-y-8 max-w-md mx-auto w-full overflow-hidden px-4"
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 0 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
@@ -99,7 +99,7 @@ export default function CouponsView() {
       {/* Logo del establecimiento */}
       {settings?.company_logo_url && (
         <div className="text-center py-6">
-          <div className="w-40 h-40 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
+          <div className="w-60 h-60 mx-auto rounded-3xl overflow-hidden flex items-center justify-center p-2">
             <Image 
               src={settings.company_logo_url} 
               alt={settings.company_name || 'Logo de la empresa'}

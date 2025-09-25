@@ -12,6 +12,13 @@ jobs:
       - name: Checkout source repo (leo-neutrondigital/rewapp)
         uses: actions/checkout@v3
 
+      - name: Debug token access
+        run: |
+          echo "Testing token access to target repo..."
+          curl -H "Authorization: token ${{ secrets.MIRROR_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3+json" \
+               https://api.github.com/repos/fuegoextremo/rewappFuego
+      
       - name: Push to fuegoextremo/rewappFuego
         run: |
           git config --global user.name 'GitHub Actions'

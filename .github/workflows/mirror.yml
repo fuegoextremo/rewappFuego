@@ -3,7 +3,7 @@ name: Mirror to fuegoextremo/rewappFuego
 on:
   push:
     branches:
-      - main  # Cambia esto si tu rama principal no es main
+      - main  # Solo ejecutar cuando se actualice main
 
 jobs:
   mirror:

@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+    <metadata>
+        <title>Plan de Implementación: Apple Wallet Pass + Google Wallet Pass</title>
+        <version>1.0</version>
+        <date>2025-09-25</date>
+        <priority>Medium</priority>
+        <estimated_effort>5-8 días de desarrollo</estimated_effort>
+    </metadata>
+
+    <overview>
+        <description>
+            Implementación de tarjetas digitales de fidelidad para Apple Wallet (iOS) y Google Wallet (Android).
+            Approach minimalista con datos estables para evitar actualizaciones frecuentes.
+        </description>
+        <objectives>
+            <objective>Permitir a los usuarios descargar su QR de fidelidad como tarjeta digital</objective>
+            <objective>Funcionalidad offline una vez instalada</objective>
+            <objective>Actualización automática solo en check-ins (cambio de racha)</objective>
+            <objective>Cross-platform: iOS (Apple Wallet) + Android (Google Wallet)</objective>
+        </objectives>
+    </overview>
+
+    <!-- APPLE WALLET IMPLEMENTATION -->
+    <apple_wallet>
+        <phase name="Configuración Base">
+            <tasks>
+                <task priority="high">
+                    <name>Obtener certificados Apple Developer</name>
+                    <description>Pass Type ID Certificate + WWDR Intermediate Certificate</description>
+                    <requirements>
+                        - Apple Developer Account ($99/año)
+                        - Pass Type ID: pass.com.rewapp.loyalty
+                        - Certificado .p12 para firmar passes
+                    </requirements>
+                </task>
+                
+                <task priority="high">
+                    <name>Configurar dependencias</name>
+                    <code_snippet>
+npm install passkit-node
+                    </code_snippet>
+                    <env_variables>
+APPLE_TEAM_ID=YOUR_TEAM_ID
+PASS_TYPE_IDENTIFIER=pass.com.rewapp.loyalty
+APPLE_PASS_CERTIFICATE_PATH=/certificates/pass.p12
+APPLE_PASS_CERTIFICATE_PASSWORD=your_password
+                    </env_variables>
+                </task>
+            </tasks>
+        </phase>
+
+        <phase name="Backend API">
+            <files_to_create>
+                <file path="/src/app/api/wallet/generate-pass/route.ts">
+                    <description>API endpoint para generar archivo .pkpass</description>
+                    <features>
+                        - Obtener datos básicos del usuario (QR, racha, nombre)
+                        - Generar pass con PassKit
+                        - Retornar archivo .pkpass para descarga
+                    </features>
+                </file>
+            </files_to_create>
+            
+            <pass_structure>
+                <primary_fields>
+                    <field key="streak" label="Racha Actual" value="{current_streak} días" />
+                </primary_fields>
+                <secondary_fields>
+                    <field key="member" label="Miembro" value="{user_name}" />
+                    <field key="since" label="Desde" value="{join_year}" />
+                </secondary_fields>
+                <barcode format="PKBarcodeFormatQR" message="{user_qr_code}" />
+                <colors>
+                    <background>rgb(215, 53, 39)</background>
+                    <foreground>rgb(255, 255, 255)</foreground>
+                </colors>
+            </pass_structure>
+        </phase>
+
+        <phase name="Frontend Integration">
+            <files_to_create>
+                <file path="/src/components/client/WalletPassButton.tsx">
+                    <description>Componente botón para descargar Apple Wallet Pass</description>
+                    <features>
+                        - Detección iOS automática
+                        - Estado de carga durante generación
+                        - Descarga automática del archivo .pkpass
+                        - Integración con toast notifications
+                    </features>
+                </file>
+            </files_to_create>
+            
+            <integration_points>
+                <location path="/src/components/client/views/ProfileView.tsx">
+                    <description>Agregar botón después del UserQR existente</description>
+                    <position>Debajo del QR principal, antes del texto descriptivo</position>
+                </location>
+            </integration_points>
+        </phase>
+
+        <phase name="Actualización en Check-ins">
+            <modification path="/src/store/slices/authSlice.ts">
+                <description>
+                    Regenerar wallet pass automáticamente cuando cambie la racha del usuario
+                    tras un check-in exitoso
+                </description>
+                <logic>
+                    if (oldStreak !== newStreak) {
+                        // Background pass regeneration
+                        fetch('/api/wallet/generate-pass', { ... })
+                    }
+                </logic>
+            </modification>
+        </phase>
+    </apple_wallet>
+
+    <!-- GOOGLE WALLET IMPLEMENTATION -->
+    <google_wallet>
+        <phase name="Configuración Base">
+            <tasks>
+                <task priority="high">
+                    <name>Configurar Google Wallet API</name>
+                    <requirements>
+                        - Google Cloud Project
+                        - Google Wallet API habilitada
+                        - Service Account con permisos
+                        - Issuer ID registrado
+                    </requirements>
+                </task>
+                
+                <task priority="high">
+                    <name>Instalar dependencias</name>
+                    <code_snippet>
+npm install googleapis
+                    </code_snippet>
+                    <env_variables>
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+GOOGLE_WALLET_ISSUER_ID=your_issuer_id
+                    </env_variables>
+                </task>
+            </tasks>
+        </phase>
+
+        <phase name="Backend API">
+            <files_to_create>
+                <file path="/src/app/api/wallet/google/generate-pass/route.ts">
+                    <description>API endpoint para generar Google Wallet Pass</description>
+                    <features>
+                        - Generar JWT firmado con datos del usuario
+                        - Crear URL de instalación para Google Wallet
+                        - Estructura de loyalty card
+                    </features>
+                </file>
+            </files_to_create>
+            
+            <pass_structure>
+                <loyalty_object>
+                    <account_id>{user_id}</account_id>
+                    <account_name>{user_name}</account_name>
+                    <program_logo>REWAPP logo</program_logo>
+                    <loyalty_points>
+                        <label>Racha Actual</label>
+                        <balance>{current_streak} días</balance>
+                    </loyalty_points>
+                    <barcode type="QR_CODE" value="{user_qr_code}" />
+                </loyalty_object>
+            </pass_structure>
+        </phase>
+
+        <phase name="Frontend Integration">
+            <files_to_create>
+                <file path="/src/components/client/GoogleWalletButton.tsx">
+                    <description>Componente botón para agregar a Google Wallet</description>
+                    <features>
+                        - Detección Android automática
+                        - Generar JWT y URL de instalación
+                        - Redirección a Google Wallet app
+                        - Fallback para web browser
+                    </features>
+                </file>
+            </files_to_create>
+
+            <integration_strategy>
+                <unified_component path="/src/components/client/DigitalWalletButtons.tsx">
+                    <description>
+                        Componente que muestra automáticamente el botón correcto según la plataforma:
+                        - iOS: Apple Wallet Button
+                        - Android: Google Wallet Button  
+                        - Otros: Ocultar o mostrar ambos
+                    </description>
+                </unified_component>
+            </integration_strategy>
+        </phase>
+    </google_wallet>
+
+    <!-- SHARED INFRASTRUCTURE -->
+    <shared_infrastructure>
+        <user_data_structure>
+            <interface name="WalletPassData">
+                <fields>
+                    <field name="userId" type="string" description="ID único del usuario" />
+                    <field name="qrCode" type="string" description="QR code principal del usuario" />
+                    <field name="userName" type="string" description="Nombre completo" />
+                    <field name="currentStreak" type="number" description="Días de racha actual" />
+                    <field name="joinDate" type="string" description="Fecha de registro" />
+                    <field name="memberSince" type="string" description="Año de membresía para display" />
+                </fields>
+            </interface>
+        </user_data_structure>
+
+        <platform_detection>
+            <utility path="/src/lib/utils/platform.ts">
+                <functions>
+                    <function name="isIOS">
+                        <description>Detectar si el usuario está en iOS</description>
+                        <logic>/iPad|iPhone|iPod/.test(navigator.userAgent)</logic>
+                    </function>
+                    <function name="isAndroid">
+                        <description>Detectar si el usuario está en Android</description>
+                        <logic>/Android/.test(navigator.userAgent)</logic>
+                    </function>
+                    <function name="supportsWallet">
+                        <description>Verificar si el dispositivo soporta wallet passes</description>
+                    </function>
+                </functions>
+            </utility>
+        </platform_detection>
+
+        <update_strategy>
+            <description>
+                Actualización inteligente de wallet passes:
+                - Solo cuando cambia la racha del usuario
+                - Background regeneration tras check-in exitoso
+                - No actualizar por cambios en configuración global
+            </description>
+            <triggers>
+                <trigger event="successful_checkin" condition="streak_changed">
+                    <apple_action>Regenerate .pkpass file</apple_action>
+                    <google_action>Update loyalty object via API</google_action>
+                </trigger>
+            </triggers>
+        </update_strategy>
+    </shared_infrastructure>
+
+    <!-- IMPLEMENTATION ROADMAP -->
+    <implementation_roadmap>
+        <milestone name="MVP - Apple Wallet" duration="3 días">
+            <deliverables>
+                - Certificados configurados
+                - API de generación de .pkpass
+                - Botón de descarga en ProfileView
+                - Generación básica funcionando
+            </deliverables>
+        </milestone>
+
+        <milestone name="Google Wallet Integration" duration="2 días">
+            <deliverables>
+                - Google Wallet API configurada
+                - Generación de loyalty passes
+                - Botón para Android
+                - Detección automática de plataforma
+            </deliverables>
+        </milestone>
+
+        <milestone name="Auto-updates" duration="2 días">
+            <deliverables>
+                - Integración con check-in flow
+                - Regeneración automática en cambios de racha
+                - Testing de actualización de passes
+            </deliverables>
+        </milestone>
+
+        <milestone name="Polish & Testing" duration="1 día">
+            <deliverables>
+                - Error handling robusto
+                - Toast notifications
+                - Testing en dispositivos reales
+                - Documentation
+            </deliverables>
+        </milestone>
+    </implementation_roadmap>
+
+    <!-- TECHNICAL CONSIDERATIONS -->
+    <technical_considerations>
+        <security>
+            <consideration>
+                Certificados Apple deben estar seguros en variables de entorno
+            </consideration>
+            <consideration>
+                Google Service Account credentials protegidas
+            </consideration>
+            <consideration>
+                Validación de usuario antes de generar passes
+            </consideration>
+        </security>
+
+        <performance>
+            <consideration>
+                Pass generation puede tomar 100-500ms - mostrar loading states
+            </consideration>
+            <consideration>
+                Cachear passes generados por corto tiempo para múltiples descargas
+            </consideration>
+            <consideration>
+                Background updates para no bloquear UI
+            </consideration>
+        </performance>
+
+        <compatibility>
+            <consideration>
+                Apple Wallet: iOS 6+ (prácticamente todos los dispositivos actuales)
+            </consideration>
+            <consideration>
+                Google Wallet: Android 5.0+ con Google Play Services
+            </consideration>
+            <consideration>
+                Fallback graceful en plataformas no soportadas
+            </consideration>
+        </compatibility>
+    </technical_considerations>
+
+    <!-- FUTURE ENHANCEMENTS -->
+    <future_enhancements>
+        <enhancement priority="low">
+            <name>Rich Notifications</name>
+            <description>
+                Push notifications cuando se actualiza el pass
+                (requiere certificados APN y FCM)
+            </description>
+        </enhancement>
+
+        <enhancement priority="medium">
+            <name>Location-based Features</name>
+            <description>
+                Mostrar pass automáticamente cerca de ubicaciones registradas
+            </description>
+        </enhancement>
+
+        <enhancement priority="low">
+            <name>Advanced Analytics</name>
+            <description>
+                Tracking de instalaciones y uso de wallet passes
+            </description>
+        </enhancement>
+
+        <enhancement priority="medium">
+            <name>Conditional Fields</name>
+            <description>
+                Mostrar diferentes campos según el tier del usuario
+            </description>
+        </enhancement>
+    </future_enhancements>
+
+    <!-- TESTING STRATEGY -->
+    <testing_strategy>
+        <test_cases>
+            <test_case platform="iOS">
+                <scenario>Descargar pass en iPhone Safari</scenario>
+                <expected>Archivo .pkpass se descarga y abre en Wallet app</expected>
+            </test_case>
+            
+            <test_case platform="Android">
+                <scenario>Agregar pass en Chrome Android</scenario>
+                <expected>Redirección a Google Wallet con pass pre-poblado</expected>
+            </test_case>
+            
+            <test_case platform="Cross-platform">
+                <scenario>Check-in exitoso que cambia racha</scenario>
+                <expected>Pass se regenera automáticamente en background</expected>
+            </test_case>
+        </test_cases>
+
+        <device_testing>
+            <device>iPhone (iOS 15+) - Apple Wallet</device>
+            <device>Android Phone (Android 10+) - Google Wallet</device>
+            <device>iPad - Apple Wallet</device>
+            <device>Desktop - Botones ocultos correctamente</device>
+        </device_testing>
+    </testing_strategy>
+</plan>

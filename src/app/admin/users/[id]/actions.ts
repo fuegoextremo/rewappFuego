@@ -86,7 +86,8 @@ export async function grantCoupon(userId: string, prizeId: string, validityDays?
 
     try {
       // Llamar a la nueva función con control de inventario usando postgrest
-      const { data, error } = await supabase.rpc('grant_manual_coupon' as any, {
+      // @ts-expect-error - Función custom no tipada en supabase
+      const { data, error } = await supabase.rpc('grant_manual_coupon', {
         p_user_id: userId,
         p_prize_id: prizeId,
         p_validity_days: validityDays || 30
@@ -102,18 +103,18 @@ export async function grantCoupon(userId: string, prizeId: string, validityDays?
       // Verificar la respuesta de la nueva función
       console.log('Raw response from grant_manual_coupon:', data);
       
-      if (data && (data as any).success) {
-        const responseData = data as any;
+      if (data && (data as Record<string, unknown>).success) {
+        const responseData = data as Record<string, unknown>;
         
         console.log('Coupon granted successfully with inventory control:', responseData);
         revalidatePath(`/admin/users/${userId}`);
 
         return {
-          message: `Cupón otorgado con éxito (${responseData.stock_affected ? 'stock descontado' : 'stock ilimitado'}).`,
+          message: `Cupón otorgado con éxito (${(responseData as { stock_affected?: boolean }).stock_affected ? 'stock descontado' : 'stock ilimitado'}).`,
           data: {
-            unique_code: responseData.unique_code,
-            id: responseData.coupon_id,
-            expires_at: responseData.expires_at
+            unique_code: (responseData as { unique_code: string }).unique_code,
+            id: (responseData as { coupon_id: string }).coupon_id,
+            expires_at: (responseData as { expires_at: string }).expires_at
           }
         };
       } else {
@@ -121,10 +122,11 @@ export async function grantCoupon(userId: string, prizeId: string, validityDays?
           error: "Error al generar el cupón con control de inventario",
         };
       }
-    } catch (rpcError: any) {
+    } catch (rpcError: unknown) {
       console.error('Exception calling grant_manual_coupon:', rpcError);
+      const errorMessage = rpcError instanceof Error ? rpcError.message : 'Sin stock disponible';
       return {
-        error: `Error de inventario: ${rpcError.message || 'Sin stock disponible'}`,
+        error: `Error de inventario: ${errorMessage}`,
       };
     }
   } catch (error) {

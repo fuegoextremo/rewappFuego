@@ -122,7 +122,7 @@ interface PullToRefreshWrapperProps {
 
 export function PullToRefreshWrapper({
   pullDistance,
-  isRefreshing,
+  isRefreshing, // eslint-disable-line @typescript-eslint/no-unused-vars
   onTouchStart,
   onTouchMove,
   onTouchEnd,

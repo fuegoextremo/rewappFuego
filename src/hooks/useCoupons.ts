@@ -4,8 +4,8 @@ import {
   setCoupons, 
   appendExpiredCoupons, 
   appendActiveCoupons,
-  setLoadingMoreCoupons,
-  type CouponRow 
+  setLoadingMoreCoupons
+  // type CouponRow - tipo no utilizado
 } from '@/store/slices/authSlice'
 import { createClientBrowser } from '@/lib/supabase/client'
 

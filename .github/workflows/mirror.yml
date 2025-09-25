@@ -1,0 +1,21 @@
+name: Mirror to fuegoextremo/rewappFuego
+
+on:
+  push:
+    branches:
+      - main  # Cambia esto si tu rama principal no es main
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo (leo-neutrondigital/rewapp)
+        uses: actions/checkout@v3
+
+      - name: Push to fuegoextremo/rewappFuego
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+          git remote add mirror https://x-access-token:${{ secrets.MIRROR_TOKEN }}@github.com/fuegoextremo/rewappFuego.git
+          git push mirror main --force

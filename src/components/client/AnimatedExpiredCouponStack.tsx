@@ -145,7 +145,6 @@ export default function AnimatedExpiredCouponStack({
                       <CouponCard 
                         coupon={coupon} 
                         isInStack={true} 
-                        stackIndex={index}
                         forceGrayStyle={true}
                       />
                     </div>

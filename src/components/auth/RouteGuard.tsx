@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientBrowser } from '@/lib/supabase/client'
-import { User } from '@supabase/auth-helpers-nextjs'
 
 interface RouteGuardProps {
   children: React.ReactNode
@@ -20,8 +19,6 @@ export function RouteGuard({
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
   </div>
 }: RouteGuardProps) {
-  const [user, setUser] = useState<User | null>(null)
-  const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [authorized, setAuthorized] = useState(false)
   const router = useRouter()
@@ -38,8 +35,6 @@ export function RouteGuard({
           router.push(redirectTo)
           return
         }
-
-        setUser(session.user)
 
         // 2. Si no se requieren roles específicos, permitir acceso
         if (allowedRoles.length === 0) {
@@ -62,7 +57,6 @@ export function RouteGuard({
         }
 
         const role = profile?.role
-        setUserRole(role)
 
         // 4. Verificar permisos de rol
         if (!role || !allowedRoles.includes(role)) {

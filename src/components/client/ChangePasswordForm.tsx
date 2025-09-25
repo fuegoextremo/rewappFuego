@@ -2,15 +2,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { passwordChangeSchema } from '@/lib/utils/validation'
 import { createClientBrowser } from '@/lib/supabase/client'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 
-export default function ChangePasswordForm() {
+type Props = {
+  onCancel?: () => void
+}
+
+export default function ChangePasswordForm({ onCancel }: Props = {}) {
+  const { data: settings } = useSystemSettings()
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState(false)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function onSubmit(formData: FormData) {
     setError(null)
@@ -88,12 +92,50 @@ export default function ChangePasswordForm() {
                className="w-full rounded-lg border px-3 py-2" />
       </div>
 
-      <div className="flex items-center gap-3 pt-2">
-        <button type="submit" disabled={loading}
-                className="rounded-lg bg-black text-white px-4 py-2 disabled:opacity-60">
+      <div className="grid gap-3 pt-6">
+        {/* Botón principal */}
+        <button 
+          type="submit" 
+          disabled={loading}
+          className="inline-flex h-12 w-full items-center justify-center rounded-xl px-5 text-white font-semibold shadow transition-colors active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            backgroundColor: loading ? '#9CA3AF' : (settings?.company_theme_primary || '#3B82F6')
+          }}
+          onMouseEnter={(e) => {
+            if (!loading) {
+              const color = settings?.company_theme_primary || '#3B82F6'
+              e.currentTarget.style.backgroundColor = `${color}dd`
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!loading) {
+              e.currentTarget.style.backgroundColor = settings?.company_theme_primary || '#3B82F6'
+            }
+          }}
+        >
           {loading ? 'Actualizando…' : 'Cambiar contraseña'}
         </button>
-        {ok && <span className="text-sm text-green-600">Hecho ✅</span>}
+        
+        {/* Botón cancelar */}
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancelar
+          </button>
+        )}
+        
+        {/* Mensaje de éxito */}
+        {ok && (
+          <div className="text-center">
+            <span className="text-sm font-medium" style={{ color: settings?.company_theme_primary || '#3B82F6' }}>
+              ¡Contraseña actualizada correctamente! ✅
+            </span>
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

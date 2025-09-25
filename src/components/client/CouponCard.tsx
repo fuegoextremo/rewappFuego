@@ -227,7 +227,7 @@ export default function CouponCard({ coupon, isInStack = false, forceGrayStyle =
               Cupón
             </div>
             <div 
-              className="font-mono text-lg font-bold tracking-wider"
+              className="font-mono text-sm font-bold tracking-wider"
               style={{ 
                 color: active ? textColor : '#111827'
               }}
@@ -241,11 +241,10 @@ export default function CouponCard({ coupon, isInStack = false, forceGrayStyle =
                 e.stopPropagation()
                 openRedeemModal(coupon.id)
               }}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200 shadow-md hover:opacity-90 hover:scale-105 active:scale-95 z-10 relative"
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm transition-all duration-200 shadow-md hover:opacity-90 hover:scale-105 active:scale-95 z-10 relative"
               style={{ 
-                backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+                backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.20)',
                 color: textColor,
-                border: `2px solid ${textColor}`,
                 backdropFilter: 'blur(10px)'
               }}
             >

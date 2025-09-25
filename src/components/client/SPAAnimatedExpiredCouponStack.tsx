@@ -107,7 +107,6 @@ export default function SPAAnimatedExpiredCouponStack({
                       <CouponCard 
                         coupon={coupon} 
                         isInStack={true} 
-                        stackIndex={index}
                         forceGrayStyle={true}
                       />
                     </div>

@@ -3,6 +3,8 @@
 import { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
+import { useSystemSettings } from '@/hooks/use-system-settings'
+
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -12,6 +14,8 @@ interface BottomSheetProps {
 }
 
 export default function BottomSheet({ isOpen, onClose, title, children }: BottomSheetProps) {
+  const { data: settings } = useSystemSettings()
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -52,13 +56,16 @@ export default function BottomSheet({ isOpen, onClose, title, children }: Bottom
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <div className="flex items-center justify-between px-6 py-4 "         style={{
+            backgroundColor: settings?.company_theme_primary || '#3B82F6',
+            
+          }}>
+              <h2 className="text-lg font-semibold text-white">{title}</h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
             

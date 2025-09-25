@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import Image from 'next/image'
 import BottomSheet from '@/components/ui/BottomSheet'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 
 type Props = {
   open: boolean
@@ -20,6 +21,7 @@ type ApiResp = {
 }
 
 export default function RedeemSheet({ open, onClose, couponId }: Props) {
+  const { data: settings } = useSystemSettings()
   const [img, setImg] = useState<string | null>(null)
   const [title, setTitle] = useState<string>('Reclamando…')
   const [code, setCode] = useState<string>('—')
@@ -84,43 +86,55 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
       onClose={onClose}
       title={title}
     >
-      <div className="px-6 pb-6 ">
-        <div className="text-center space-y-1 m-6"> 
-          <p className="text-xs tracking-wider text-gray-500">RECLAMANDO</p>
-          <h3>{title}</h3> 
-          {code && <p className="text-sm text-gray-500">#{code}</p>}
+      <div className="relative overflow-hidden">
+        {/* 🎨 Fondo circular con color del sistema */}
+        <div 
+          className="absolute inset-0 h-1/2"
+          style={{
+            backgroundColor: settings?.company_theme_primary || '#3B82F6',
+            clipPath: 'ellipse(100% 100% at 50% 0%)'
+          }}
+        />
+        
+        {/* Contenido principal */}
+        <div className="relative px-6 pb-6">
+          <div className="text-center space-y-1 m-6"> 
+            <p className="text-xs tracking-wider text-white/80 uppercase">RECLAMANDO</p>
+            <h3 className="text-white font-semibold">{title}</h3> 
+            {code && <p className="text-sm text-white/70">#{code}</p>}
+          </div>
+
+          <div className="flex justify-center mb-6">
+            {err ? (
+              <p className="text-sm text-red-600">{err}</p>
+            ) : img ? (
+              <Image
+                src={img}
+                alt="QR para reclamar"
+                width={250}
+                height={250}
+                className="rounded-2xl p-4 bg-white shadow-2xl"
+                unoptimized
+                priority
+              />
+            ) : (
+              <div className="h-[250px] w-[250px] rounded-2xl border flex items-center justify-center bg-white/10 backdrop-blur">
+                <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              </div>
+            )}
+          </div>
+
+          <p className="text-center text-xs text-gray-600 mb-6">
+            Muestra este código QR al mesero de cualquier sucursal para reclamar tu premio.
+          </p>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 transition-colors"
+          >
+            Cerrar
+          </button>
         </div>
-
-        <div className="flex justify-center mb-6">
-          {err ? (
-            <p className="text-sm text-red-600">{err}</p>
-          ) : img ? (
-            <Image
-              src={img}
-              alt="QR para reclamar"
-              width={240}
-              height={240}
-              className="rounded-2xl border p-2"
-              unoptimized
-              priority
-            />
-          ) : (
-            <div className="h-48 w-48 rounded-2xl border flex items-center justify-center">
-              <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-            </div>
-          )}
-        </div>
-
-        <p className="text-center text-xs text-gray-600 mb-6">
-          Muestra este código QR al mesero de cualquier sucursal para reclamar tu premio.
-        </p>
-
-        <button
-          onClick={onClose}
-          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 transition-colors"
-        >
-          Cerrar
-        </button>
       </div>
     </BottomSheet>
   )

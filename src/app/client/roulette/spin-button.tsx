@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 //import { Loader2 } from 'lucide-react'
-import { useUser, useSettings, useAppDispatch } from '@/store/hooks'
+import { useAppDispatch } from '@/store/hooks'
 import { startSpin, endSpin } from '@/store/slices/rouletteSlice'
 import { useNavigationBlock } from '@/hooks/useNavigationBlock'
 import { useSystemSettings } from '@/hooks/use-system-settings'
@@ -22,7 +22,6 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [spinning, setSpinning] = useState(false) // Estado para la animación RIVE
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   const dispatch = useAppDispatch()
-  const user = useUser()
   
   // 🔒 Activar hook de bloqueo de navegación
   useNavigationBlock()
@@ -57,7 +56,7 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   }
 
   // ✨ Usar configuración o fallback elegante
-  const primaryColor = settings?.company_theme_primary || '#10B981'
+  // const primaryColor = settings?.company_theme_primary || '#b91010ff'
 
   // 🎰 Nueva lógica integrada con RIVE
   const onSpin = () => {
@@ -145,19 +144,29 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
       <div className="absolute inset-0 flex items-center justify-center">
         {/* Ajuste vertical proporcional para compensar la proporción 5:6 de la ruleta */}
         <div className="transform" style={{ transform: 'translateY(32%)' }}>
-          <button
-            onClick={onSpin}
-            disabled={disabled || pending || spinning}
-            className="w-[20vw] h-[20vw] rounded-full text-white font-bold text-sm shadow-lg active:scale-95 transition-transform disabled:scale-100 flex items-center justify-center"
-            style={{ 
-              backgroundColor: primaryColor,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
+          {/* Contenedor exterior SIN stroke - Gradiente INVERTIDO */}
+          <div 
+            className="w-[30vw] h-[30vw] rounded-full flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(184deg, #FF4848 11.7%, #B00 100.24%)'
             }}
           >
-            <span className="leading-tight text-center text-lg">
-              {spinning ? 'GIRANDO' : pending ? 'CARGANDO' : 'GIRAR'}
-            </span>
-          </button>
+            {/* Contenedor interior CON stroke y gradiente del centro */}
+            <button
+              onClick={onSpin}
+              disabled={disabled || pending || spinning}
+              className="w-[22vw] h-[22vw] rounded-full text-white font-bold text-sm active:scale-95 transition-transform disabled:scale-100 flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(4deg, #FF4848 11.7%, #B00 100.24%)',
+                border: '3px solid #FF4848',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              <span className="leading-tight text-center text-lg">
+                {spinning ? 'GIRANDO' : pending ? 'CARGANDO' : 'GIRAR'}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 

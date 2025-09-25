@@ -38,27 +38,40 @@ export default function CheckinSheet({
     <BottomSheet
       isOpen={open}
       onClose={onClose}
-      title="Check‑in"
+      title="Mi QR personal"
     >
-      <div className="px-6 pb-6">
-        <div className="text-center space-y-1 mb-6">
-          <p className="text-xs tracking-wider text-gray-500">MI CÓDIGO</p>
+      <div className="relative overflow-hidden">
+        {/* 🎨 Fondo circular con color del sistema */}
+        <div 
+          className="absolute inset-0 h-1/2"
+          style={{
+            backgroundColor: settings?.company_theme_primary || '#3B82F6',
+            clipPath: 'ellipse(100% 100% at 50% 0%)'
+          }}
+        />
+        
+        {/* Contenido principal */}
+        <div className="relative p-8 pb-6">
+          <div className="text-center space-y-1 mb-2">
+            <span className='text-xs tracking-wider text-white/80 uppercase'>Check-in</span>
+            <h3 className='text-xl font-semibold text-white'>Registra tu visita</h3>
+          </div>
+
+          <div className="flex justify-center mb-6">
+            <UserQR size={250} />
+          </div>
+
+          <p className="text-center text-sm text-gray-600 mb-6">
+            Muestra este QR al personal de la sucursal para registrar tu visita.
+          </p>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 transition-colors"
+          >
+            Cerrar
+          </button>
         </div>
-
-        <div className="flex justify-center mb-6">
-          <UserQR size={240} />
-        </div>
-
-        <p className="text-center text-xs text-gray-600 mb-6">
-          Muestra este QR al personal de la sucursal para registrar tu visita.
-        </p>
-
-        <button
-          onClick={onClose}
-          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 transition-colors"
-        >
-          Cerrar
-        </button>
       </div>
     </BottomSheet>
   )

@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Gift, Trophy } from 'lucide-react'
 import { useAppDispatch } from '@/store/hooks'
 import { setCurrentView } from '@/store/slices/uiSlice'
+import { useSystemSettings } from '@/hooks/use-system-settings'
+
 
 type ResultSheetProps = {
   open: boolean
@@ -16,6 +18,8 @@ type ResultSheetProps = {
 
 export default function ResultSheet({ open, onClose, won, prizeName }: ResultSheetProps) {
   const dispatch = useAppDispatch()
+  const { data: settings } = useSystemSettings()
+
   const handleGoToCoupons = () => {
     onClose()
     dispatch(setCurrentView('coupons'))
@@ -69,21 +73,32 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
               transform: 'translate3d(0,0,0)'
             }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {won ? '🎉 ¡Resultado!' : '🎲 Resultado'}
-              </h2>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            
-            {/* Content */}
-            <div className="px-6 pb-6 pt-4">
+            {/* Container con overflow hidden para el fondo circular */}
+            <div className="relative overflow-hidden h-full">
+              {/* 🎨 Fondo circular con color del sistema */}
+              <div 
+                className="absolute inset-0 h-1/4"
+                style={{
+                  backgroundColor: settings?.company_theme_primary || '#3B82F6',
+                  clipPath: 'ellipse(100% 100% at 50% 0%)'
+                }}
+              />
+              
+              {/* Header */}
+              <div className="relative flex items-center justify-between px-6 py-4">
+                <h2 className="text-lg font-semibold text-white">
+                  {won ? '¡Resultado!' : 'Resultado'}
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-white/80" />
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="relative px-6 pb-6 pt-4">
               {won ? (
                 <div className="text-center space-y-4">
                   {/* Animated trophy icon */}
@@ -98,8 +113,13 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
                     }}
                     className="flex justify-center mb-4"
                   >
-                    <div className="h-20 w-20 rounded-2xl bg-gradient-to-b from-green-100 to-green-50 flex items-center justify-center border border-green-200">
-                      <Trophy className="w-10 h-10 text-green-600" />
+                    <div 
+                      className="h-20 w-20 rounded-2xl flex items-center justify-center shadow-xl bg-white"
+                    >
+                      <Trophy 
+                        className="w-10 h-10"
+                        style={{ color: settings?.company_theme_primary || '#3B82F6' }}
+                      />
                     </div>
                   </motion.div>
 
@@ -110,9 +130,13 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
                     transition={{ delay: 0.4, duration: 0.3 }}
                     className="space-y-2"
                   >
-                    <p className="text-xs tracking-wider text-gray-500 uppercase">Felicidades</p>
-                    <h3 className="text-3xl font-extrabold text-green-600">¡Ganaste!</h3>
-                    <p className="text-lg font-semibold text-gray-900">{prizeName ?? 'Premio'}</p>
+                    <h3 
+                      className="text-xl font-extrabold"
+                      style={{ color: settings?.company_theme_primary || '#3B82F6' }}
+                    >
+                      ¡Felicidades Ganaste!
+                    </h3>
+                    <p className="text-3xl font-semibold text-gray-900">{prizeName ?? 'Premio'}</p>
                     <p className="text-sm text-gray-600">
                       Reclama tu premio en cualquier sucursal.
                     </p>
@@ -127,7 +151,18 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
                   >
                     <button
                       onClick={handleGoToCoupons}
-                      className="inline-flex h-12 items-center justify-center rounded-xl bg-green-600 px-5 text-white font-semibold shadow hover:bg-green-700 transition-colors active:translate-y-[1px]"
+                      className="inline-flex h-12 items-center justify-center rounded-xl px-5 text-white font-semibold shadow transition-colors active:translate-y-[1px]"
+                      style={{
+                        backgroundColor: settings?.company_theme_primary || '#3B82F6'
+                      }}
+                      onMouseEnter={(e) => {
+                        const color = settings?.company_theme_primary || '#3B82F6'
+                        // Crear una versión más oscura para hover
+                        e.currentTarget.style.backgroundColor = `${color}dd`
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = settings?.company_theme_primary || '#3B82F6'
+                      }}
                     >
                       <Gift className="w-5 h-5 mr-2" />
                       Reclamar Premio
@@ -189,6 +224,7 @@ export default function ResultSheet({ open, onClose, won, prizeName }: ResultShe
                   </motion.div>
                 </div>
               )}
+            </div>
             </div>
           </motion.div>
         </>

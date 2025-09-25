@@ -116,15 +116,18 @@ export default function HomeView() {
       <FloatingHeader />
 
       <motion.div
-        className="space-y-0"
+        className="space-y-0 relative"
         initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        {/* Fondo degradado con tamaño fijo - Se mueve con scroll */}
         <div 
-          className="pb-5 relative"
+          className="absolute top-0 left-0 w-full h-80"
           style={{ background: `linear-gradient(180deg, ${primaryColor} 0%, #FFF 100%)` }}
-        >
+        />
+
+        <div className="pb-5 relative">
           {/* Explosión de partículas desde el centro 
           <ParticleExplosion color="#ffffff" particleCount={50} />*/}
           
@@ -227,15 +230,19 @@ export default function HomeView() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="mt-4 p-4 flex items-center gap-2">
+          <div className="p-4 mt-4">
+          <div className="flex items-center gap-2">
              <History size={26} style={{ color: primaryColor }} />
             <h3 className="text-lg font-bold text-gray-900">
               Actividad reciente
             </h3>
           </div>
+          <p className="text-sm">Mira tu progreso y las visitas más recientes</p>
+          </div>
           <div className="px-4 mb-10">
             <RecentActivity userId={user.id} />
           </div>
+          
         </motion.div>
 
         {/* Streak Prizes List */}

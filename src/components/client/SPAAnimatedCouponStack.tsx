@@ -1,7 +1,8 @@
 'use client'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState} from 'react'
 import { CouponRow } from '@/store/slices/authSlice'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 
 // Importamos desde AnimatedExpiredCouponStack que ya tiene el forceGrayStyle
 import CouponCard from './CouponCard'
@@ -28,6 +29,10 @@ export default function SPAAnimatedCouponStack({
   total        // 🆕 Recibir total
 }: SPAAnimatedCouponStackProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const { data: systemSettings } = useSystemSettings()
+  
+  // Obtener el color primario del sistema
+  const primaryColor = systemSettings?.company_theme_primary || '#D73527'
 
   if (coupons.length === 0) {
     return (
@@ -39,7 +44,7 @@ export default function SPAAnimatedCouponStack({
       >
         <h3 className="font-semibold text-gray-800">{title}</h3>
         <motion.div 
-          className="bg-white p-6 rounded-xl text-center border border-gray-100"
+          className="p-6 rounded-xl text-center border border-gray-100"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.4 }}
@@ -85,7 +90,10 @@ export default function SPAAnimatedCouponStack({
         
         <motion.button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-blue-600 active:text-blue-800 transition-colors flex items-center gap-1 touch-manipulation"
+          className="p-2 rounded-full text-white text-xs transition-all duration-200 active:scale-95 touch-manipulation"
+          style={{ 
+            backgroundColor: `${primaryColor}80` // 50% opacity
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -142,7 +150,7 @@ export default function SPAAnimatedCouponStack({
                     onClick={() => setIsExpanded(true)}
                   >
                     <div className="cursor-pointer">
-                      <CouponCard coupon={coupon} isInStack={true} stackIndex={index} />
+                      <CouponCard coupon={coupon} isInStack={true} />
                     </div>
                   </motion.div>
                 )
@@ -210,15 +218,15 @@ export default function SPAAnimatedCouponStack({
             <button
               onClick={onLoadMore}
               disabled={loading}
-              className="w-full p-3 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 active:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+              className="w-full p-3 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 active:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-t-transparent rounded-full animate-spin"></div>
                   Cargando más cupones...
                 </div>
               ) : (
-                '🎫 Cargar más cupones'
+                'Cargar más cupones'
               )}
             </button>
           </motion.div>

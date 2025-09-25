@@ -6,6 +6,7 @@ import SpinButton from '@/app/client/roulette/spin-button'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { FloatingHeader } from '@/components/client/FloatingHeader'
+import { FerrisWheel } from "lucide-react";
 
 export default function RouletteView() {
   const user = useUser()
@@ -68,16 +69,19 @@ export default function RouletteView() {
       <FloatingHeader />
 
       <motion.div 
-        className="space-y-0"
+        className="space-y-0 relative"
         initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Sección con fondo degradado - igual que HomeView */}
+        {/* Fondo degradado con tamaño fijo - Se mueve con scroll */}
         <div 
-          className="pb-20 relative"
+          className="absolute top-0 left-0 w-full h-80"
           style={{ background: `linear-gradient(180deg, ${primaryColor} 0%, #FFF 100%)` }}
-        >
+        />
+
+        {/* Sección superior con padding fijo */}
+        <div className="relative">
           {/* 🎰 Título de ruleta dentro del degradado */}
           <motion.div
             className="pt-24 mb-6 relative z-10"
@@ -85,21 +89,22 @@ export default function RouletteView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <h2 className="text-4xl font-semibold mb-4 px-8 text-white">La ruleta</h2>
+            <h2 className="text-3xl font-semibold mb-4 px-8 text-center">¡Gira la Ruleta!</h2>
             
-            <div className=" space-y-4">
-              <p className='px-8 text-white text-sm'>Cada giro de ruleta te da la oportunidad de ganar premios increíbles</p>
+            <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
-                <span className="text-lg text-white">Tienes</span>
+                <span className="text-2xl">Tienes</span>
+                <FerrisWheel size={26} className="" />
                 <div 
-                  className="inline-block px-4 py-2 rounded-xl text-2xl font-bold bg-white"
+                  className=" flex gap-1 px-2 py-2 rounded-xl text-2xl font-bold bg-white"
                   style={{ color: primaryColor }}
                 >
                   {availableSpins}
                 </div>
-                <span className="text-lg text-white">oportunidades</span>
+                <span className="text-2xl">oportunidades</span>
               </div>
-              
+                            <p className='px-8 text-center text-sm'>Cuando ganas giros de ruleta 😄, puedes utilizar cada oportunidad para ganar alguno de las recompensas disponibles.</p>
+
               <SpinButton disabled={!hasSpins} />
               
               {!hasSpins && (

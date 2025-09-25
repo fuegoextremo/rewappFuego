@@ -1,7 +1,24 @@
 'use client';
 
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { useRive, useStateMachineInput, Layout, Fit, Alignment } from '@rive-app/react-canvas';
+
+// Types for Rive event system
+interface RiveEventData {
+  name?: string;
+  stateName?: string;
+}
+
+interface RiveStateChangeEvent {
+  data: RiveEventData | RiveEventData[];
+}
+
+interface RiveWithEventSystem {
+  on?: (eventType: string, callback: (event: RiveStateChangeEvent) => void) => void;
+  off?: (eventType: string, callback: (event: RiveStateChangeEvent) => void) => void;
+  addEventListener?: (eventType: string, callback: (event: RiveStateChangeEvent) => void) => void;
+  removeEventListener?: (eventType: string, callback: (event: RiveStateChangeEvent) => void) => void;
+}
 
 const ARTBOARD = undefined;       // o 'WheelArtboard' si lo nombraste
 const STATE_MACHINE = 'WheelSM';  // 👈 exacto como en Rive
@@ -36,14 +53,14 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* 
   // const [internalSpinning, setInternalSpinning] = useState(false); // Para debug UI
 
   // 🔄 Función para resetear el estado de giro
-  const resetSpin = () => {
+  const resetSpin = useCallback(() => {
     // console.log('🔄 Reseteando estado de giro RIVE');
     spinningRef.current = false;
     // setInternalSpinning(false); // Para debug UI
-  };
+  }, []);
 
   // 🎯 Función para activar el giro
-  const triggerSpin = (win: boolean) => {
+  const triggerSpin = useCallback((win: boolean) => {
     if (!spin || !isWin || spinningRef.current) {
       // console.warn('⚠️ No se puede girar: spin, isWin o ya girando', { spin: !!spin, isWin: !!isWin, spinning: spinningRef.current });
       return false;
@@ -55,19 +72,19 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* 
     // setInternalSpinning(true); // Para debug UI
     spin.fire();
     return true;
-  };
+  }, [spin, isWin]);
 
   // Exponer funciones al componente padre
   useImperativeHandle(ref, () => ({
     triggerSpin,
     resetSpin
-  }), [spin, isWin]);
+  }), [triggerSpin, resetSpin]);
 
   // Escucha cambios de estado para detectar cuándo vuelve a Idle y terminar el giro
   useEffect(() => {
     if (!rive) return;
     
-    const onStateChange = (event: any) => {
+    const onStateChange = (event: RiveStateChangeEvent) => {
       // console.log('🎰 RIVE State Change:', event.data);
       
       // Detectar estados de transición específicos
@@ -104,14 +121,16 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* 
 
     // Usar múltiples event listeners para capturar el cambio de estado
     try {
+      const riveWithEvents = rive as unknown as RiveWithEventSystem;
+      
       // Método principal
-      if (typeof (rive as any).on === 'function') {
-        (rive as any).on('statechange', onStateChange);
+      if (typeof riveWithEvents.on === 'function') {
+        riveWithEvents.on('statechange', onStateChange);
       }
       
       // Método alternativo usando addEventListener
-      if (typeof (rive as any).addEventListener === 'function') {
-        (rive as any).addEventListener('statechange', onStateChange);
+      if (typeof riveWithEvents.addEventListener === 'function') {
+        riveWithEvents.addEventListener('statechange', onStateChange);
       }
       
       // Listener para el state machine específico
@@ -122,11 +141,12 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* 
       
       return () => {
         try {
-          if (typeof (rive as any).off === 'function') {
-            (rive as any).off('statechange', onStateChange);
+          const riveWithEvents = rive as unknown as RiveWithEventSystem;
+          if (typeof riveWithEvents.off === 'function') {
+            riveWithEvents.off('statechange', onStateChange);
           }
-          if (typeof (rive as any).removeEventListener === 'function') {
-            (rive as any).removeEventListener('statechange', onStateChange);
+          if (typeof riveWithEvents.removeEventListener === 'function') {
+            riveWithEvents.removeEventListener('statechange', onStateChange);
           }
         } catch {
           // console.warn('⚠️ Error limpiando listeners de RIVE:', cleanupError);
@@ -135,13 +155,13 @@ const WheelRive = forwardRef<WheelRiveRef, WheelRiveProps>(({ onSpinComplete /* 
     } catch {
       // console.warn('⚠️ Error configurando listener de RIVE:', error);
     }
-  }, [rive, onSpinComplete]);
+  }, [rive, onSpinComplete, resetSpin]);
 
   // const isCurrentlySpinning = spinning || internalSpinning; // Para debug UI
 
   return (
   <div className="w-full">                   {/* Responsivo hasta 384px */}
-    <div className="relative w-full aspect-[4/6]">             {/* Proporción exacta 1200:1000 */}
+    <div className="relative w-full aspect-[9/13]">             {/* Proporción exacta 1200:1000 */}
       <RiveComponent
         className="absolute inset-0 w-full h-full"
       />

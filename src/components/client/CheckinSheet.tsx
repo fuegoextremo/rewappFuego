@@ -62,7 +62,7 @@ export default function CheckinSheet({
           </div>
 
           <p className="text-center text-sm text-gray-600 mb-6">
-            Muestra este QR al personal de la sucursal para registrar tu visita.
+            Muestra este QR al personal de la sucursal para registrar  tu visita.
           </p>
 
           <button

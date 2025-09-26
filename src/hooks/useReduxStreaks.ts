@@ -79,19 +79,19 @@ export function useRecentActivityRedux(userId: string) {
     recentActivityLoaded, 
     recentActivityLoading,
     dataCount: recentActivity.length,
-    shouldLoad: userId && (!recentActivityLoaded || recentActivity.length === 0) && !recentActivityLoading
+    shouldLoad: userId && !recentActivityLoaded && !recentActivityLoading
   })
   
   // Cargar actividad si:
   // 1. Hay userId
-  // 2. NO se ha cargado antes O no hay datos (para nuevo usuario)
+  // 2. NO se ha cargado antes (sin importar si el resultado está vacío)
   // 3. NO se está cargando actualmente
   useEffect(() => {
-    if (userId && (!recentActivityLoaded || recentActivity.length === 0) && !recentActivityLoading) {
+    if (userId && !recentActivityLoaded && !recentActivityLoading) {
       console.log('🔄 Dispatching loadRecentActivity for userId:', userId)
       dispatch(loadRecentActivity(userId))
     }
-  }, [userId, recentActivityLoaded, recentActivityLoading, recentActivity.length, dispatch])
+  }, [userId, recentActivityLoaded, recentActivityLoading, dispatch])
   
   return {
     data: recentActivity,

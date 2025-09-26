@@ -209,7 +209,7 @@ export function AppShell({ children }: AppShellProps) {
         ease: "linear" // 🎯 Sin easing para movimiento directo
       }}
     >
-      {/* 🎯 Pull-to-refresh moderno estilo iPhone - Crea espacio real */}
+      {/* Pull-to-refresh moderno estilo iPhone - Crea espacio real */}
       <AnimatePresence>
         {(pullDistance > 0 || isRefreshing) && ( /* 🎯 Mostrar durante pull O refresh */
           <motion.div

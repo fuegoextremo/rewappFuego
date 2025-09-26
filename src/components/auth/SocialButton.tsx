@@ -1,6 +1,6 @@
 /**
  * 🔗 SOCIAL AUTH BUTTON
- * Botón reutilizable para autenticación social (Google, Facebook)
+ * Botón reutilizable      // VERIFICAR SI YA HAY SESIÓN ACTIVApara autenticación social (Google, Facebook)
  * Con diseño oficial de marcas y logos SVG
  */
 
@@ -8,7 +8,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-// import { createClientBrowser } from '@/lib/supabase/client' // Se usará cuando tengas las claves OAuth
+import { createClientBrowser } from '@/lib/supabase/client' // ✅ ACTIVADO
 
 interface SocialButtonProps {
   provider: 'google' | 'facebook'
@@ -19,7 +19,7 @@ interface SocialButtonProps {
 export function SocialButton({ provider, disabled = false, className = '' }: SocialButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
-  // const supabase = createClientBrowser() // Se usará cuando tengas las claves OAuth
+  const supabase = createClientBrowser() // ✅ ACTIVADO
 
   const providerConfig = {
     google: {
@@ -48,38 +48,47 @@ export function SocialButton({ provider, disabled = false, className = '' }: Soc
     setIsLoading(true)
     
     try {
-      // Por ahora solo mostramos un mensaje
-      // Cuando tengas las claves OAuth, aquí irá la lógica real
-      toast({
-        title: "OAuth no configurado",
-        description: `Autenticación con ${config.name} estará disponible pronto. Por ahora usa email y contraseña.`,
-        variant: "default"
-      })
+      // � VERIFICAR SI YA HAY SESIÓN ACTIVA
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Si ya está logueado, ir al callback para validación
+        console.log('Usuario ya logueado, validando perfil...')
+        
+        // Pequeña pausa para mostrar loading
+        await new Promise(resolve => setTimeout(resolve, 800))
+        
+        window.location.href = '/auth/callback'
+        return // No ejecutar setIsLoading(false) porque cambiamos de página
+      }
 
-      // CÓDIGO PARA CUANDO TENGAS LAS CLAVES:
-      /*
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      // SOLO SI NO HAY SESIÓN: HACER OAUTH
+      console.log('No hay sesión, iniciando OAuth...')
+      
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback` // Callback universal
         }
       })
 
       if (error) {
         throw error
       }
-      */
+
+      // OAuth iniciado exitosamente - la redirección externa maneja el resto
+      console.log('OAuth iniciado, redirigiendo a Facebook...')
 
     } catch (error) {
       console.error(`Error en OAuth ${provider}:`, error)
       toast({
         title: "Error de autenticación",
-        description: `No se pudo conectar con ${config.name}. Intenta más tarde.`,
+        description: `No se pudo conectar con ${config.name}. Intenta de nuevo.`,
         variant: "destructive"
       })
-    } finally {
       setIsLoading(false)
     }
+    // No hacer setIsLoading(false) aquí porque ya estamos redirigiendo
   }
 
   return (
@@ -105,7 +114,10 @@ export function SocialButton({ provider, disabled = false, className = '' }: Soc
         className="flex-shrink-0"
       />
       {isLoading ? (
-        <span>Conectando...</span>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <span>Conectando...</span>
+        </div>
       ) : (
         <span>{config.text}</span>
       )}

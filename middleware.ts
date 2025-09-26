@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // 📋 CONFIGURACIÓN DE RUTAS
-const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password']
+const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/complete-profile', '/welcome', '/auth/callback']
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password']
 
 // 🔐 PERMISOS DE RUTA (verificación básica sin DB)

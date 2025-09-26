@@ -43,10 +43,10 @@ export function RouteGuard({
           return
         }
 
-        // 3. Obtener rol del usuario desde la BD
+        // 3. Obtener perfil completo del usuario desde la BD
         const { data: profile, error: profileError } = await supabase
           .from('user_profiles')
-          .select('role')
+          .select('role, first_name, last_name, phone, birth_date')
           .eq('id', session.user.id)
           .single()
 
@@ -58,7 +58,20 @@ export function RouteGuard({
 
         const role = profile?.role
 
-        // 4. Verificar permisos de rol
+        // 4. Verificar que el perfil esté completo (solo para clientes)
+        const REQUIRED_FIELDS = ['first_name', 'last_name', 'phone', 'birth_date']
+        const isProfileComplete = REQUIRED_FIELDS.every(field => {
+          const value = profile?.[field as keyof typeof profile]
+          return value !== null && value !== undefined && value !== ''
+        })
+
+        if (!isProfileComplete && role === 'client') {
+          console.log('🚫 Perfil incompleto, redirigiendo a welcome')
+          router.push('/welcome')
+          return
+        }
+
+        // 5. Verificar permisos de rol
         if (!role || !allowedRoles.includes(role)) {
           console.log(`🚫 Rol '${role}' no autorizado. Roles permitidos:`, allowedRoles)
           
@@ -76,7 +89,7 @@ export function RouteGuard({
           return
         }
 
-        // 5. Usuario autorizado
+        // 6. Usuario autorizado
         console.log(`✅ Usuario autorizado con rol: ${role}`)
         setAuthorized(true)
 

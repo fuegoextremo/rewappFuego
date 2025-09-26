@@ -1,29 +1,13 @@
 -- ============================================
--- MIGRACIÓN: Mantener streak en último threshold al completar
+-- MIGRACIÓN URGENTE: Usar user_profiles en lugar de user_roles inexistente
 -- ============================================
--- Objetivo: Cuando se completa una racha (alcanza el último premio configurado),
--- mantener el contador en ese valor en lugar de resetearlo a 0.
--- Solo afecta el comportamiento de completación exitosa.
+-- Problema: La migración 028 usa table user_roles que no existe
+-- Solución: Usar user_profiles como en migración 017
 
--- Verificar que la función existe antes de modificarla
-DO $$ 
-BEGIN 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_proc 
-    WHERE proname = 'process_checkin' 
-    AND pg_get_function_identity_arguments(oid) = 'p_user uuid, p_branch uuid, p_spins_earned integer'
-  ) THEN
-    RAISE EXCEPTION 'Función process_checkin no encontrada. Migración abortada.';
-  END IF;
-END $$;
-
--- ============================================
--- REEMPLAZAR FUNCIÓN process_checkin
--- ============================================
 CREATE OR REPLACE FUNCTION public.process_checkin(
   p_user uuid,
   p_branch uuid,
-  p_spins_earned int
+  p_spins int DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -31,73 +15,91 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_user_record RECORD;
-  v_previous_last_checkin timestamptz;
+  v_role text;
+  v_my_branch uuid;
+  v_existing_checkins int;
+  v_final_spins int;
+  v_max_checkins_daily int;
+  v_expiry_days int;
+  v_break_days int;
+  v_max_threshold int;
+  v_new_current_count int;
   v_previous_expires_at timestamptz;
   v_streak_created_at timestamptz;
-  v_expiry_days int := 90;
-  v_break_days int := 1;
-  v_max_checkins_daily int := 1;
-  v_today_checkins int := 0;
+  v_last_checkin_date date;
+  v_was_just_completed boolean := false;
   v_streak_expired boolean := false;
   v_streak_broken boolean := false;
-  v_new_current_count int;
-  v_max_threshold int;
   v_prize_record RECORD;
 BEGIN
   -- ============================================
-  -- 1. VALIDAR USUARIO
+  -- 1. CARGAR CONFIGURACIÓN SISTEMA
   -- ============================================
-  SELECT * INTO v_user_record 
-  FROM public.user_profiles 
-  WHERE id = p_user;
-  
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Usuario % no encontrado', p_user;
-  END IF;
-
-  -- ============================================
-  -- 2. CARGAR CONFIGURACIÓN SISTEMA (CORREGIDO)
-  -- ============================================
+  v_final_spins := COALESCE(p_spins, get_system_setting('checkin_points_daily', '1')::int);
+  v_max_checkins_daily := get_system_setting('max_checkins_per_day', '1')::int;
   v_expiry_days := get_system_setting('streak_expiry_days', '90')::int;
   v_break_days := get_system_setting('streak_break_days', '1')::int;
-  v_max_checkins_daily := get_system_setting('max_checkins_per_day', '1')::int;
+
+  -- ============================================
+  -- 2. VALIDACIONES DE SEGURIDAD (COMO EN 017)
+  -- ============================================
+  SELECT role, branch_id INTO v_role, v_my_branch
+  FROM public.user_profiles WHERE id = auth.uid();
+
+  IF v_role IS NULL THEN
+    RAISE EXCEPTION 'Usuario no autenticado';
+  END IF;
+
+  IF v_role = 'verifier' AND v_my_branch IS DISTINCT FROM p_branch THEN
+    RAISE EXCEPTION 'Verificador solo puede procesar check-ins de su sucursal';
+  END IF;
 
   -- ============================================
   -- 3. VERIFICAR LÍMITE DE CHECK-INS DIARIOS
   -- ============================================
-  SELECT COUNT(*) INTO v_today_checkins
-  FROM public.check_ins
-  WHERE user_id = p_user 
-    AND check_in_date::date = CURRENT_DATE;
+  SELECT COUNT(*) INTO v_existing_checkins
+  FROM public.check_ins 
+  WHERE user_id = p_user AND check_in_date = CURRENT_DATE;
 
-  IF v_today_checkins >= v_max_checkins_daily THEN
-    RAISE EXCEPTION 'Límite de check-ins diarios alcanzado: % de %', v_today_checkins, v_max_checkins_daily;
+  IF v_existing_checkins >= v_max_checkins_daily THEN
+    RAISE EXCEPTION 'Has alcanzado el límite de check-ins diarios (%)', v_max_checkins_daily;
   END IF;
 
   -- ============================================
-  -- 4. OBTENER THRESHOLD MÁXIMO CONFIGURADO
+  -- 4. INSERTAR CHECK-IN
+  -- ============================================
+  INSERT INTO public.check_ins(user_id, branch_id, verified_by, check_in_date, spins_earned, created_at)
+  VALUES (p_user, p_branch, auth.uid(), CURRENT_DATE, v_final_spins, NOW());
+
+  -- ============================================
+  -- 5. ACTUALIZAR GIROS DISPONIBLES
+  -- ============================================
+  INSERT INTO public.user_spins(user_id, available_spins, updated_at)
+  VALUES (p_user, v_final_spins, NOW())
+  ON CONFLICT (user_id) DO UPDATE SET 
+    available_spins = user_spins.available_spins + v_final_spins,
+    updated_at = NOW();
+
+  -- ============================================
+  -- 6. OBTENER THRESHOLD MÁXIMO CONFIGURADO
   -- ============================================
   SELECT MAX(streak_threshold) INTO v_max_threshold
   FROM public.prizes 
   WHERE type = 'streak' 
     AND is_active = true 
-    AND streak_threshold IS NOT NULL
-    AND (deleted_at IS NULL);
+    AND (deleted_at IS NULL)
+    AND streak_threshold IS NOT NULL;
 
   -- ============================================
-  -- 5. CREAR CHECK-IN REGISTRO
+  -- 7. VERIFICAR ESTADO ACTUAL DE LA RACHA
   -- ============================================
-  INSERT INTO public.check_ins(user_id, branch_id, spins_earned, check_in_date, created_at)
-  VALUES (p_user, p_branch, p_spins_earned, NOW(), NOW());
-
-  -- ============================================
-  -- 6. OBTENER DATOS PREVIOS DE RACHA
-  -- ============================================
-  SELECT last_check_in, expires_at, created_at 
-  INTO v_previous_last_checkin, v_previous_expires_at, v_streak_created_at
+  SELECT current_count, expires_at, created_at, last_check_in, is_just_completed
+  INTO v_new_current_count, v_previous_expires_at, v_streak_created_at, v_last_checkin_date, v_was_just_completed
   FROM public.streaks 
   WHERE user_id = p_user;
+
+  -- Convertir last_check_in a fecha para comparación (CORREGIDO)
+  v_last_checkin_date := v_last_checkin_date::date;
 
   -- Verificar si la racha ha expirado (temporada completa)
   IF v_previous_expires_at IS NOT NULL AND v_previous_expires_at < NOW() THEN
@@ -106,13 +108,13 @@ BEGIN
 
   -- Verificar si la racha se rompió por inactividad
   IF v_streak_created_at IS NOT NULL THEN
-    IF EXTRACT(days FROM (NOW() - v_streak_created_at)) > v_break_days THEN
+    IF (CURRENT_DATE - v_last_checkin_date) > v_break_days THEN
       v_streak_broken := true;
     END IF;
   END IF;
 
   -- ============================================
-  -- 7. ACTUALIZAR/CREAR RACHA CON LÓGICA CORREGIDA
+  -- 8. ACTUALIZAR/CREAR RACHA CON LÓGICA CORREGIDA
   -- ============================================
   INSERT INTO public.streaks(
     user_id, 
@@ -137,13 +139,13 @@ BEGIN
     NOW()
   )
   ON CONFLICT (user_id) DO UPDATE SET
-    -- 🔥 CORRECCIÓN: Lógica que respeta configuración de múltiples check-ins
+    -- 🔥 LÓGICA CORREGIDA: Expiración/Ruptura van a 0, no a 1
     current_count = CASE
       -- Si estaba "recién completada", iniciar nueva racha en 1
       WHEN streaks.is_just_completed = true THEN 1
-      -- Racha expirada: Nueva temporada desde 0 (más lógico)
+      -- Racha expirada: Nueva temporada desde 0 (CORREGIDO)
       WHEN v_streak_expired THEN 0
-      -- Racha rota: Volver a 0 (más lógico)  
+      -- Racha rota: Volver a 0 (CORREGIDO)
       WHEN v_streak_broken THEN 0
       -- Último check-in fue ayer: Continuar racha incrementando
       WHEN streaks.last_check_in::date = CURRENT_DATE - INTERVAL '1 day' THEN 
@@ -151,21 +153,21 @@ BEGIN
       -- 🔥 NUEVO: Último check-in fue hoy Y permite múltiples check-ins: INCREMENTAR
       WHEN streaks.last_check_in::date = CURRENT_DATE AND v_max_checkins_daily > 1 THEN 
         streaks.current_count + 1
-      -- Último check-in fue hoy pero solo 1 check-in por día: MANTENER
-      WHEN streaks.last_check_in::date = CURRENT_DATE THEN 
+      -- Último check-in fue hoy pero solo permite 1 check-in: mantener
+      WHEN streaks.last_check_in::date = CURRENT_DATE AND v_max_checkins_daily = 1 THEN 
         streaks.current_count
-      -- Primer check-in del usuario: Iniciar en 1
+      -- Otros casos: Reiniciar
       ELSE 1
     END,
     
-    -- Reset flag de recién completada
+    -- Resetear flag de "recién completada" siempre
     is_just_completed = false,
     
     -- Actualizar max_count considerando incrementos múltiples
     max_count = CASE 
-      -- Si fue recién completada, expirada o rota: max_count no menor que 1
+      -- Si fue recién completada, expirada o rota: max_count no menor que actual
       WHEN streaks.is_just_completed = true OR v_streak_expired OR v_streak_broken THEN 
-        GREATEST(streaks.max_count, 1)
+        GREATEST(streaks.max_count, 0)
       -- Último check-in fue ayer: actualizar con nueva cuenta
       WHEN streaks.last_check_in::date = CURRENT_DATE - INTERVAL '1 day' THEN 
         GREATEST(streaks.max_count, streaks.current_count + 1)
@@ -187,14 +189,14 @@ BEGIN
     updated_at = NOW();
 
   -- ============================================
-  -- 8. OBTENER NUEVO CURRENT_COUNT PARA GENERAR CUPONES
+  -- 9. OBTENER CURRENT_COUNT ACTUALIZADO
   -- ============================================
   SELECT current_count INTO v_new_current_count
   FROM public.streaks 
   WHERE user_id = p_user;
 
   -- ============================================
-  -- 9. GENERAR CUPONES AUTOMÁTICOS POR THRESHOLD
+  -- 10. GENERAR CUPONES AUTOMÁTICOS POR THRESHOLD
   -- ============================================
   FOR v_prize_record IN 
     SELECT id, streak_threshold, validity_days, name
@@ -216,14 +218,14 @@ BEGIN
   END LOOP;
 
   -- ============================================
-  -- 10. VERIFICAR COMPLETACIÓN DE RACHA MÁXIMA
+  -- 11. VERIFICAR COMPLETACIÓN DE RACHA MÁXIMA (ÚNICO CAMBIO vs 017)
   -- ============================================
   IF v_max_threshold IS NOT NULL AND v_new_current_count >= v_max_threshold THEN
-    -- 🎯 CAMBIO ESPECÍFICO: Mantener en último threshold en lugar de resetear a 0
+    -- 🎯 CAMBIO: Mantener en último threshold en lugar de resetear a 0
     UPDATE public.streaks 
     SET 
       completed_count = completed_count + 1,
-      current_count = v_max_threshold,  -- ← NUEVO: Mantener en último threshold
+      current_count = v_max_threshold,  -- ← CAMBIO: Mantener en threshold (017 usaba: current_count = 0)
       is_just_completed = true,  -- Flag para UI temporal
       updated_at = NOW()
     WHERE user_id = p_user;
@@ -235,15 +237,11 @@ BEGIN
 END;
 $$;
 
--- ============================================
--- COMENTARIOS Y VALIDACIONES FINALES
--- ============================================
-
 COMMENT ON FUNCTION public.process_checkin(uuid, uuid, int) IS 
-'Función de check-in ACTUALIZADA: mantiene contador en último threshold al completar racha, reinicia a 0 en rupturas/expiraciones';
+'Función de check-in CORREGIDA: usa user_profiles (no user_roles) + mantiene streak completion';
 
 -- Verificar que la función se actualizó correctamente
 DO $$ 
 BEGIN 
-  RAISE NOTICE 'Función process_checkin ACTUALIZADA: streak completion mantiene último threshold, rupturas/expiraciones van a 0';
+  RAISE NOTICE 'Función process_checkin CORREGIDA: user_profiles usado correctamente como en migración 017';
 END $$;

@@ -194,7 +194,10 @@ export const performCheckin = createAsyncThunk(
       const response = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ 
+          user_id: userId, 
+          branch_id: 1 // TODO: Obtener branch_id real del usuario
+        })
       })
 
       if (!response.ok) {

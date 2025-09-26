@@ -153,17 +153,20 @@ export default function CouponCard({ coupon, isInStack = false, forceGrayStyle =
             backgroundColor: primaryColor,
             color: textColor
           }),
-          // 🎫 Mask para crear círculos laterales perforados usando radial-gradient
-        WebkitMask: `
-          radial-gradient(circle 25px at 0px 50%, transparent 25px, black 25px),
-          radial-gradient(circle 25px at 100% 50%, transparent 25px, black 25px)
-        `,
-        mask: `
-          radial-gradient(circle 25px at 0px 50%, transparent 25px, black 25px),
-          radial-gradient(circle 25px at 100% 50%, transparent 25px, black 25px)
-        `,
-        WebkitMaskComposite: 'intersect',
-        maskComposite: 'intersect'
+          // 🎫 TEMPORALMENTE COMENTADO: Mask para crear círculos laterales perforados
+          // 🍎 Verificando si causa problemas en iPhone
+          /* 
+          WebkitMask: `
+            radial-gradient(circle 25px at 0px 50%, transparent 25px, black 25px),
+            radial-gradient(circle 25px at 100% 50%, transparent 25px, black 25px)
+          `,
+          mask: `
+            radial-gradient(circle 25px at 0px 50%, transparent 25px, black 25px),
+            radial-gradient(circle 25px at 100% 50%, transparent 25px, black 25px)
+          `,
+          WebkitMaskComposite: 'intersect',
+          maskComposite: 'intersect'
+          */
       }}
     >
       <div className="px-9 py-5 relative h-full flex flex-col justify-between">        

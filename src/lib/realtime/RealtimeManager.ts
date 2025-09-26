@@ -317,7 +317,7 @@ export class RealtimeManager {
             branches: null // Se puede cargar después si es necesario
           }
           this.reduxDispatch!(prependRecentActivity(newCheckin))
-          console.log('🔥 RealtimeManager: ✅ Agregando check-in a recentActivity')
+          console.log('🔥 RealtimeManager: ✅ Agregando check-in a recentActivity:', newCheckin)
         })
       }
 
@@ -380,7 +380,7 @@ export class RealtimeManager {
             
             console.log('� REALTIME → REDUX: DESPUÉS DE ACTUALIZAR');
             console.log('✅ Streak data enviado a Redux:', streakData);
-            console.log('� Current_count que debería aparecer en UI:', streakCount);
+            console.log('🔥 Current_count que debería aparecer en UI:', streakCount);
           }
         })
       }

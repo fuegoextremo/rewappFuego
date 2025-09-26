@@ -67,9 +67,20 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
   // Encontrar siguiente premio
   const nextPrize = validPrizes.find(p => (p.streak_threshold || 0) > currentCount)
   
+  // 🎯 SIEMPRE encontrar el último premio alcanzado para mostrar su imagen
+  const lastAchievedPrize = validPrizes
+    .filter(p => (p.streak_threshold || 0) <= currentCount)
+    .sort((a, b) => (b.streak_threshold || 0) - (a.streak_threshold || 0))[0]
+
+  // 🎯 Usar imagen del último premio alcanzado (si tiene), sino imagen por defecto
+  const achievedImage = (lastAchievedPrize?.image_url && lastAchievedPrize.image_url.trim() !== '') 
+    ? lastAchievedPrize.image_url 
+    : settings?.streak_progress_default || defaultImages.progress
+
   if (!nextPrize) {
+    // 🎯 CORREGIDO: Al completar, mostrar imagen del último premio alcanzado (no genérica)
     return {
-      image: settings?.streak_complete_image || defaultImages.complete,
+      image: achievedImage, // ← CAMBIO: Era settings?.streak_complete_image
       stage: "¡Racha completa!",
       progress: 100,
       isCompleted: true
@@ -84,18 +95,9 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
   const nextThreshold = nextPrize.streak_threshold || 0
   const progress = ((currentCount - previousThreshold) / (nextThreshold - previousThreshold)) * 100
 
-  // 🎯 Encontrar el último premio alcanzado para mostrar su imagen
-  const lastAchievedPrize = validPrizes
-    .filter(p => (p.streak_threshold || 0) <= currentCount)
-    .sort((a, b) => (b.streak_threshold || 0) - (a.streak_threshold || 0))[0]
-
-  // 🎯 Usar imagen del último premio alcanzado (si tiene), sino imagen de progreso por defecto
-  const image = (lastAchievedPrize?.image_url && lastAchievedPrize.image_url.trim() !== '') 
-    ? lastAchievedPrize.image_url 
-    : settings?.streak_progress_default || defaultImages.progress
-
+  // 🎯 Usar la imagen ya calculada del último premio alcanzado
   return {
-    image,
+    image: achievedImage,
     stage: `¡Vas por buen camino!`,
     progress: Math.min(progress, 100),
     nextGoal: nextThreshold,

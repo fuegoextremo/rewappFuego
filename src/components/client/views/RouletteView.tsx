@@ -1,6 +1,7 @@
 'use client'
 
 import { useUser, useSettings } from '@/store/hooks'
+import { useSystemSettings } from "@/hooks/use-system-settings";
 import { useRoulettePrizes, getRarityFromWeight } from '@/hooks/queries/useRouletteQueries'
 import SpinButton from '@/app/client/roulette/spin-button'
 import Image from 'next/image'
@@ -11,6 +12,7 @@ import { FerrisWheel } from "lucide-react";
 export default function RouletteView() {
   const user = useUser()
   const settings = useSettings()
+  const { data: systemSettings } = useSystemSettings()
   const { data: prizes, isLoading: prizesLoading } = useRoulettePrizes()
 
   // ✨ Loading inteligente - solo necesitamos verificar prizes
@@ -61,7 +63,7 @@ export default function RouletteView() {
   // ✨ Datos desde Redux - igual que HomeView
   const availableSpins = user?.available_spins ?? 0
   const hasSpins = availableSpins > 0
-  const primaryColor = settings?.company_theme_primary || '#3B82F6'
+  const primaryColor = systemSettings?.company_theme_primary || '#3B82F6'
 
   return (
     <>

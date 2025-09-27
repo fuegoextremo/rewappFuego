@@ -37,7 +37,7 @@ export function WelcomeWizard({ currentProfile, missingFields }: WelcomeWizardPr
     window.location.href = '/client'
   }
 
-  // Ocultar hint después de 5 segundos
+  // Ocultar hint después de 8 segundos
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowMissingFieldsHint(false)

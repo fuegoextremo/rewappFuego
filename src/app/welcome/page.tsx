@@ -47,7 +47,6 @@ export default async function WelcomePage() {
 
   return (
     <WelcomeWizard 
-      userId={user.id}
       currentProfile={profile}
       missingFields={missingFields}
     />

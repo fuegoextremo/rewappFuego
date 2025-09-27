@@ -81,6 +81,14 @@ export async function GET(request: NextRequest) {
 
       console.log('OAuth successful for user:', user.id)
 
+      // 🔍 DEBUGGING: Log detallado de datos de Facebook/OAuth
+      console.log('🔍 OAuth Provider:', user.app_metadata?.provider)
+      console.log('🔍 User metadata:', JSON.stringify(user.user_metadata, null, 2))
+      console.log('🔍 Identity data:', user.identities?.map(i => ({
+        provider: i.provider,
+        identity_data: i.identity_data
+      })))
+      
       // VALIDACIÓN UNIVERSAL - todos los OAuth pasan por aquí
       const validation = await validateUserProfile(user.id)
       

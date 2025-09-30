@@ -511,6 +511,11 @@ const authSlice = createSlice({
         // 🔄 Actualizar datos completos
         state.user.streakData = { ...state.user.streakData, ...action.payload }
         
+        // 🎯 FASE 1: Log prioritario para last_check_in
+        if (action.payload.last_check_in) {
+          console.log('🟡 [FASE1] Redux: last_check_in actualizado =', action.payload.last_check_in)
+        }
+        
         // 🎯 SIEMPRE sincronizar current_streak (campo crítico para UI)
         if (action.payload.current_count !== undefined) {
           state.user.current_streak = action.payload.current_count

@@ -24,6 +24,11 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
 
   // Calcular días hasta que se rompa la racha
   const daysUntilStreakBreaks = useMemo(() => {
+    // 🎯 FASE 1: Log prioritario para verificar datos realtime
+    if (lastCheckinDate) {
+      console.log('🟦 [FASE1] StreakProgress: last_check_in desde realtime =', lastCheckinDate)
+    }
+    
     // Solución temporal: Si no tenemos lastCheckinDate pero sí una racha activa,
     // mostrar los días configurados del sistema
     if (currentStreak === 0) return null

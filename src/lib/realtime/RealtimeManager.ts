@@ -378,9 +378,8 @@ export class RealtimeManager {
             
             this.reduxDispatch!(updateUserStreakData(streakData))
             
-            console.log('� REALTIME → REDUX: DESPUÉS DE ACTUALIZAR');
-            console.log('✅ Streak data enviado a Redux:', streakData);
-            console.log('🔥 Current_count que debería aparecer en UI:', streakCount);
+            // 🎯 FASE 1: Log prioritario para last_check_in
+            console.log('� [FASE1] Realtime → Redux: last_check_in =', streakData.last_check_in);
           }
         })
       }

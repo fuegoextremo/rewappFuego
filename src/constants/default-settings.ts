@@ -35,11 +35,11 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   company_address: '',
   company_terms_conditions: 'Términos y condiciones por definir...',
   company_privacy_policy: 'Política de privacidad por definir...',
-  streak_initial_image: '/animations/streaks/streak-broken-default.png',
-  streak_progress_default: '/animations/streaks/hamburguesa_3.riv',
-  streak_complete_image: '/images/streak-start-default.png',
-  streak_broken_image: '/images/streak-broken-default.png',     // ← NUEVO: Imagen para racha rota
-  streak_expired_image: '/images/streak-start-default.png',    // ← NUEVO: Imagen para racha expirada
+  streak_initial_image: '/images/badge-default.png',
+  streak_progress_default: '/images/badge-default.png',
+  streak_complete_image: '/images/badge-default.png',
+  streak_broken_image: '/images/badge-broken-streak.png',     // ← NUEVO: Imagen para racha rota
+  streak_expired_image: '/images/badge-default.png',    // ← NUEVO: Imagen para racha expirada
   // Valores por defecto para rachas
   streak_break_days: '12',   // Romper racha después de 12 días sin check-in
   streak_expiry_days: '90',  // Expirar racha después de 90 días totales

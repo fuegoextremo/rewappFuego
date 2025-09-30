@@ -35,6 +35,7 @@ export default function HomeView() {
     user?.current_streak,
     "- realtime connected:", isConnected,
     "- redux settings loaded:", Object.keys(reduxSettings).length > 0,
+    "- max_streak:", user?.max_streak,
     "- timestamp:", new Date().toLocaleTimeString()
   );
   
@@ -194,7 +195,7 @@ export default function HomeView() {
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Flame size={26} style={{ color: primaryColor }} />
                   <span className="text-3xl font-bold text-gray-900">
-                    {user.current_streak || 0}
+                    {user.max_streak || 0}
                   </span>
                 </div>
                 <div className="text-xs text-gray-600">Racha más alta</div>

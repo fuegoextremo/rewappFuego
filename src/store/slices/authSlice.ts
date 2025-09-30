@@ -14,6 +14,7 @@ export interface User {
   // Estadísticas calculadas
   total_checkins: number       // COUNT(*) from check_ins
   current_streak: number       // current_count from streaks
+  max_streak: number           // max_count from streaks
   available_spins: number      // available_spins from user_spins
   
   // 🔥 NUEVOS: Datos detallados de streak (para eliminar React Query)
@@ -81,6 +82,7 @@ interface AuthState {
   recentActivityLoaded: boolean  // 🆕 Flag para evitar loop infinito
   streakPrizes: StreakPrize[]
   streakPrizesLoaded: boolean
+  streakPrizesLastUpdate: number | null  // 🆕 Timestamp de última actualización
 }
 
 // 🏁 ESTADO INICIAL
@@ -106,7 +108,8 @@ const initialState: AuthState = {
   recentActivityError: null,
   recentActivityLoaded: false,  // 🆕 Inicial: no se ha cargado
   streakPrizes: [],
-  streakPrizesLoaded: false
+  streakPrizesLoaded: false,
+  streakPrizesLastUpdate: null  // 🆕 Inicial: sin timestamp
 }
 
 // 🔄 ASYNC THUNKS
@@ -138,10 +141,10 @@ export const loadUserProfile = createAsyncThunk(
       .select('id')
       .eq('user_id', userId)
 
-    // 3. Cargar racha actual desde streaks (current_count)
+    // 3. Cargar racha actual desde streaks (current_count y max_count)
     const { data: streakData } = await supabase
       .from('streaks')
-      .select('current_count')
+      .select('current_count, max_count')
       .eq('user_id', userId)
       .maybeSingle()
 
@@ -154,12 +157,14 @@ export const loadUserProfile = createAsyncThunk(
 
     const totalCheckins = checkinData?.length || 0
     const currentStreak = streakData?.current_count || 0
+    const maxStreak = streakData?.max_count || 0
     const availableSpins = spinsData?.available_spins || 0
     
     console.log('🔄 loadUserProfile COMPLETED:', { 
       userId, 
       totalCheckins, 
       currentStreak, 
+      maxStreak,
       availableSpins,
       spinsData 
     });
@@ -174,6 +179,7 @@ export const loadUserProfile = createAsyncThunk(
       branch_id: profile.branch_id,
       total_checkins: totalCheckins,
       current_streak: currentStreak,
+      max_streak: maxStreak,
       available_spins: availableSpins
     }
   }
@@ -344,7 +350,14 @@ const authSlice = createSlice({
     
     updateCurrentStreak: (state, action: PayloadAction<number>) => {
       if (state.user) {
-        state.user.current_streak = action.payload
+        const newStreak = action.payload
+        state.user.current_streak = newStreak
+        
+        // 🆕 Actualizar max_streak si la racha actual es mayor
+        const currentMax = state.user.max_streak || 0
+        if (newStreak > currentMax) {
+          state.user.max_streak = newStreak
+        }
       }
     },
     
@@ -481,7 +494,7 @@ const authSlice = createSlice({
       completed_count: number, 
       is_just_completed: boolean, 
       expires_at: string | null, 
-      last_check_in: string | null 
+      last_check_in: string | null
     }>>) => {
       if (state.user) {
         // 🛡️ Garantizar inicialización robusta de streakData
@@ -501,6 +514,12 @@ const authSlice = createSlice({
         // 🎯 SIEMPRE sincronizar current_streak (campo crítico para UI)
         if (action.payload.current_count !== undefined) {
           state.user.current_streak = action.payload.current_count
+          
+          // 🆕 Actualizar max_streak si la racha actual es mayor
+          const currentMax = state.user.max_streak || 0
+          if (action.payload.current_count > currentMax) {
+            state.user.max_streak = action.payload.current_count
+          }
         }
       }
     }
@@ -607,6 +626,7 @@ const authSlice = createSlice({
       .addCase(loadStreakPrizes.fulfilled, (state, action) => {
         state.streakPrizes = action.payload
         state.streakPrizesLoaded = true
+        state.streakPrizesLastUpdate = Date.now()  // 🆕 Guardar timestamp
       })
       .addCase(loadStreakPrizes.rejected, (state, action) => {
         state.streakPrizesLoaded = false

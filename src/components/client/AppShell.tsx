@@ -7,7 +7,7 @@ import { queryKeys } from '@/lib/queryClient'
 import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
-import { loadUserProfile, loadStreakPrizes } from '@/store/slices/authSlice'
+import { loadUserProfile, loadStreakPrizes, loadUserStreakData } from '@/store/slices/authSlice'
 import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
 import confetti from 'canvas-confetti'
@@ -62,6 +62,9 @@ export function AppShell({ children }: AppShellProps) {
       await Promise.all([
         // 🔥 DATOS CRÍTICOS: Refrescar datos del usuario (realtime)
         dispatch(loadUserProfile(user.id)).unwrap(),
+        
+        // 🔥 STREAK DATA: Refrescar datos de racha incluyendo max_count
+        dispatch(loadUserStreakData(user.id)).unwrap(),
         
         // 🏆 STREAK PRIZES: Forzar reload desde Redux (temporal hasta migración a React Query)
         dispatch(loadStreakPrizes()).unwrap(),

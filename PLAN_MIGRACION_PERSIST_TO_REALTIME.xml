@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<migration_plan>
+  <title>Migración de Redux-Persist a Invalidación Natural con Realtime</title>
+  
+  <objectives>
+    <primary>Eliminar persistencia de datos dinámicos para lograr invalidación correcta</primary>
+    <secondary>Mantener realtime para datos como last_check_in para cálculos de expiración</secondary>
+    <tertiary>Permitir invalidación natural en datos de perfil (nombre, email, etc.)</tertiary>
+    <constraint>NO ROMPER funcionalidad existente</constraint>
+  </objectives>
+
+  <current_problems>
+    <problem id="1">
+      <description>Redux-persist cachea datos obsoletos indefinidamente</description>
+      <impact>Datos como max_streak no se actualizan hasta pull-to-refresh manual</impact>
+    </problem>
+    <problem id="2">
+      <description>Conflicto entre datos persistidos vs realtime</description>
+      <impact>UI muestra mezcla de datos viejos (persist) y frescos (realtime)</impact>
+    </problem>
+    <problem id="3">
+      <description>last_check_in no está en realtime pero se usa para cálculos críticos</description>
+      <impact>Componente StreakPrizesProgress calcula días incorrectamente</impact>
+    </problem>
+    <problem id="4">
+      <description>Datos de perfil (nombre, email) no se invalidan cuando usuario los cambia</description>
+      <impact>Cambios de perfil no se reflejan hasta refresh manual</impact>
+    </problem>
+  </current_problems>
+
+  <strategy>
+    <phase name="FASE 1: Preparación de Datos Realtime">
+      <description>Expandir realtime para incluir todos los datos necesarios</description>
+      <files_affected>
+        <file path="src/lib/realtime/RealtimeManager.ts">
+          <changes>
+            <change>Expandir handleStreakChange para incluir last_check_in en updateUserStreakData</change>
+            <change>Asegurar que todos los campos de streaks se envían via realtime</change>
+          </changes>
+        </file>
+        <file path="src/store/slices/authSlice.ts">
+          <changes>
+            <change>Modificar updateUserStreakData para recibir last_check_in</change>
+            <change>Asegurar que streakData incluya todos los campos necesarios</change>
+          </changes>
+        </file>
+      </files_affected>
+      <validation>
+        <test>Verificar que last_check_in llega via realtime al hacer check-in</test>
+        <test>Confirmar que StreakPrizesProgress usa datos realtime para cálculos</test>
+      </validation>
+    </phase>
+
+    <phase name="FASE 2: Separación de Datos Estáticos vs Dinámicos">
+      <description>Crear nuevo slice para datos dinámicos sin persistencia</description>
+      <files_affected>
+        <file path="src/store/slices/userDataSlice.ts" status="new">
+          <purpose>Slice dedicado para datos dinámicos (NO persistidos)</purpose>
+          <content>
+            <state>
+              - userStats: { available_spins, current_streak, max_streak, total_checkins }
+              - streakData: { current_count, completed_count, is_just_completed, expires_at, last_check_in }
+              - coupons: { active[], expired[], pagination }
+              - recentActivity: CheckInRow[]
+            </state>
+            <actions>
+              - updateUserStats
+              - updateStreakData
+              - updateCoupons
+              - updateRecentActivity
+            </actions>
+          </content>
+        </file>
+        <file path="src/store/slices/authSlice.ts">
+          <changes>
+            <change>Mantener SOLO datos estáticos del perfil</change>
+            <change>Remover: available_spins, current_streak, max_streak, streakData, coupons, recentActivity</change>
+            <change>Conservar: id, email, first_name, last_name, role, phone, branch_id, isAuthenticated</change>
+          </changes>
+        </file>
+        <file path="src/store/index.ts">
+          <changes>
+            <change>Agregar userDataSlice al rootReducer</change>
+            <change>Configurar persist para EXCLUIR userDataSlice</change>
+            <change>whitelist: ['auth', 'settings'], blacklist: ['userData', 'ui', 'roulette']</change>
+          </changes>
+        </file>
+      </files_affected>
+    </phase>
+
+    <phase name="FASE 3: Migración de Componentes">
+      <description>Actualizar components para usar ambos slices</description>
+      <files_affected>
+        <file path="src/store/hooks.ts">
+          <changes>
+            <change>Crear useUserProfile() para datos estáticos de auth</change>
+            <change>Crear useUserStats() para datos dinámicos de userData</change>
+            <change>Crear useStreakData() para datos específicos de racha</change>
+          </changes>
+        </file>
+        <file path="src/components/client/HomeView.tsx">
+          <changes>
+            <change>Usar useUserProfile() para nombre, email</change>
+            <change>Usar useUserStats() para max_streak, current_streak, available_spins</change>
+          </changes>
+        </file>
+        <file path="src/components/client/StreakPrizesProgress.tsx">
+          <changes>
+            <change>Usar useStreakData() para obtener last_check_in directo de realtime</change>
+            <change>Eliminar dependencia de user.streakData?.last_check_in</change>
+          </changes>
+        </file>
+        <file path="src/components/client/AppShell.tsx">
+          <changes>
+            <change>Actualizar pull-to-refresh para disparar ambos slices</change>
+            <change>Usar invalidación de React Query para datos estáticos</change>
+          </changes>
+        </file>
+      </files_affected>
+    </phase>
+
+    <phase name="FASE 4: Realtime Enhancement">
+      <description>Expandir realtime para cubrir datos de perfil</description>
+      <files_affected>
+        <file path="src/lib/realtime/RealtimeManager.ts">
+          <changes>
+            <change>Agregar subscripción a tabla user_profiles para cambios de perfil</change>
+            <change>Crear handleProfileChange para invalidar datos de perfil</change>
+            <change>Expandir handleStreakChange para enviar datos completos a userDataSlice</change>
+          </changes>
+        </file>
+        <file path="src/store/slices/userDataSlice.ts">
+          <changes>
+            <change>Agregar reducers para manejar updates de realtime</change>
+            <change>Implementar updateUserStatsFromRealtime</change>
+            <change>Implementar updateStreakDataFromRealtime</change>
+          </changes>
+        </file>
+      </files_affected>
+    </phase>
+
+    <phase name="FASE 5: Invalidación Natural de Perfil">
+      <description>Implementar invalidación automática para cambios de perfil</description>
+      <files_affected>
+        <file path="src/hooks/use-user-profile.ts" status="new">
+          <purpose>Hook que combina datos persistidos + invalidación reactiva</purpose>
+          <logic>
+            - Usar datos básicos de authSlice como base
+            - React Query para revalidación automática
+            - TTL corto (5 min) para datos de perfil
+            - Invalidación via realtime cuando hay cambios
+          </logic>
+        </file>
+        <file path="src/components/client/ProfileEdit.tsx">
+          <changes>
+            <change>Al guardar cambios, disparar invalidación de perfil</change>
+            <change>Usar mutation que invalide tanto Redux como React Query</change>
+          </changes>
+        </file>
+      </files_affected>
+    </phase>
+
+    <phase name="FASE 6: Cleanup y Optimización">
+      <description>Limpiar código obsoleto y optimizar carga inicial</description>
+      <files_affected>
+        <file path="src/store/slices/authSlice.ts">
+          <changes>
+            <change>Remover funciones obsoletas: loadUserStreakData, loadStreakPrizes</change>
+            <change>Simplificar loadUserProfile para solo datos básicos</change>
+          </changes>
+        </file>
+        <file path="src/components/client/AppShell.tsx">
+          <changes>
+            <change>Simplificar pull-to-refresh eliminando cargas duplicadas</change>
+            <change>Optimizar para que solo invalide lo necesario</change>
+          </changes>
+        </file>
+      </files_affected>
+    </phase>
+  </strategy>
+
+  <benefits>
+    <immediate>
+      <benefit>Datos de racha siempre frescos sin pull-to-refresh manual</benefit>
+      <benefit>last_check_in disponible via realtime para cálculos precisos</benefit>
+      <benefit>Eliminación de conflictos entre persist y realtime</benefit>
+    </immediate>
+    <medium_term>
+      <benefit>Cambios de perfil se reflejan automáticamente</benefit>
+      <benefit>Invalidación natural basada en eventos de BD</benefit>
+      <benefit>Mejor performance al cargar solo datos necesarios</benefit>
+    </medium_term>
+    <long_term>
+      <benefit>Arquitectura más mantenible con responsabilidades claras</benefit>
+      <benefit>Escalabilidad para nuevas features sin conflictos de cache</benefit>
+      <benefit>Mejor experiencia de usuario con datos siempre actualizados</benefit>
+    </long_term>
+  </benefits>
+
+  <risk_mitigation>
+    <risk id="breaking_changes">
+      <description>Cambios en estructura de state pueden romper componentes</description>
+      <mitigation>
+        <step>Migración gradual por fases</step>
+        <step>Mantener hooks existentes como wrapper durante transición</step>
+        <step>Testing exhaustivo en cada fase</step>
+      </mitigation>
+    </risk>
+    <risk id="performance_regression">
+      <description>Más calls a BD por no usar cache persistido</description>
+      <mitigation>
+        <step>React Query con TTL inteligente</step>
+        <step>Realtime reduce necesidad de polling</step>
+        <step>Background refetch para datos críticos</step>
+      </mitigation>
+    </risk>
+    <risk id="offline_experience">
+      <description>Sin persist, experiencia offline puede degradarse</description>
+      <mitigation>
+        <step>React Query mantiene cache en memoria durante sesión</step>
+        <step>Datos críticos de perfil siguen persistidos</step>
+        <step>Graceful degradation para estados offline</step>
+      </mitigation>
+    </risk>
+  </risk_mitigation>
+
+  <implementation_order>
+    <step order="1">FASE 1: Expandir realtime para last_check_in</step>
+    <step order="2">FASE 2: Crear userDataSlice y separar datos</step>
+    <step order="3">FASE 3: Migrar componentes clave (HomeView, StreakProgress)</step>
+    <step order="4">FASE 4: Expandir realtime para perfil</step>
+    <step order="5">FASE 5: Implementar invalidación de perfil</step>
+    <step order="6">FASE 6: Cleanup y optimización</step>
+  </implementation_order>
+
+  <success_criteria>
+    <criterion>max_streak se actualiza automáticamente sin pull-to-refresh</criterion>
+    <criterion>Cálculo de días para romper racha usa datos realtime precisos</criterion>
+    <criterion>Cambios de perfil se reflejan inmediatamente en UI</criterion>
+    <criterion>No hay conflictos entre datos persistidos y realtime</criterion>
+    <criterion>Performance igual o mejor que implementación actual</criterion>
+    <criterion>Funcionalidad existente mantiene comportamiento idéntico</criterion>
+  </success_criteria>
+
+  <recommendation>
+    <priority>ALTA - Problema afecta UX core de la aplicación</priority>
+    <timeline>2-3 sprints, implementación gradual por fases</timeline>
+    <start_with>FASE 1 - Es la más segura y da beneficio inmediato para cálculos de racha</start_with>
+  </recommendation>
+</migration_plan>

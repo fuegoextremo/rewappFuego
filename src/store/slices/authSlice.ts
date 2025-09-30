@@ -16,6 +16,7 @@ export interface User {
   current_streak: number       // current_count from streaks
   max_streak: number           // max_count from streaks
   available_spins: number      // available_spins from user_spins
+  last_check_in: string | null // 🎯 FASE 1: last_check_in directo (patrón consistente)
   
   // 🔥 NUEVOS: Datos detallados de streak (para eliminar React Query)
   streakData?: {
@@ -144,7 +145,7 @@ export const loadUserProfile = createAsyncThunk(
     // 3. Cargar racha actual desde streaks (current_count y max_count)
     const { data: streakData } = await supabase
       .from('streaks')
-      .select('current_count, max_count')
+      .select('current_count, max_count, last_check_in')
       .eq('user_id', userId)
       .maybeSingle()
 
@@ -158,6 +159,7 @@ export const loadUserProfile = createAsyncThunk(
     const totalCheckins = checkinData?.length || 0
     const currentStreak = streakData?.current_count || 0
     const maxStreak = streakData?.max_count || 0
+    const lastCheckin = streakData?.last_check_in || null
     const availableSpins = spinsData?.available_spins || 0
     
     console.log('🔄 loadUserProfile COMPLETED:', { 
@@ -180,7 +182,8 @@ export const loadUserProfile = createAsyncThunk(
       total_checkins: totalCheckins,
       current_streak: currentStreak,
       max_streak: maxStreak,
-      available_spins: availableSpins
+      available_spins: availableSpins,
+      last_check_in: lastCheckin
     }
   }
 )
@@ -338,6 +341,13 @@ const authSlice = createSlice({
     updateAvailableSpins: (state, action: PayloadAction<number>) => {
       if (state.user) {
         state.user.available_spins = action.payload
+      }
+    },
+
+    // 🎯 FASE 1: Reducer para last_check_in directo (patrón consistente)
+    updateLastCheckIn: (state, action: PayloadAction<string | null>) => {
+      if (state.user) {
+        state.user.last_check_in = action.payload
       }
     },
     
@@ -664,6 +674,7 @@ export const {
   setError,
   clearError,
   updateAvailableSpins,
+  updateLastCheckIn,  // 🎯 FASE 1: Export de la nueva acción
   incrementTotalCheckins,
   updateCurrentStreak,
   addAvailableSpins,

@@ -19,8 +19,17 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
   
   const currentStreak = user?.current_streak || 0
   const primaryColor = settings?.company_theme_primary || '#D73527'
-  const lastCheckinDate = user?.streakData?.last_check_in
+  const lastCheckinDate = user?.last_check_in  // 🎯 FASE 1: Usar campo directo (patrón consistente)
   const streakBreakDays = settings?.streak_break_days || 12
+
+  // 🚨 DEBUG: Investigar por qué last_check_in no está disponible
+  console.log('🔍 [DEBUG] StreakProgress - user object:', {
+    hasUser: !!user,
+    hasStreakData: !!user?.streakData,
+    streakData: user?.streakData,
+    current_streak: user?.current_streak,
+    lastCheckinDate
+  })
 
   // Calcular días hasta que se rompa la racha
   const daysUntilStreakBreaks = useMemo(() => {
@@ -192,6 +201,28 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
             >
               Visita antes de <strong>{daysUntilStreakBreaks}d</strong> para no perder la racha
             </p>
+            
+            {/* 🔍 DEBUG TEMPORAL: Mostrar datos de cálculo */}
+            <div className="mt-2 text-xs text-gray-500 space-y-1">
+              <div>📅 last_check_in: {lastCheckinDate || 'No disponible'}</div>
+              <div>⚙️ streak_break_days config: {streakBreakDays}d</div>
+              <div>🧮 Días transcurridos: {lastCheckinDate ? Math.floor((new Date().getTime() - new Date(lastCheckinDate).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A'}</div>
+              <div>🎯 Cálculo: {streakBreakDays} - {lastCheckinDate ? Math.floor((new Date().getTime() - new Date(lastCheckinDate).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A'} = {daysUntilStreakBreaks}</div>
+            </div>
+          </div>
+        )}
+
+        {/* 🔍 DEBUG TEMPORAL: Info adicional cuando no se muestra mensaje principal */}
+        {(currentStreak === 0 || daysUntilStreakBreaks === null || daysUntilStreakBreaks <= 0) && (
+          <div className="mt-4 text-center">
+            <div className="text-xs text-gray-400 space-y-1">
+              <div>🔍 DEBUG - Estado actual:</div>
+              <div>📊 current_streak: {currentStreak}</div>
+              <div>📅 last_check_in: {lastCheckinDate || 'No disponible'}</div>
+              <div>⚙️ streak_break_days: {streakBreakDays}d</div>
+              <div>⏰ daysUntilStreakBreaks: {daysUntilStreakBreaks}</div>
+              <div>🎯 Mostrar mensaje: {daysUntilStreakBreaks !== null && daysUntilStreakBreaks > 0 && currentStreak > 0 ? 'SÍ' : 'NO'}</div>
+            </div>
           </div>
         )}
     </div>

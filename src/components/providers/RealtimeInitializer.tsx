@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useRef } from 'react'
 import { useRealtimeManager } from '@/hooks/useRealtimeManager'
 import { useUser, useAppDispatch } from '@/store/hooks'
-import { loadUserProfile } from '@/store/slices/authSlice'
+import { loadUserProfile, loadUserStreakData } from '@/store/slices/authSlice'
 
 interface RealtimeInitializerProps {
   children: ReactNode
@@ -49,9 +49,12 @@ export function RealtimeInitializer({ children }: RealtimeInitializerProps) {
       })
       
       // Forzar carga de datos frescos
-      dispatch(loadUserProfile(user.id))
+      Promise.all([
+        dispatch(loadUserProfile(user.id)),
+        dispatch(loadUserStreakData(user.id))  // 🎯 FASE 1: Cargar streakData inicial
+      ])
         .then(() => {
-          console.log('✅ Sincronización inicial completada: datos frescos cargados')
+          console.log('✅ Sincronización inicial completada: datos frescos + streakData cargados')
           hasSyncedOnce.current = true
         })
         .catch((error) => {

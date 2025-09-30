@@ -354,7 +354,7 @@ export class RealtimeManager {
       
       // ✨ Actualización granular de racha usando Redux (OPTIMIZADO: solo una dispatch)
       if (this.reduxDispatch) {
-        import('@/store/slices/authSlice').then(({ updateUserStreakData }) => {
+        import('@/store/slices/authSlice').then(({ updateUserStreakData, updateLastCheckIn }) => {
           const streakCount = payload.new?.current_count as number
           if (typeof streakCount === 'number' && streakCount >= 0) {
             
@@ -364,8 +364,13 @@ export class RealtimeManager {
               current_count: streakCount,
               completed_count: payload.new?.completed_count,
               is_just_completed: payload.new?.is_just_completed,
+              last_check_in: payload.new?.last_check_in,
               user_id: payload.new?.user_id
             });
+            
+            // 🎯 FASE 1: Actualizar last_check_in usando patrón directo
+            const lastCheckIn = payload.new?.last_check_in as string | null
+            this.reduxDispatch!(updateLastCheckIn(lastCheckIn))
             
             // 🔥 OPTIMIZADO: Solo una actualización completa, evita doble re-render
             const streakData = {

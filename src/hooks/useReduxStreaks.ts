@@ -41,7 +41,7 @@ export function useUserStreakRedux(userId: string) {
       completedCount: streakData.completed_count,        // 🆕 Contador de completadas
       isJustCompleted: streakData.is_just_completed,     // 🆕 Flag temporal UI
       expiresAt: streakData.expires_at,
-      lastCheckIn: streakData.last_check_in,
+      lastCheckIn: user.last_check_in,  // 🎯 LIMPIEZA: Usar campo directo en lugar de streakData
       rawData: streakData
     } : undefined,
     isLoading: !streakData && !!userId, // Loading si hay userId pero no datos

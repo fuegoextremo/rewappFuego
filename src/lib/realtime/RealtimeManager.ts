@@ -354,7 +354,7 @@ export class RealtimeManager {
       
       // ✨ Actualización granular de racha usando Redux (OPTIMIZADO: solo una dispatch)
       if (this.reduxDispatch) {
-        import('@/store/slices/authSlice').then(({ updateUserStreakData, updateLastCheckIn }) => {
+        import('@/store/slices/authSlice').then(({ updateUserStreakData }) => {
           const streakCount = payload.new?.current_count as number
           if (typeof streakCount === 'number' && streakCount >= 0) {
             
@@ -364,27 +364,23 @@ export class RealtimeManager {
               current_count: streakCount,
               completed_count: payload.new?.completed_count,
               is_just_completed: payload.new?.is_just_completed,
-              last_check_in: payload.new?.last_check_in,
               user_id: payload.new?.user_id
             });
-            
-            // 🎯 FASE 1: Actualizar last_check_in usando patrón directo
-            const lastCheckIn = payload.new?.last_check_in as string | null
-            this.reduxDispatch!(updateLastCheckIn(lastCheckIn))
             
             // 🔥 OPTIMIZADO: Solo una actualización completa, evita doble re-render
             const streakData = {
               current_count: streakCount,
               completed_count: (payload.new?.completed_count as number) || 0,
               is_just_completed: (payload.new?.is_just_completed as boolean) || false,
-              expires_at: payload.new?.expires_at as string | null,
-              last_check_in: payload.new?.last_check_in as string | null
+              expires_at: payload.new?.expires_at as string | null
+              // 🚫 REMOVIDO: last_check_in (se maneja separadamente con updateLastCheckIn)
             }
             
             this.reduxDispatch!(updateUserStreakData(streakData))
             
-            // 🎯 FASE 1: Log prioritario para last_check_in
-            console.log('� [FASE1] Realtime → Redux: last_check_in =', streakData.last_check_in);
+            console.log('� REALTIME → REDUX: DESPUÉS DE ACTUALIZAR');
+            console.log('✅ Streak data enviado a Redux:', streakData);
+            console.log('🔥 Current_count que debería aparecer en UI:', streakCount);
           }
         })
       }

@@ -24,7 +24,7 @@ export interface User {
     completed_count: number        // 🆕 Contador de rachas completadas
     is_just_completed: boolean     // 🆕 Flag para mostrar "recién completada"
     expires_at: string | null
-    last_check_in: string | null
+    // 🚫 REMOVIDO: last_check_in (ahora campo directo user.last_check_in)
   }
 }
 
@@ -503,8 +503,8 @@ const authSlice = createSlice({
       current_count: number, 
       completed_count: number, 
       is_just_completed: boolean, 
-      expires_at: string | null, 
-      last_check_in: string | null
+      expires_at: string | null
+      // 🚫 REMOVIDO: last_check_in (ahora se maneja con updateLastCheckIn)
     }>>) => {
       if (state.user) {
         // 🛡️ Garantizar inicialización robusta de streakData
@@ -513,18 +513,13 @@ const authSlice = createSlice({
             current_count: state.user.current_streak || 0, // ← Usar valor existente como base
             completed_count: 0,
             is_just_completed: false,
-            expires_at: null,
-            last_check_in: null
+            expires_at: null
+            // 🚫 REMOVIDO: last_check_in (se maneja separadamente)
           }
         }
         
-        // 🔄 Actualizar datos completos
+        // 🔄 Actualizar datos completos (sin last_check_in)
         state.user.streakData = { ...state.user.streakData, ...action.payload }
-        
-        // 🎯 FASE 1: Log prioritario para last_check_in
-        if (action.payload.last_check_in) {
-          console.log('🟡 [FASE1] Redux: last_check_in actualizado =', action.payload.last_check_in)
-        }
         
         // 🎯 SIEMPRE sincronizar current_streak (campo crítico para UI)
         if (action.payload.current_count !== undefined) {

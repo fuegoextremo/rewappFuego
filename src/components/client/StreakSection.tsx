@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
 import { useSystemSettings } from '@/hooks/use-system-settings'
+import { useLastCheckIn } from '@/store/hooks'
 import { isRiveFile } from '@/lib/utils/fileTypes'
 import SimpleRiveLoop from './SimpleRiveLoop'
 import { motion } from 'framer-motion'
@@ -35,20 +36,46 @@ interface SystemSettings {
   streak_initial_image?: string
   streak_progress_default?: string
   streak_complete_image?: string
+  streak_broken_image?: string    // ✨ NUEVO: Para rachas rotas
   company_theme_primary?: string
 }
 
-// ✨ Función para calcular el stage basado en el currentCount y premios
-function calculateStreakStage(currentCount: number, prizes: StreakPrize[], settings: SystemSettings | undefined): StreakStage {
+// ✨ Función mejorada para calcular el stage con detección de rachas rotas
+function calculateStreakStage(
+  currentCount: number, 
+  prizes: StreakPrize[], 
+  settings: SystemSettings | undefined,
+  lastCheckIn: string | null,
+  streakBreakDays: number = 12
+): StreakStage {
   const defaultImages = {
     initial: "🔥",
     progress: "🚀", 
-    complete: "🏆"
+    complete: "🏆",
+    broken: "😴"  // ✨ NUEVO: Imagen para rachas rotas
   }
 
   // Filtrar premios válidos (con threshold no nulo)
   const validPrizes = prizes.filter(p => p.streak_threshold !== null && p.streak_threshold > 0)
     .sort((a, b) => (a.streak_threshold || 0) - (b.streak_threshold || 0))
+
+  // ✨ NUEVO: Verificar si la racha está rota por inactividad
+  if (currentCount > 0 && lastCheckIn) {
+    const daysSinceLastCheckin = Math.floor(
+      (new Date().getTime() - new Date(lastCheckIn).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    
+    if (daysSinceLastCheckin > streakBreakDays) {
+      return {
+        image: settings?.streak_broken_image || defaultImages.broken, // ✨ FIX: Usar streak_broken_image
+        stage: "Racha perdida - ¡Reinicia!",
+        progress: 0,
+        nextGoal: validPrizes[0]?.streak_threshold || 3,
+        nextReward: validPrizes[0]?.name || "Premio sorpresa",
+        canRestart: true
+      }
+    }
+  }
 
   if (currentCount === 0) {
     // 🎯 INICIO: Siempre mostrar imagen inicial (no del premio)
@@ -129,6 +156,9 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   // 🔄 CAMBIO SEGURO: Usar Redux para streakPrizes (datos estáticos)
   const streakPrizes = useSelector((state: RootState) => state.auth.streakPrizes)
   
+  // ✨ NUEVO: Obtener datos para detección de rachas rotas
+  const lastCheckIn = useLastCheckIn()
+  
   // ⚠️ MANTENER: useSystemSettings por precaución (datos dinámicos)
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   
@@ -142,14 +172,20 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
       streak_initial_image: settings.streak_initial_image,
       streak_progress_default: settings.streak_progress_default,
       streak_complete_image: settings.streak_complete_image,
+      streak_broken_image: settings.streak_broken_image, // ✨ NUEVO: Para rachas rotas
       company_theme_primary: settings.company_theme_primary
     }
   }, [settings])
   
+  // ✨ NUEVO: Obtener días para romper racha desde settings
+  const streakBreakDays = settings?.streak_break_days ? parseInt(settings.streak_break_days) : 12
+  
   console.log('🔍 StreakSection settings:', { 
     hasSettings: !!stableSettings, 
     settingsLoading,
-    settingsKeys: stableSettings ? Object.keys(stableSettings).length : 0
+    settingsKeys: stableSettings ? Object.keys(stableSettings).length : 0,
+    lastCheckIn,
+    streakBreakDays
   });
 
   // ✨ OPTIMIZACIÓN: Memoizar onError callbacks
@@ -172,10 +208,10 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   // ✨ Calcular el stage reactivamente cuando cambian los datos
   const streakStage = useMemo(() => {
     if (streakPrizes.length > 0 && stableSettings) {
-      return calculateStreakStage(currentCount, streakPrizes, stableSettings)
+      return calculateStreakStage(currentCount, streakPrizes, stableSettings, lastCheckIn, streakBreakDays)
     }
     return null
-  }, [currentCount, streakPrizes, stableSettings]) // 🎯 OPTIMIZADO: Usa stableSettings
+  }, [currentCount, streakPrizes, stableSettings, lastCheckIn, streakBreakDays]) // ✨ NUEVO: Incluir deps para detección de rachas rotas
 
   // 💎 Calcular número máximo de threshold
   const maxThreshold = useMemo(() => {

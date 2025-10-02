@@ -1,28 +1,29 @@
--- Migración para corregir solo el valor por defecto de streak_break_days en process_checkin
--- Solo cambia el fallback de '1' a '12' para consistencia
+-- Migración para corregir valor por defecto de streak_break_days y lógica de racha rota
+-- Cambios: fallback '1' → '12' + racha rota inicia en 1 (no 0) para permitir mostrar imagen "rota"
 
 CREATE OR REPLACE FUNCTION public.process_checkin(
   p_user uuid,
   p_branch uuid,
   p_spins int DEFAULT NULL
 )
-RETURNS json
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
-  v_final_spins int;
-  v_existing_checkins int;
-  v_max_checkins_daily int;
   v_role text;
   v_my_branch uuid;
-  v_new_current_count int := 0;
-  v_previous_expires_at timestamp with time zone;
-  v_streak_created_at timestamp with time zone;
-  v_last_checkin_date date;
-  v_max_threshold int;
+  v_existing_checkins int;
+  v_final_spins int;
+  v_max_checkins_daily int;
   v_expiry_days int;
   v_break_days int;
+  v_max_threshold int;
+  v_new_current_count int;
+  v_previous_expires_at timestamptz;
+  v_streak_created_at timestamptz;
+  v_last_checkin_date date;
   v_was_just_completed boolean := false;
   v_streak_expired boolean := false;
   v_streak_broken boolean := false;
@@ -142,10 +143,10 @@ BEGIN
     current_count = CASE
       -- Si estaba "recién completada", iniciar nueva racha en 1
       WHEN streaks.is_just_completed = true THEN 1
-      -- Racha expirada: Nueva temporada desde 0 (CORREGIDO)
+      -- Racha expirada: Nueva temporada desde 0 (reinicio automático de temporada)
       WHEN v_streak_expired THEN 0
-      -- Racha rota: Volver a 0 (CORREGIDO)
-      WHEN v_streak_broken THEN 0
+      -- Racha rota: Empezar nueva racha en 1 (permitir mostrar imagen "rota" antes)
+      WHEN v_streak_broken THEN 1
       -- Último check-in fue ayer: Continuar racha incrementando
       WHEN streaks.last_check_in::date = CURRENT_DATE - INTERVAL '1 day' THEN 
         streaks.current_count + 1
@@ -164,9 +165,12 @@ BEGIN
     
     -- Actualizar max_count considerando incrementos múltiples
     max_count = CASE 
-      -- Si fue recién completada, expirada o rota: max_count no menor que actual
-      WHEN streaks.is_just_completed = true OR v_streak_expired OR v_streak_broken THEN 
+      -- Si fue recién completada o expirada: mantener max actual (reinicio de temporada)
+      WHEN streaks.is_just_completed = true OR v_streak_expired THEN 
         GREATEST(streaks.max_count, 0)
+      -- Si fue rota: mantener max actual (nueva racha empezó en 1)
+      WHEN v_streak_broken THEN 
+        GREATEST(streaks.max_count, 1)
       -- Último check-in fue ayer: actualizar con nueva cuenta
       WHEN streaks.last_check_in::date = CURRENT_DATE - INTERVAL '1 day' THEN 
         GREATEST(streaks.max_count, streaks.current_count + 1)
@@ -248,22 +252,5 @@ BEGIN
     WHERE user_id = p_user;
   END IF;
 
-  -- ============================================
-  -- 12. RETORNAR RESULTADO
-  -- ============================================
-  RETURN json_build_object(
-    'success', true,
-    'current_streak', v_new_current_count,
-    'spins_earned', v_final_spins,
-    'streak_expired', v_streak_expired,
-    'streak_broken', v_streak_broken,
-    'was_just_completed', v_was_just_completed,
-    'message', CASE 
-      WHEN v_streak_expired THEN 'Nueva temporada iniciada'
-      WHEN v_streak_broken THEN 'Racha reiniciada por inactividad'
-      WHEN v_was_just_completed THEN 'Nueva racha iniciada tras completar la anterior'
-      ELSE 'Check-in procesado exitosamente'
-    END
-  );
 END;
 $$;

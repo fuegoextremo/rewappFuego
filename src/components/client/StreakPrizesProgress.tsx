@@ -5,7 +5,6 @@ import Image from 'next/image'
 import React from 'react'
 import { useCurrentStreak, useLastCheckIn } from '@/store/hooks'
 import { useSystemSettings } from '@/hooks/use-system-settings'
-//import { useAdvancedStreaks } from '@/hooks/useAdvancedStreaks'
 import { useStreakPrizesRedux } from '@/hooks/useReduxStreaks'
 
 interface StreakPrizesProgressProps {

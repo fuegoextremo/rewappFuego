@@ -3,7 +3,7 @@
 import { useUser, useSettings, useAvailableSpins } from '@/store/hooks'
 import { useSystemSettings } from "@/hooks/use-system-settings";
 import { useRoulettePrizes, getRarityFromWeight } from '@/hooks/queries/useRouletteQueries'
-import SpinButton from '@/app/client/roulette/spin-button'
+import SpinButton from '@/components/client/SpinButton'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { FloatingHeader } from '@/components/client/FloatingHeader'

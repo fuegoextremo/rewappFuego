@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useUser, useSetting } from '@/store/hooks'
+import { useSetting, useStreakCount } from '@/store/hooks'
 import { StreakPrizeItem } from './StreakPrizeItem'
 import { useStreakPrizesRedux } from '@/hooks/useReduxStreaks'
 import { Trophy } from "lucide-react";
@@ -20,13 +20,13 @@ export function StreakPrizesList({
   maxItems,
   className = '' 
 }: StreakPrizesListProps) {
-  const user = useUser()
   const { data: realStreakPrizes, isLoading } = useStreakPrizesRedux()
   
   // Check if component should be visible
   const showComponent = useSetting('show_streak_prizes_list') || process.env.NEXT_PUBLIC_SHOW_STREAK_PRIZES === 'true'
   
-  const currentStreak = user?.current_streak || 0
+  // 🔄 MIGRATED: Use new userData hook instead of user.current_streak
+  const currentStreak = useStreakCount()
 
   const { data: settings } = useSystemSettings();
 const primaryColor = settings?.company_theme_primary || "#D73527";

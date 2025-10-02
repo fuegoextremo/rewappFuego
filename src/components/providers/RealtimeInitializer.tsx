@@ -3,7 +3,8 @@
 import { ReactNode, useEffect, useRef } from 'react'
 import { useRealtimeManager } from '@/hooks/useRealtimeManager'
 import { useUser, useAppDispatch } from '@/store/hooks'
-import { loadUserProfile, loadUserStreakData } from '@/store/slices/authSlice'
+import { loadUserProfile } from '@/store/slices/authSlice'
+import { loadUserStats, loadStreakData } from '@/store/slices/userDataSlice'
 
 interface RealtimeInitializerProps {
   children: ReactNode
@@ -28,13 +29,10 @@ export function RealtimeInitializer({ children }: RealtimeInitializerProps) {
     // Solo ejecutar si hay usuario autenticado
     if (!user?.id) return
     
-    // Verificar si faltan datos críticos
-    const missingCriticalData = user.current_streak === undefined || 
-                               user.available_spins === undefined ||
-                               user.total_checkins === undefined
+    // Verificar si faltan datos críticos (solo datos estáticos en authSlice)
+    const missingCriticalData = user.total_checkins === undefined
     
     // 🚀 NUEVA LÓGICA: Forzar sincronización en primer mount O si faltan datos
-    // Esto resuelve el caso de datos "completos" pero obsoletos en Redux
     const shouldSync = missingCriticalData || !hasSyncedOnce.current
 
     if (shouldSync) {
@@ -42,19 +40,18 @@ export function RealtimeInitializer({ children }: RealtimeInitializerProps) {
       
       console.log(`🔄 Sincronización inicial: ${reason}`, {
         userId: user.id,
-        current_streak: user.current_streak,
-        available_spins: user.available_spins,
         total_checkins: user.total_checkins,
         hasSyncedBefore: hasSyncedOnce.current
       })
       
       // Forzar carga de datos frescos
       Promise.all([
-        dispatch(loadUserProfile(user.id)),
-        dispatch(loadUserStreakData(user.id))  // 🎯 FASE 1: Cargar streakData inicial
+        dispatch(loadUserProfile(user.id)),     // authSlice: datos estáticos
+        dispatch(loadUserStats(user.id)),       // userData: userStats
+        dispatch(loadStreakData(user.id))       // userData: streakData
       ])
         .then(() => {
-          console.log('✅ Sincronización inicial completada: datos frescos + streakData cargados')
+          console.log('✅ Sincronización inicial completada: authSlice + userData cargados')
           hasSyncedOnce.current = true
         })
         .catch((error) => {
@@ -62,12 +59,10 @@ export function RealtimeInitializer({ children }: RealtimeInitializerProps) {
         })
     } else {
       console.log('✅ Sincronización inicial ya ejecutada en esta sesión', {
-        current_streak: user.current_streak,
-        available_spins: user.available_spins,
         total_checkins: user.total_checkins
       })
     }
-  }, [user?.id, user?.current_streak, user?.available_spins, user?.total_checkins, dispatch])
+  }, [user?.id, user?.total_checkins, dispatch])
 
   // No necesita envolver children en ningún Context, solo inicializa
   return <>{children}</>

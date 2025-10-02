@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import Image from 'next/image'
 import React from 'react'
-import { useUser } from '@/store/hooks'
+import { useCurrentStreak, useLastCheckIn } from '@/store/hooks'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 //import { useAdvancedStreaks } from '@/hooks/useAdvancedStreaks'
 import { useStreakPrizesRedux } from '@/hooks/useReduxStreaks'
@@ -13,23 +13,20 @@ interface StreakPrizesProgressProps {
 }
 
 export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps) {
-  const user = useUser()
+  // Solo usar datos dinámicos de userData (sin persist)
   const { data: settings } = useSystemSettings()
   const { data: streakPrizes, isLoading } = useStreakPrizesRedux()
   
-  const currentStreak = user?.current_streak || 0
+  const currentStreak = useCurrentStreak()
   const primaryColor = settings?.company_theme_primary || '#D73527'
-  const lastCheckinDate = user?.last_check_in  // 🎯 FASE 1: Usar campo directo (patrón consistente)
+  const lastCheckinDate = useLastCheckIn()
   const streakBreakDays = settings?.streak_break_days || 12
 
-  // 🚨 DEBUG: Investigar por qué last_check_in no está disponible
-  console.log('🔍 [DEBUG] StreakProgress - user object:', {
-    hasUser: !!user,
-    hasStreakData: !!user?.streakData,
-    streakData: user?.streakData,
-    current_streak: user?.current_streak,
-    lastCheckinDate
-  })
+  // ✅ MIGRACIÓN COMPLETADA: sin logs para evitar ruido en consola
+  // console.log('✅ [MIGRACIÓN] StreakProgress usando userData:', {
+  //   currentStreak,
+  //   lastCheckinDate
+  // })
 
   // Calcular días hasta que se rompa la racha
   const daysUntilStreakBreaks = useMemo(() => {

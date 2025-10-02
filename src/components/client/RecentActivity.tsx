@@ -13,15 +13,15 @@ export function RecentActivity({ userId }: Props) {
   const { data: checkIns = [], isLoading, error } = useRecentActivityRedux(userId)
   const { data: settings } = useSystemSettings()
 
-  // 🔍 Debug logging mejorado
-  console.log('🔍 RecentActivity render:', { 
-    userId, 
-    checkInsCount: checkIns.length, 
-    isLoading, 
-    error,
-    latestCheckIn: checkIns[0]?.created_at,
-    allCheckIns: checkIns.map(c => ({ id: c.id, date: c.check_in_date, created: c.created_at }))
-  })
+  // ✅ Debug logs eliminados para evitar ruido
+  // console.log('🔍 RecentActivity render:', { 
+  //   userId, 
+  //   checkInsCount: checkIns.length, 
+  //   isLoading, 
+  //   error,
+  //   latestCheckIn: checkIns[0]?.created_at,
+  //   allCheckIns: checkIns.map(c => ({ id: c.id, date: c.check_in_date, created: c.created_at }))
+  // })
 
   const primaryColor = settings?.company_theme_primary || '#D73527'
 

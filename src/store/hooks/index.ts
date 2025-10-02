@@ -21,6 +21,24 @@ export const useIsInitialLoading = () => useAppSelector(state => state.auth.isIn
 export const useIsSilentRefreshing = () => useAppSelector(state => state.auth.isSilentRefreshing)
 export const useAuthError = () => useAppSelector(state => state.auth.error)
 
+// FASE 3: HOOKS PARA DATOS DINÁMICOS (userData slice - NO persistidos)
+export const useCurrentStreak = () => useAppSelector(state => state.userData?.streakData?.current_count || 0)
+export const useMaxStreak = () => useAppSelector(state => state.userData?.userStats?.max_streak || 0)
+export const useAvailableSpins = () => useAppSelector(state => state.userData?.userStats?.available_spins || 0)
+export const useLastCheckIn = () => useAppSelector(state => state.userData?.userStats?.last_check_in || null)
+export const useTotalCheckIns = () => useAppSelector(state => state.userData?.userStats?.total_checkins || 0)
+
+// Hooks para datos de racha específicos
+export const useStreakData = () => useAppSelector(state => state.userData?.streakData)
+export const useStreakCount = () => useAppSelector(state => state.userData?.streakData?.current_count || 0)
+export const useCompletedStreaks = () => useAppSelector(state => state.userData?.streakData?.completed_count || 0)
+export const useIsStreakJustCompleted = () => useAppSelector(state => state.userData?.streakData?.is_just_completed || false)
+
+// Hooks para cupones
+export const useCoupons = () => useAppSelector(state => state.userData?.coupons)
+export const useActiveCoupons = () => useAppSelector(state => state.userData?.coupons?.active || [])
+export const useExpiredCoupons = () => useAppSelector(state => state.userData?.coupons?.expired || [])
+
 // 🎨 SELECTORES DE UI
 export const useCurrentView = () => useAppSelector(state => state.ui.currentView)
 export const useOpenCheckin = () => useAppSelector(state => state.ui.openCheckin)

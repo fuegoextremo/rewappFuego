@@ -1,4 +1,4 @@
-import { useAppDispatch, useUser, useSettings } from "@/store/hooks";
+import { useAppDispatch, useUser, useCurrentStreak, useAvailableSpins, useMaxStreak } from "@/store/hooks";
 import { setCurrentView } from "@/store/slices/uiSlice";
 import { useBlockedDispatch } from "@/hooks/useBlockedDispatch";
 import { useSystemSettings } from "@/hooks/use-system-settings";
@@ -9,6 +9,7 @@ import { RecentActivity } from "@/components/client/RecentActivity";
 import { StreakPrizesList } from "@/components/client/StreakPrizesList";
 import { StreakPrizesProgress } from "@/components/client/StreakPrizesProgress";
 import { FloatingHeader } from "@/components/client/FloatingHeader";
+import { SimpleStreakTest } from "@/components/debug/SimpleStreakTest"; // 🧪 DEBUG
 //import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
 import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { FerrisWheel, Flame, History } from "lucide-react";
@@ -18,11 +19,16 @@ import { motion } from 'framer-motion';
 export default function HomeView() {
   const dispatch = useAppDispatch();
   const blockedDispatch = useBlockedDispatch();
-  const user = useUser();
+  const user = useUser(); // Solo para datos estáticos (id, name, email)
   const { data: settings } = useSystemSettings();
   
-  // 🔧 Redux settings para el contador de racha (sincrónicos)
-  const reduxSettings = useSettings();
+  // 🎯 MIGRACIÓN: Usar hooks de userData para datos dinámicos
+  const currentStreak = useCurrentStreak()
+  const availableSpins = useAvailableSpins()
+  const maxStreak = useMaxStreak()
+  
+  // 🔧 Redux settings (para futuro uso)
+  // const reduxSettings = useSettings();
 
   // Crear dispatch wrapper que respeta el bloqueo
   const safeDispatch = blockedDispatch(dispatch);
@@ -30,62 +36,28 @@ export default function HomeView() {
   // ✨ Solo obtener el estado de conexión (la conexión es automática)
   const { isConnected } = useUserRealtime()
 
-  console.log(
-    "🔍 HomeView render - user?.current_streak:",
-    user?.current_streak,
-    "- realtime connected:", isConnected,
-    "- redux settings loaded:", Object.keys(reduxSettings).length > 0,
-    "- max_streak:", user?.max_streak,
-    "- timestamp:", new Date().toLocaleTimeString()
-  );
+  // ✅ MIGRACIÓN COMPLETADA: sin logs para evitar ruido
+  // console.log(
+  //   "🔍 HomeView render - currentStreak (userData):",
+  //   currentStreak,
+  //   "- realtime connected:", isConnected,
+  //   "- redux settings loaded:", Object.keys(reduxSettings).length > 0,
+  //   "- max_streak:", maxStreak,
+  //   "- timestamp:", new Date().toLocaleTimeString()
+  // );
   
-  // 🔍 LOG ADICIONAL: Estado completo del usuario
-  console.log('🟦 REDUX STATE en HomeView:', {
-    current_streak: user?.current_streak,
-    available_spins: user?.available_spins,
-    total_checkins: user?.total_checkins,
-    userId: user?.id,
-    realtimeConnected: isConnected
-  });
+  // console.log('🟦 MIGRACIÓN HomeView:', {
+  //   'currentStreak (userData)': currentStreak,
+  //   'availableSpins (userData)': availableSpins,
+  //   'user.id': user?.id,
+  //   'user.email': user?.email,
+  //   total_checkins: user?.total_checkins,
+  //   userId: user?.id,
+  //   realtimeConnected: isConnected
+  // });
 
-  // 🧪 TESTING TEMPORAL: Función para simular datos obsoletos
-  if (typeof window !== 'undefined') {
-    (window as unknown as Record<string, unknown>).testObsoleteData = () => {
-      console.log('🧪 Simulando datos obsoletos...')
-      console.log('🔍 Usuario actual antes:', {
-        current_streak: user?.current_streak,
-        available_spins: user?.available_spins
-      })
-      
-      // ✅ Crear usuario completo con datos modificados
-      const modifiedUser = {
-        ...user,
-        current_streak: 5,
-        available_spins: 2
-      }
-      
-      console.log('🔍 Usuario modificado a enviar:', {
-        current_streak: modifiedUser.current_streak,
-        available_spins: modifiedUser.available_spins
-      })
-      
-      // ✅ Usar dispatch directo en lugar de safeDispatch
-      dispatch({
-        type: 'auth/setUser',
-        payload: modifiedUser
-      })
-      
-      console.log('🧪 Dispatch directo ejecutado con datos obsoletos')
-    }
-    
-    (window as unknown as Record<string, unknown>).testCurrentState = () => {
-      console.log('🔍 Estado actual:', {
-        current_streak: user?.current_streak,
-        available_spins: user?.available_spins
-      })
-    }
-  }
-
+  // ❌ ELIMINADO: Testing functions obsoletas
+  
   if (!user) {
     return (
       <>
@@ -108,11 +80,14 @@ export default function HomeView() {
   const companyName = settings?.company_name || "Fuego Rewards";
   const primaryColor = settings?.company_theme_primary || "#D73527";
   {
-    /*const hasStreak = (user.current_streak || 0) > 0*/
+    /*const hasStreak = currentStreak > 0*/
   }
 
   return (
     <>
+      {/* 🧪 DEBUG: Test component */}
+      <SimpleStreakTest />
+      
       {/* Floating Header - Fixed at top */}
       <FloatingHeader />
 
@@ -165,7 +140,7 @@ export default function HomeView() {
             transition={{ delay: 0.2 }}
           >
             <StreakSection 
-              currentCount={user?.current_streak || 0} 
+              currentCount={currentStreak} 
               isLoading={false} 
             />
           </motion.div>
@@ -195,7 +170,7 @@ export default function HomeView() {
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Flame size={26} style={{ color: primaryColor }} />
                   <span className="text-3xl font-bold text-gray-900">
-                    {user.max_streak || 0}
+                    {maxStreak}
                   </span>
                 </div>
                 <div className="text-xs text-gray-600">Racha más alta</div>
@@ -212,7 +187,7 @@ export default function HomeView() {
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <FerrisWheel size={26} className="text-gray-700" />
                   <span className="text-3xl font-bold text-gray-900">
-                    {user.available_spins || 0}
+                    {availableSpins}
                   </span>
                 </div>
                 <div className="text-xs text-gray-600">Giros de ruleta</div>

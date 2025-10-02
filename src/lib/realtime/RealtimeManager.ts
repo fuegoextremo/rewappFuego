@@ -5,6 +5,10 @@ import type { AppDispatch } from '@/store'
 import type { CouponRow } from '@/store/slices/authSlice'
 // 🔔 NUEVO: Importar NotificationService de forma SEGURA
 import NotificationService from '@/lib/services/notifications'
+// 🎯 MIGRACIÓN: Imports estáticos para evitar problemas
+import { updateStreakData, updateUserStats } from '@/store/slices/userDataSlice'
+// 🫀 NEW: Connection Health Monitor
+import { connectionHealthMonitor } from './ConnectionHealthMonitor'
 
 // 🚀 FASE 1.3: Sistema de logging estructurado
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
@@ -197,7 +201,9 @@ export class RealtimeManager {
           eventType: payload.eventType,
           userId: payload.new?.user_id,
           currentUserId: this.currentUserId,
-          currentCount: payload.new?.current_count
+          currentCount: payload.new?.current_count,
+          maxCount: payload.new?.max_count,
+          fullPayload: payload.new
         });
         this.handleStreakChange(payload)
       })
@@ -211,6 +217,29 @@ export class RealtimeManager {
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           RealtimeLogger.info('connect', 'Conexión unificada establecida exitosamente', { userId })
+          
+          // 🫀 Inicializar health monitor después de conexión exitosa
+          connectionHealthMonitor.start({
+            onSendHeartbeat: () => {
+              // Enviar heartbeat via broadcast para verificar conectividad
+              if (this.channel) {
+                this.channel.send({
+                  type: 'broadcast',
+                  event: 'heartbeat_ping',
+                  payload: { timestamp: Date.now() }
+                })
+              }
+            },
+            onReconnectNeeded: () => {
+              console.log('🔄 Health monitor detectó conexión muerta - reconectando...')
+              const currentUserId = this.currentUserId
+              this.disconnect()
+              if (currentUserId) {
+                setTimeout(() => this.connect(currentUserId), 2000)
+              }
+            }
+          })
+          
         } else if (status === 'CHANNEL_ERROR') {
           RealtimeLogger.error('connect', 'Error en canal realtime', { userId, status })
         } else {
@@ -228,6 +257,9 @@ export class RealtimeManager {
       this.currentUserId = null
     }
     
+    // 🫀 Detener health monitor al desconectar
+    connectionHealthMonitor.stop()
+    
     // 🚀 IMPORTANTE: NO hacer cleanup de Page Visibility aquí
     // ❌ this.cleanupPageVisibility() - Se mantiene activo para el singleton
     // 🔄 Solo reset el estado de pausa
@@ -236,6 +268,9 @@ export class RealtimeManager {
 
   // Handlers para eventos específicos
   private handleUserSpinsChange(payload: RealtimePayload) {
+    // 🫀 Notificar health monitor que recibimos datos
+    connectionHealthMonitor.notifyDataReceived()
+    
     if (payload.new && payload.new.user_id === this.currentUserId) {
       const newSpins = payload.new.available_spins as number
       const oldSpins = (payload.old?.available_spins as number) || 0
@@ -247,12 +282,11 @@ export class RealtimeManager {
         userId: this.currentUserId 
       })
       
-      // ✨ Actualizar solo Redux - fuente única de verdad para giros
+      // ✅ MIGRACIÓN COMPLETA: Solo actualizar userDataSlice (fuente única de verdad)
       if (this.reduxDispatch) {
-        // Importamos dinámicamente para evitar dependencias circulares
-        import('@/store/slices/authSlice').then(({ updateAvailableSpins }) => {
-          this.reduxDispatch!(updateAvailableSpins(newSpins))
-          RealtimeLogger.info('user-spins', 'Redux store actualizado exitosamente', { newSpins })
+        import('@/store/slices/userDataSlice').then(({ updateUserStats }) => {
+          this.reduxDispatch!(updateUserStats({ available_spins: newSpins }))
+          RealtimeLogger.info('user-spins', 'userData store actualizado exitosamente', { newSpins })
         })
       }
 
@@ -285,6 +319,9 @@ export class RealtimeManager {
   }
 
   private handleCheckinChange(payload: RealtimePayload) {
+    // 🫀 Notificar health monitor que recibimos datos
+    connectionHealthMonitor.notifyDataReceived()
+    
     RealtimeLogger.debug('check-ins', 'handleCheckinChange llamado', { payload })
     if (payload.new && payload.new.user_id === this.currentUserId) {
       RealtimeLogger.info('check-ins', 'Nuevo checkin detectado para usuario actual', { 
@@ -349,40 +386,62 @@ export class RealtimeManager {
   }
 
   private handleStreakChange(payload: RealtimePayload) {
+    // 🫀 Notificar health monitor que recibimos datos
+    connectionHealthMonitor.notifyDataReceived()
+    
     if (payload.new && payload.new.user_id === this.currentUserId) {
       console.log('🔥 RealtimeManager: Streak payload completo:', payload.new)
       
-      // ✨ Actualización granular de racha usando Redux (OPTIMIZADO: solo una dispatch)
+      // ✅ MIGRACIÓN COMPLETA: Solo actualizar userDataSlice (fuente única de verdad)
       if (this.reduxDispatch) {
-        import('@/store/slices/authSlice').then(({ updateUserStreakData }) => {
-          const streakCount = payload.new?.current_count as number
-          if (typeof streakCount === 'number' && streakCount >= 0) {
-            
-            // 🔍 LOG DETALLADO: Estado antes y después
-            console.log('🟦 REALTIME → REDUX: ANTES DE ACTUALIZAR');
-            console.log('📊 Datos del realtime:', {
-              current_count: streakCount,
-              completed_count: payload.new?.completed_count,
-              is_just_completed: payload.new?.is_just_completed,
-              user_id: payload.new?.user_id
-            });
-            
-            // 🔥 OPTIMIZADO: Solo una actualización completa, evita doble re-render
-            const streakData = {
-              current_count: streakCount,
-              completed_count: (payload.new?.completed_count as number) || 0,
-              is_just_completed: (payload.new?.is_just_completed as boolean) || false,
-              expires_at: payload.new?.expires_at as string | null
-              // 🚫 REMOVIDO: last_check_in (se maneja separadamente con updateLastCheckIn)
-            }
-            
-            this.reduxDispatch!(updateUserStreakData(streakData))
-            
-            console.log('� REALTIME → REDUX: DESPUÉS DE ACTUALIZAR');
-            console.log('✅ Streak data enviado a Redux:', streakData);
-            console.log('🔥 Current_count que debería aparecer en UI:', streakCount);
+        const currentCount = payload.new?.current_count as number
+        if (typeof currentCount === 'number' && currentCount >= 0) {
+          console.log('🔄 Procesando cambio de streak:', { currentCount, maxCount: payload.new?.max_count })
+          
+          // Actualizar streakData completo (fuente única de verdad para current_count)
+          const userDataStreakData = {
+            current_count: currentCount,
+            completed_count: (payload.new?.completed_count as number) || 0,
+            is_just_completed: (payload.new?.is_just_completed as boolean) || false,
+            expires_at: payload.new?.expires_at as string | null,
+            last_check_in: payload.new?.last_check_in as string | null
           }
-        })
+          
+          try {
+            this.reduxDispatch!(updateStreakData(userDataStreakData))
+            console.log('✅ updateStreakData dispatch exitoso:', userDataStreakData)
+          } catch (error) {
+            console.error('❌ Error en updateStreakData:', error)
+          }
+          
+          // Actualizar userStats con last_check_in y max_streak si es necesario
+          const userStatsUpdate: Partial<{
+            last_check_in: string | null
+            max_streak: number
+          }> = {
+            last_check_in: payload.new?.last_check_in as string | null
+          }
+          
+          // 🔥 LÓGICA max_streak: Usar max_count del payload (ya calculado en el servidor)
+          const maxCount = (payload.new?.max_count as number)
+          if (typeof maxCount === 'number' && maxCount >= 0) {
+            userStatsUpdate.max_streak = maxCount
+            console.log('🏆 max_streak actualizado vía realtime:', maxCount)
+          }
+          
+          try {
+            this.reduxDispatch!(updateUserStats(userStatsUpdate))
+            console.log('✅ updateUserStats dispatch exitoso:', userStatsUpdate)
+          } catch (error) {
+            console.error('❌ Error en updateUserStats:', error)
+          }
+          
+          console.log('✅ MIGRACIÓN: userData actualizado completo');
+        } else {
+          console.warn('⚠️ currentCount inválido:', currentCount)
+        }
+      } else {
+        console.error('❌ reduxDispatch no disponible')
       }
 
       this.callbacks.onStreakUpdate?.({
@@ -406,6 +465,9 @@ export class RealtimeManager {
   }
 
   private handleCouponChange(payload: RealtimePayload) {
+    // 🫀 Notificar health monitor que recibimos datos
+    connectionHealthMonitor.notifyDataReceived()
+    
     if (payload.new && payload.new.user_id === this.currentUserId) {
       // ✨ Actualizar Redux directamente - fuente única de verdad
       if (this.reduxDispatch) {
@@ -567,38 +629,48 @@ export class RealtimeManager {
     }
     
     this.visibilityListener = () => {
-      if (document.hidden) {
-        console.log('🌙 PESTAÑA OCULTA - RealtimeManager pausando...')
-        this.pause()
-      } else {
-        console.log('📱 PESTAÑA VISIBLE - RealtimeManager resumiendo...')
-        this.resume()
-      }
+      console.log('⚠️ Page Visibility DESHABILITADO temporalmente para evitar pausas/resumenes')
+      // if (document.hidden) {
+      //   console.log('🌙 PESTAÑA OCULTA - RealtimeManager pausando...')
+      //   this.pause()
+      // } else {
+      //   console.log('📱 PESTAÑA VISIBLE - RealtimeManager resumiendo...')
+      //   this.resume()
+      // }
     }
     
-    // 🎯 Window Focus Listeners
+    // 🎯 Window Focus Listeners - TEMPORALMENTE DESHABILITADOS para debugging
     this.windowBlurListener = () => {
-      console.log('🌙 VENTANA SIN FOCO - RealtimeManager pausando...')
-      this.pause()
+      console.log('⚠️ windowBlur DESHABILITADO temporalmente para evitar pausas')
+      // Solo pausar si la ventana realmente está inactiva por más tiempo
+      // console.log('🌙 VENTANA SIN FOCO - Programando pausa en 2s...')
+      // setTimeout(() => {
+      //   if (document.visibilityState === 'hidden' || !document.hasFocus()) {
+      //     console.log('🔴 Pausando realtime por inactividad confirmada')
+      //     this.pause()
+      //   } else {
+      //     console.log('✅ Ventana volvió al foco - no pausar')
+      //   }
+      // }, 2000) // Delay de 2 segundos para evitar pausas innecesarias
     }
     
     this.windowFocusListener = () => {
-      console.log('📱 VENTANA CON FOCO - RealtimeManager resumiendo...')
-      this.resume()
+      console.log('⚠️ windowFocus DESHABILITADO temporalmente para evitar resumenes')
+      // console.log('📱 VENTANA CON FOCO - RealtimeManager resumiendo...')
+      // this.resume()
     }
     
-    // 🎯 Page Visibility API - pausa cuando la pestaña se oculta
-    document.addEventListener('visibilitychange', this.visibilityListener)
-    
-    // 🎯 Window Focus API - pausa cuando la ventana pierde foco
-    window.addEventListener('blur', this.windowBlurListener)
-    window.addEventListener('focus', this.windowFocusListener)
-    
-    console.log('✅ Page Visibility API y Window Focus inicializados - Cambiar de pestaña o foco para ver logs')
-    RealtimeLogger.info('page-visibility', 'Page Visibility API y Window Focus inicializados exitosamente')
+    // Configurar heartbeat monitoring en lugar de Page Visibility
+    // TODO: Implementar sistema de heartbeat después de resolver problemas de sintaxis
+    console.log('🫀 Heartbeat monitoring inicializado (simplificado)')
   }
-  
-  private pause() {
+
+  // 🎯 TEMPORALMENTE DESHABILITADO - Page Visibility API 
+  // TODO: Re-implementar con heartbeat inteligente después de resolver re-renders
+  private setupPageVisibilityHandlers(): void {
+    console.log('⚠️ Page Visibility API DESHABILITADO temporalmente - usando heartbeat en su lugar')
+    RealtimeLogger.info('page-visibility', 'Page Visibility API deshabilitado, heartbeat monitoring activo')
+  }  private pause() {
     if (this.isPaused) return
     
     console.log('🔴 PAUSE: Conexión realtime pausada por Page Visibility API')

@@ -1,5 +1,5 @@
 'use client'
-import { useCurrentView, useAppDispatch, useUser } from '@/store/hooks'
+import { useCurrentView, useAppDispatch, useAvailableSpins } from '@/store/hooks'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import { setCurrentView } from '@/store/slices/uiSlice'
 import { useBlockedDispatch } from '@/hooks/useBlockedDispatch'
@@ -19,13 +19,12 @@ export function BottomNav({ onCheckinClick }: { onCheckinClick?: () => void }) {
   const blockedDispatch = useBlockedDispatch()
   const currentView = useCurrentView()
   const { data: settings } = useSystemSettings()
-  const user = useUser()
+  const availableSpins = useAvailableSpins() // 🎯 Hook de userData para available_spins
   
   // Crear dispatch wrapper que respeta el bloqueo
   const safeDispatch = blockedDispatch(dispatch)
   
   const primaryColor = settings?.company_theme_primary || '#D73527'
-  const availableSpins = user?.available_spins ?? 0
   
   // 📜 Auto-scroll al top cuando cambia de sección
   useEffect(() => {

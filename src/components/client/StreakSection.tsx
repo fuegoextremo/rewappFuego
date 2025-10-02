@@ -105,32 +105,10 @@ function calculateStreakStage(currentCount: number, prizes: StreakPrize[], setti
   }
 }
 
-// 🔍 Custom comparison function para debugging
+// ✅ Custom comparison function optimizada (sin logs)
 const areStreakPropsEqual = (prevProps: Props, nextProps: Props) => {
-  console.log('🔍 React.memo comparación ejecutada:', {
-    prevCount: prevProps.currentCount,
-    nextCount: nextProps.currentCount,
-    prevLoading: prevProps.isLoading,
-    nextLoading: nextProps.isLoading
-  })
-  
-  const areEqual = prevProps.currentCount === nextProps.currentCount && 
-                   prevProps.isLoading === nextProps.isLoading;
-  
-  if (!areEqual) {
-    console.log('🔍 StreakSection props changed:', {
-      currentCountChanged: prevProps.currentCount !== nextProps.currentCount,
-      isLoadingChanged: prevProps.isLoading !== nextProps.isLoading,
-      prevCount: prevProps.currentCount,
-      nextCount: nextProps.currentCount,
-      prevLoading: prevProps.isLoading,
-      nextLoading: nextProps.isLoading
-    });
-  } else {
-    console.log('🔍 StreakSection memo: props IDENTICAL - skipping render');
-  }
-  
-  return areEqual;
+  return prevProps.currentCount === nextProps.currentCount && 
+         prevProps.isLoading === nextProps.isLoading;
 };
 
 const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
@@ -193,11 +171,6 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
 
   // ✨ Calcular el stage reactivamente cuando cambian los datos
   const streakStage = useMemo(() => {
-    console.log('🔄 StreakSection useMemo[streakStage] triggered:', { 
-      prizesLength: streakPrizes.length, 
-      hasSettings: !!stableSettings, 
-      currentCount 
-    });
     if (streakPrizes.length > 0 && stableSettings) {
       return calculateStreakStage(currentCount, streakPrizes, stableSettings)
     }
@@ -221,9 +194,7 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
 
   // ✨ OPTIMIZACIÓN: Memoizar solo la imagen para key estable
   const stableImageKey = useMemo(() => {
-    const key = streakStage?.image || '';
-    console.log('🔍 stableImageKey calculated:', key);
-    return key;
+    return streakStage?.image || '';
   }, [streakStage?.image])
 
     // 🔄 NUEVO: Solo settingsLoading (prizesLoading eliminado - vienen de Redux)

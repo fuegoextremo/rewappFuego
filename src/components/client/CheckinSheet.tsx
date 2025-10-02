@@ -3,7 +3,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useUser } from '@/store/hooks'
+import { useStreakCount } from '@/store/hooks'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import UserQR from './UserQR'
 import BottomSheet from '@/components/ui/BottomSheet'
@@ -15,7 +15,7 @@ export default function CheckinSheet({
   open: boolean
   onClose: () => void
 }) {
-  const user = useUser()
+  const streakCount = useStreakCount() // 🎯 Hook de userData para current_streak
   const { data: settings } = useSystemSettings()
 
   // 🎯 Escuchar cuando se realiza un check-in exitoso para cerrar automáticamente
@@ -33,7 +33,7 @@ export default function CheckinSheet({
     return () => {
       window.removeEventListener('checkin-success', handleCheckinSuccess)
     }
-  }, [open, onClose, user?.current_streak, settings?.company_theme_primary])
+  }, [open, onClose, streakCount, settings?.company_theme_primary]) // 🎯 Migrado user?.current_streak → streakCount
   return (
     <BottomSheet
       isOpen={open}

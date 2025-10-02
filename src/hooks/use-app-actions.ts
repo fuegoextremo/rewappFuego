@@ -19,26 +19,22 @@ export function useAppActions() {
   const loadUserData = useCallback(async (userId: string, forceReload = false) => {
     console.log('🔍 loadUserData called - userId:', userId, 'forceReload:', forceReload)
     
-    // 🎯 SINCRONIZACIÓN HÍBRIDA: Verificar que TODOS los datos críticos estén presentes
-    const hasCriticalData = user?.id === userId && 
-                           user.total_checkins !== undefined && 
-                           user.current_streak !== undefined &&
-                           user.available_spins !== undefined
+    // 🎯 SINCRONIZACIÓN HÍBRIDA: Verificar que datos estáticos estén presentes (authSlice)
+    const hasBasicData = user?.id === userId && 
+                        user.total_checkins !== undefined
     
-    if (!forceReload && hasCriticalData) {
-      console.log('✅ Cache hit: datos completos en Redux, saltando recarga...', {
-        total_checkins: user.total_checkins,
-        current_streak: user.current_streak,
-        available_spins: user.available_spins
+    if (!forceReload && hasBasicData) {
+      console.log('✅ Cache hit: datos básicos en Redux, saltando recarga...', {
+        total_checkins: user.total_checkins
+        // ❌ ELIMINADO: current_streak, available_spins - se manejan en userData via realtime
       })
       return
     }
     
     if (!forceReload && user?.id === userId) {
       console.log('🔄 Datos incompletos detectados en Redux, forzando sincronización...', {
-        has_total_checkins: user.total_checkins !== undefined,
-        has_current_streak: user.current_streak !== undefined,
-        has_available_spins: user.available_spins !== undefined
+        has_total_checkins: user.total_checkins !== undefined
+        // ❌ ELIMINADO: current_streak, available_spins - migrados a userData
       })
     }
     

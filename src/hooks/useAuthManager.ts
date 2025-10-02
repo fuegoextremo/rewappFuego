@@ -9,8 +9,8 @@ import {
   logout as logoutAction,
   // 🔥 NUEVOS: Cargar datos que estaban en React Query
   loadRecentActivity,
-  loadStreakPrizes,
-  loadUserStreakData
+  loadStreakPrizes
+  // ❌ ELIMINADO: loadUserStreakData - migrado a userData
 } from '@/store/slices/authSlice'
 import { loadSettings } from '@/store/slices/settingsSlice'
 
@@ -53,7 +53,7 @@ export function useAuthManager() {
               // 🔥 NUEVOS: Cargar datos que estaban en React Query
               dispatch(loadRecentActivity(session.user.id))
               dispatch(loadStreakPrizes()) // Solo una vez, no depende del usuario
-              dispatch(loadUserStreakData(session.user.id))
+              // ❌ ELIMINADO: loadUserStreakData - migrado a userData
             }
             break
 
@@ -76,7 +76,7 @@ export function useAuthManager() {
               // 🔥 NUEVOS: Cargar datos que estaban en React Query
               dispatch(loadRecentActivity(session.user.id))
               dispatch(loadStreakPrizes())
-              dispatch(loadUserStreakData(session.user.id))
+              // ❌ ELIMINADO: loadUserStreakData - migrado a userData
             }
             break
             
@@ -89,7 +89,7 @@ export function useAuthManager() {
               // 🔥 NUEVOS: También cargar estos datos
               dispatch(loadRecentActivity(session.user.id))
               dispatch(loadStreakPrizes())
-              dispatch(loadUserStreakData(session.user.id))
+              // ❌ ELIMINADO: loadUserStreakData - migrado a userData
             }
             break
             

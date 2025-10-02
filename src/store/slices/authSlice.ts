@@ -11,21 +11,11 @@ export interface User {
   phone: string | null         // Teléfono
   branch_id: string | null     // FK a branches
   
-  // Estadísticas calculadas
-  total_checkins: number       // COUNT(*) from check_ins
-  current_streak: number       // current_count from streaks
-  max_streak: number           // max_count from streaks
-  available_spins: number      // available_spins from user_spins
-  last_check_in: string | null // 🎯 FASE 1: last_check_in directo (patrón consistente)
+  // Estadísticas estáticas (solo datos que cambian poco)
+  total_checkins: number       // COUNT(*) from check_ins (se actualiza lento)
   
-  // 🔥 NUEVOS: Datos detallados de streak (para eliminar React Query)
-  streakData?: {
-    current_count: number
-    completed_count: number        // 🆕 Contador de rachas completadas
-    is_just_completed: boolean     // 🆕 Flag para mostrar "recién completada"
-    expires_at: string | null
-    // 🚫 REMOVIDO: last_check_in (ahora campo directo user.last_check_in)
-  }
+  // ❌ ELIMINADOS - MIGRADOS A userData: current_streak, available_spins, max_streak, last_check_in
+  // ❌ ELIMINADO - DUPLICADO: streakData (usar userData.streakData)
 }
 
 // 🎯 TIPOS PARA NUEVOS DATOS
@@ -142,33 +132,18 @@ export const loadUserProfile = createAsyncThunk(
       .select('id')
       .eq('user_id', userId)
 
-    // 3. Cargar racha actual desde streaks (current_count y max_count)
-    const { data: streakData } = await supabase
-      .from('streaks')
-      .select('current_count, max_count, last_check_in')
-      .eq('user_id', userId)
-      .maybeSingle()
+    // ❌ ELIMINADO: 3. Cargar racha - ahora se maneja en userData
+    // ❌ ELIMINADO: 4. Cargar spins - ahora se maneja en userData
 
-    // 4. Cargar spins disponibles desde user_spins
-    const { data: spinsData } = await supabase
-      .from('user_spins')
-      .select('available_spins')
-      .eq('user_id', userId)
-      .maybeSingle()
-
+    // Calcular estadísticas
     const totalCheckins = checkinData?.length || 0
-    const currentStreak = streakData?.current_count || 0
-    const maxStreak = streakData?.max_count || 0
-    const lastCheckin = streakData?.last_check_in || null
-    const availableSpins = spinsData?.available_spins || 0
+
+    // ❌ ELIMINADO: Variables de racha y spins - ahora se manejan en userData
     
     console.log('🔄 loadUserProfile COMPLETED:', { 
       userId, 
-      totalCheckins, 
-      currentStreak, 
-      maxStreak,
-      availableSpins,
-      spinsData 
+      totalCheckins
+      // ❌ ELIMINADO: Campos de racha y spins - ahora se manejan en userData
     });
     
     return {
@@ -179,11 +154,8 @@ export const loadUserProfile = createAsyncThunk(
       role: profile.role,
       phone: profile.phone,
       branch_id: profile.branch_id,
-      total_checkins: totalCheckins,
-      current_streak: currentStreak,
-      max_streak: maxStreak,
-      available_spins: availableSpins,
-      last_check_in: lastCheckin
+      total_checkins: totalCheckins
+      // ❌ ELIMINADO: current_streak, max_streak, available_spins, last_check_in - ahora se manejan en userData
     }
   }
 )
@@ -337,19 +309,8 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
-    // 🎰 Action granular para actualizar solo spins via Realtime
-    updateAvailableSpins: (state, action: PayloadAction<number>) => {
-      if (state.user) {
-        state.user.available_spins = action.payload
-      }
-    },
-
-    // 🎯 FASE 1: Reducer para last_check_in directo (patrón consistente)
-    updateLastCheckIn: (state, action: PayloadAction<string | null>) => {
-      if (state.user) {
-        state.user.last_check_in = action.payload
-      }
-    },
+    
+    // ❌ ELIMINADO: updateLastCheckIn - last_check_in migrado a userData
     
     // 🔥 Actions granulares para actualizaciones realtime de checkins
     incrementTotalCheckins: (state) => {
@@ -358,24 +319,7 @@ const authSlice = createSlice({
       }
     },
     
-    updateCurrentStreak: (state, action: PayloadAction<number>) => {
-      if (state.user) {
-        const newStreak = action.payload
-        state.user.current_streak = newStreak
-        
-        // 🆕 Actualizar max_streak si la racha actual es mayor
-        const currentMax = state.user.max_streak || 0
-        if (newStreak > currentMax) {
-          state.user.max_streak = newStreak
-        }
-      }
-    },
-    
-    addAvailableSpins: (state, action: PayloadAction<number>) => {
-      if (state.user) {
-        state.user.available_spins = (state.user.available_spins || 0) + action.payload
-      }
-    },
+    // ❌ ELIMINADOS: updateCurrentStreak, addAvailableSpins (migrados a userData)
     
     // 🎫 REDUCERS PARA CUPONES (Realtime + Paginación)
     setCoupons: (state, action: PayloadAction<{ 
@@ -484,55 +428,7 @@ const authSlice = createSlice({
       state.streakPrizesLoaded = true
     },
     
-    // User Streak Data Actions
-    setUserStreakData: (state, action: PayloadAction<{ 
-      current_count: number, 
-      completed_count: number, 
-      is_just_completed: boolean, 
-      expires_at: string | null, 
-      last_check_in: string | null 
-    }>) => {
-      if (state.user) {
-        state.user.streakData = action.payload
-        // También mantener current_streak sincronizado
-        state.user.current_streak = action.payload.current_count
-      }
-    },
-    
-    updateUserStreakData: (state, action: PayloadAction<Partial<{ 
-      current_count: number, 
-      completed_count: number, 
-      is_just_completed: boolean, 
-      expires_at: string | null
-      // 🚫 REMOVIDO: last_check_in (ahora se maneja con updateLastCheckIn)
-    }>>) => {
-      if (state.user) {
-        // 🛡️ Garantizar inicialización robusta de streakData
-        if (!state.user.streakData) {
-          state.user.streakData = {
-            current_count: state.user.current_streak || 0, // ← Usar valor existente como base
-            completed_count: 0,
-            is_just_completed: false,
-            expires_at: null
-            // 🚫 REMOVIDO: last_check_in (se maneja separadamente)
-          }
-        }
-        
-        // 🔄 Actualizar datos completos (sin last_check_in)
-        state.user.streakData = { ...state.user.streakData, ...action.payload }
-        
-        // 🎯 SIEMPRE sincronizar current_streak (campo crítico para UI)
-        if (action.payload.current_count !== undefined) {
-          state.user.current_streak = action.payload.current_count
-          
-          // 🆕 Actualizar max_streak si la racha actual es mayor
-          const currentMax = state.user.max_streak || 0
-          if (action.payload.current_count > currentMax) {
-            state.user.max_streak = action.payload.current_count
-          }
-        }
-      }
-    }
+    // ❌ ELIMINADOS: setUserStreakData, updateUserStreakData (migrados a userData)
   },
   extraReducers: (builder) => {
     builder
@@ -565,11 +461,10 @@ const authSlice = createSlice({
       })
       .addCase(performCheckin.fulfilled, (state, action) => {
         state.isInitialLoading = false
-        // Actualizar estadísticas del usuario después del checkin exitoso
+        // Solo actualizar total_checkins (datos estáticos)
+        // current_streak y available_spins ahora se manejan en userData
         if (state.user && action.payload.success) {
           state.user.total_checkins = (state.user.total_checkins || 0) + 1
-          state.user.current_streak = action.payload.current_streak || state.user.current_streak
-          state.user.available_spins = (state.user.available_spins || 0) + (action.payload.spins_earned || 0)
         }
       })
       .addCase(performCheckin.rejected, (state, action) => {
@@ -643,20 +538,7 @@ const authSlice = createSlice({
         console.error('Error loading streak prizes:', action.error.message)
       })
       
-      // Load User Streak Data
-      .addCase(loadUserStreakData.pending, () => {
-        // No loading state para este
-      })
-      .addCase(loadUserStreakData.fulfilled, (state, action) => {
-        if (state.user) {
-          state.user.streakData = action.payload
-          // Mantener current_streak sincronizado
-          state.user.current_streak = action.payload.current_count
-        }
-      })
-      .addCase(loadUserStreakData.rejected, (state, action) => {
-        console.error('Error loading user streak data:', action.error.message)
-      })
+      // ❌ ELIMINADO: loadUserStreakData (migrado a userData)
   }
 })
 
@@ -668,11 +550,8 @@ export const {
   setLoading,            // 🔄 Retrocompatible
   setError,
   clearError,
-  updateAvailableSpins,
-  updateLastCheckIn,  // 🎯 FASE 1: Export de la nueva acción
+  // ❌ ELIMINADO: updateLastCheckIn - migrado a userData
   incrementTotalCheckins,
-  updateCurrentStreak,
-  addAvailableSpins,
   setCoupons,
   addActiveCoupon,
   prependExpiredCoupon,
@@ -686,8 +565,8 @@ export const {
   setRecentActivity,
   prependRecentActivity,
   setStreakPrizes,
-  setUserStreakData,
-  updateUserStreakData
+  
+  // ❌ ELIMINADOS: setUserStreakData, updateAvailableSpins, updateCurrentStreak, addAvailableSpins, updateUserStreakData (migrados a userData)
 } = authSlice.actions
 
 // � SELECTORS CON RETROCOMPATIBILIDAD

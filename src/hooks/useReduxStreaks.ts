@@ -1,51 +1,31 @@
 'use client'
 
-import { useSelector } from 'react-redux'
+import { useSelector, shallowEqual } from 'react-redux'
 import { useEffect } from 'react'
 import { useAppDispatch } from '@/store/hooks'
 import { 
   loadRecentActivity, 
   loadStreakPrizes, 
-  loadUserStreakData,
+  // ❌ DEPRECATED: loadUserStreakData - no usado
   type StreakPrize
 } from '@/store/slices/authSlice'
 import type { RootState } from '@/store'
 
 // 🔥 Hook que reemplaza useUserStreak de React Query
+// ❌ DEPRECATED: useUserStreakRedux migrado a userData + hooks
 export function useUserStreakRedux(userId: string) {
-  const dispatch = useAppDispatch()
-  const user = useSelector((state: RootState) => state.auth.user)
-  
-  // 🔍 Debug logging
-  console.log('🔍 useUserStreakRedux:', { 
+  console.log('🔍 useUserStreakRedux (DEPRECATED):', { 
     userId, 
-    hasStreakData: !!user?.streakData,
-    userIdMatch: user?.id === userId
+    note: 'Usar useStreakCount(), useStreakData() de userData'
   })
   
-  // Cargar datos si:
-  // 1. Hay userId
-  // 2. NO hay datos de streak O el usuario cambió (para evitar datos cached)
-  useEffect(() => {
-    if (userId && (!user?.streakData || user.id !== userId)) {
-      console.log('🔄 Dispatching loadUserStreakData for userId:', userId)
-      dispatch(loadUserStreakData(userId))
-    }
-  }, [userId, user?.streakData, user?.id, dispatch])
-  
-  const streakData = user?.streakData
+  // ❌ NO hacer dispatch - los datos vienen de userData ahora
+  // Los datos de racha se manejan via realtime en userData
   
   return {
-    data: streakData ? {
-      currentCount: streakData.current_count,
-      completedCount: streakData.completed_count,        // 🆕 Contador de completadas
-      isJustCompleted: streakData.is_just_completed,     // 🆕 Flag temporal UI
-      expiresAt: streakData.expires_at,
-      lastCheckIn: user.last_check_in,  // 🎯 LIMPIEZA: Usar campo directo en lugar de streakData
-      rawData: streakData
-    } : undefined,
-    isLoading: !streakData && !!userId, // Loading si hay userId pero no datos
-    error: null // TODO: Manejar errores si es necesario
+    data: null, // ❌ DEPRECATED: usar useStreakData() hook
+    isLoading: false,
+    error: null
   }
 }
 
@@ -90,16 +70,24 @@ export function useStreakPrizesRedux() {
 // 🔥 Hook que reemplaza useRecentActivity de React Query  
 export function useRecentActivityRedux(userId: string) {
   const dispatch = useAppDispatch()
-  const { recentActivity, recentActivityLoading, recentActivityError, recentActivityLoaded } = useSelector((state: RootState) => state.auth)
+  const { recentActivity, recentActivityLoading, recentActivityError, recentActivityLoaded } = useSelector(
+    (state: RootState) => ({
+      recentActivity: state.auth.recentActivity,
+      recentActivityLoading: state.auth.recentActivityLoading,
+      recentActivityError: state.auth.recentActivityError,
+      recentActivityLoaded: state.auth.recentActivityLoaded
+    }),
+    shallowEqual // 🎯 CLAVE: evitar re-renders innecesarios
+  )
   
-  // 🔍 Debug logging mejorado
-  console.log('🔍 useRecentActivityRedux:', { 
-    userId, 
-    recentActivityLoaded, 
-    recentActivityLoading,
-    dataCount: recentActivity.length,
-    shouldLoad: userId && !recentActivityLoaded && !recentActivityLoading
-  })
+  // ✅ Migración completa - sin logs de debug para evitar ruido
+  // console.log('🔍 useRecentActivityRedux:', { 
+  //   userId, 
+  //   recentActivityLoaded, 
+  //   recentActivityLoading,
+  //   dataCount: recentActivity.length,
+  //   shouldLoad: userId && !recentActivityLoaded && !recentActivityLoading
+  // })
   
   // Cargar actividad si:
   // 1. Hay userId
@@ -121,12 +109,11 @@ export function useRecentActivityRedux(userId: string) {
 
 // 🔥 Hook que reemplaza useStreakStage - AHORA CALCULADO EN TIEMPO REAL
 export function useStreakStageRedux() {
-  const user = useSelector((state: RootState) => state.auth.user)
+  const streakData = useSelector((state: RootState) => state.userData?.streakData)
   const streakPrizes = useSelector((state: RootState) => state.auth.streakPrizes)
   const settings = useSelector((state: RootState) => state.settings.settings)
   
-  // Asegurar que tenemos los datos necesarios
-  const streakData = user?.streakData
+  // Usar datos de userData.streakData (migración completa)
   const currentCount = streakData?.current_count || 0
   
   // Calcular stage en tiempo real (sin cache, siempre actualizado)

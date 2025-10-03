@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAppDispatch, useUser } from '@/store/hooks'
-import { loadUserProfile, updateAvailableSpins } from '@/store/slices/authSlice'
+import { loadUserProfile } from '@/store/slices/authSlice'
 import { queryKeys } from '@/lib/queryClient' // 🚀 FASE 3.3: QueryKeys modernos
 import type { RealtimePostgresChangesPayload, RealtimeChannel } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
@@ -34,7 +34,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
   
   // 🎯 Callbacks estables para evitar re-renders
   const stableToast = useCallback((params: Parameters<typeof toast>[0]) => toast(params), [toast])
-  const stableDispatch = useCallback((action: ReturnType<typeof loadUserProfile> | ReturnType<typeof updateAvailableSpins>) => dispatch(action), [dispatch])
+  const stableDispatch = useCallback((action: ReturnType<typeof loadUserProfile>) => dispatch(action), [dispatch])
   
   // 🎯 Estado mínimo y limpio
   const [isConnected, setIsConnected] = useState(false)
@@ -210,15 +210,11 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
             }
           })
           
-          // 🎯 GRANULAR: Actualizar Redux Store directamente (para HomeView)
-          stableDispatch(updateAvailableSpins(newAvailableSpins))
-          console.log('✅ Redux dispatch reactivado - ambos sistemas funcionando')
+          // 🚀 FASE 3.3: RealtimeManager maneja Redux automáticamente via user_spins subscription
+          // ❌ ELIMINADO: updateAvailableSpins - RealtimeManager actualiza userData.spins
+          // ❌ ELIMINADO: invalidación redundante de stats
           
-          // 🚀 FASE 3.3: RealtimeManager ya maneja user_stats via postgres_changes
-          // ❌ ELIMINADO: invalidación redundante  
-          // ❌ ['user', 'stats', userId] → Viene por RealtimeManager
-          
-          console.log('🔴 RealtimeProvider: Spins update - RealtimeManager se encarga de stats updates')
+          console.log('🔴 RealtimeProvider: Spins update - RealtimeManager se encarga de Redux y stats updates')
           
           // ✨ Event para otros componentes
           window.dispatchEvent(new CustomEvent('user-data-updated', { 

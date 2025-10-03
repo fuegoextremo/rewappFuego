@@ -27,15 +27,8 @@ const SimpleQRScanner = ({ onScanSuccess, onScanFailure, isPaused }: SimpleQRSca
       setIsLoading(true);
       setError(null);
 
-      // Primero verificar y solicitar permisos de cámara
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-      
-      // Detener el stream temporal (qr-scanner manejará su propio stream)
-      stream.getTracks().forEach(track => track.stop());
-
-      // Importar dinámicamente qr-scanner después de confirmar permisos
+      // ✅ OPTIMIZACIÓN: Importar qr-scanner directamente sin verificación previa
+      // Esto evita la doble solicitud de permisos de cámara
       const QrScanner = (await import('qr-scanner')).default;
       
       if (!videoRef.current) return;
@@ -135,8 +128,8 @@ const SimpleQRScanner = ({ onScanSuccess, onScanFailure, isPaused }: SimpleQRSca
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-100 rounded-lg">
           <div className="text-center">
             <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600 mb-2"></div>
-            <p className="text-sm">Solicitando permisos de cámara...</p>
-            <p className="text-xs text-gray-600 mt-1">Si aparece una notificación, permite el acceso</p>
+            <p className="text-sm font-medium">Iniciando cámara...</p>
+            <p className="text-xs text-gray-600 mt-1">Permite el acceso si se solicita</p>
           </div>
         </div>
       )}

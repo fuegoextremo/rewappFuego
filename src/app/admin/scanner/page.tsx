@@ -17,6 +17,7 @@ function ScannerCard({
   isScanning,
   isPending,
   result,
+  countdown,
   handleScanSuccess,
   resetScanner
 }: {
@@ -24,6 +25,7 @@ function ScannerCard({
   isScanning: boolean;
   isPending: boolean;
   result: { success: boolean; message: string } | null;
+  countdown: number | null;
   handleScanSuccess: (decodedText: string) => void;
   resetScanner: () => void;
 }) {
@@ -71,6 +73,11 @@ function ScannerCard({
             <p className={`mb-4 ${result.success ? 'text-green-700' : 'text-red-700'}`}>
               {result.message}
             </p>
+            {result.success && countdown !== null && (
+              <p className="text-sm text-green-600 mb-4 font-medium">
+                Reiniciando en {countdown}s...
+              </p>
+            )}
             <button
               onClick={resetScanner}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
@@ -106,6 +113,7 @@ export default function ScannerPage() {
   const [isScanning, setIsScanning] = useState(true);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [recentActivities, setRecentActivities] = useState<ScanActivity[]>([]);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -146,6 +154,21 @@ export default function ScannerPage() {
         // Recargar actividades recientes después de un escaneo exitoso
         if (response.success) {
           await loadRecentActivities();
+          
+          // ✨ Iniciar countdown de 2 segundos
+          setCountdown(2);
+          const countdownInterval = setInterval(() => {
+            setCountdown(prev => {
+              if (prev === null || prev <= 1) {
+                clearInterval(countdownInterval);
+                // Auto-reinicio cuando llega a 0
+                setIsScanning(true);
+                setResult(null);
+                return null;
+              }
+              return prev - 1;
+            });
+          }, 1000);
         }
 
       } catch (error) {
@@ -170,6 +193,7 @@ export default function ScannerPage() {
     isScanning,
     isPending,
     result,
+    countdown,
     handleScanSuccess,
     resetScanner,
   };

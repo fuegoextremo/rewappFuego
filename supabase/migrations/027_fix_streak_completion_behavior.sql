@@ -5,22 +5,27 @@
 -- mantener el contador en ese valor en lugar de resetearlo a 0.
 -- Solo afecta el comportamiento de completación exitosa.
 
--- Verificar que la función existe antes de modificarla
-DO $$ 
-BEGIN 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_proc 
-    WHERE proname = 'process_checkin' 
-    AND pg_get_function_identity_arguments(oid) = 'p_user uuid, p_branch uuid, p_spins_earned integer'
-  ) THEN
-    RAISE EXCEPTION 'Función process_checkin no encontrada. Migración abortada.';
-  END IF;
-END $$;
+-- Validación comentada - CREATE OR REPLACE ya maneja el reemplazo automáticamente
+-- DO $$ 
+-- BEGIN 
+--   IF NOT EXISTS (
+--     SELECT 1 FROM pg_proc 
+--     WHERE proname = 'process_checkin' 
+--     AND pg_get_function_identity_arguments(oid) = 'p_user uuid, p_branch uuid, p_spins_earned integer'
+--   ) THEN
+--     RAISE EXCEPTION 'Función process_checkin no encontrada. Migración abortada.';
+--   END IF;
+-- END $$;
 
 -- ============================================
--- REEMPLAZAR FUNCIÓN process_checkin
+-- DROP Y RECREAR FUNCIÓN (necesario para cambiar nombre de parámetro)
 -- ============================================
-CREATE OR REPLACE FUNCTION public.process_checkin(
+DROP FUNCTION IF EXISTS public.process_checkin(uuid, uuid, int);
+
+-- ============================================
+-- CREAR FUNCIÓN process_checkin
+-- ============================================
+CREATE FUNCTION public.process_checkin(
   p_user uuid,
   p_branch uuid,
   p_spins_earned int

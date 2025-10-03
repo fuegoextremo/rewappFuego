@@ -13,7 +13,10 @@
 -- 3. Restaurar lógica de verificación por rol
 -- 4. Mantener lógica correcta de streak completion
 
-CREATE OR REPLACE FUNCTION public.process_checkin(
+-- DROP necesario para cambiar firma de parámetros
+DROP FUNCTION IF EXISTS public.process_checkin(uuid, uuid, int);
+
+CREATE FUNCTION public.process_checkin(
   p_user uuid,
   p_branch uuid,
   p_spins int DEFAULT NULL

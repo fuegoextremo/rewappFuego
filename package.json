@@ -4,10 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:local": "npm run env:local && next dev",
+    "dev:prod": "npm run env:prod && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "types:generate": "supabase gen types typescript --project-id wapzrqysraazykcfmrhd --schema public > src/types/database.ts"
+    "types:generate": "supabase gen types typescript --project-id wapzrqysraazykcfmrhd --schema public > src/types/database.ts",
+    "types:generate:local": "supabase gen types typescript --local > src/types/database.ts",
+    "env:local": "cp .env.local.supabase .env.local && echo '✅ Usando Supabase LOCAL'",
+    "env:prod": "cp .env.local.production .env.local && echo '✅ Usando Supabase PRODUCCIÓN'",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

@@ -4,6 +4,7 @@
 -- Problema: La migración 028 usa table user_roles que no existe
 -- Solución: Usar user_profiles como en migración 017
 
+-- No es necesario DROP aquí porque los parámetros no cambiaron desde 028
 CREATE OR REPLACE FUNCTION public.process_checkin(
   p_user uuid,
   p_branch uuid,

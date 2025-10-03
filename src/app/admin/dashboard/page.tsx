@@ -6,6 +6,10 @@ import DashboardCharts from '@/components/admin/DashboardCharts';
 import PeriodSelector from '@/components/admin/PeriodSelector';
 import TopClients from '@/components/admin/TopClients';
 
+// ⚡ Revalidar cada 30 segundos para mantener datos frescos
+// No usamos 'force-static' para mantener compatibilidad con auth dinámico
+export const revalidate = 30;
+
 interface DashboardPageProps {
   searchParams: {
     period?: string;

@@ -27,8 +27,15 @@ const SimpleQRScanner = ({ onScanSuccess, onScanFailure, isPaused }: SimpleQRSca
       setIsLoading(true);
       setError(null);
 
-      // ✅ OPTIMIZACIÓN: Importar qr-scanner directamente sin verificación previa
-      // Esto evita la doble solicitud de permisos de cámara
+      // Primero verificar y solicitar permisos de cámara
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      
+      // Detener el stream temporal (qr-scanner manejará su propio stream)
+      stream.getTracks().forEach(track => track.stop());
+
+      // Importar dinámicamente qr-scanner después de confirmar permisos
       const QrScanner = (await import('qr-scanner')).default;
       
       if (!videoRef.current) return;
@@ -56,12 +63,19 @@ const SimpleQRScanner = ({ onScanSuccess, onScanFailure, isPaused }: SimpleQRSca
       let errorMsg = 'Error al inicializar el escáner.';
       
       if (err instanceof Error) {
+        // Errores específicos de permisos/dispositivo
         if (err.name === 'NotAllowedError') {
           errorMsg = 'Permisos de cámara denegados. Por favor, permite el acceso a la cámara.';
         } else if (err.name === 'NotFoundError') {
           errorMsg = 'No se encontró una cámara en el dispositivo.';
         } else if (err.name === 'NotSupportedError') {
           errorMsg = 'La cámara no es compatible con este dispositivo.';
+        } else if (err.message.includes('fetch')) {
+          // Error de carga de módulo qr-scanner
+          errorMsg = 'Error al cargar el módulo de escaneo. Verifica tu conexión.';
+        } else {
+          // Mostrar mensaje del error para debugging
+          errorMsg = `Error: ${err.message}`;
         }
       }
       

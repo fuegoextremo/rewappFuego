@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createActionClient } from "@/lib/supabase/actions";
 import { verifyToken, RedeemPayload } from "@/lib/utils/qr";
+import { revalidatePath } from "next/cache";
 
 export type ActionResponse = {
   success: boolean;
@@ -54,6 +55,9 @@ export async function processCheckin(qrToken: string): Promise<ActionResponse> {
     }
     return { success: false, message: `Error en el check-in: ${error.message}` };
   }
+
+  // ✅ Invalidar caché del dashboard para reflejar nuevo check-in inmediatamente
+  revalidatePath('/admin/dashboard');
 
   return { success: true, message: "Check-in exitoso. Puntos otorgados según configuración!" };
 }
@@ -121,6 +125,10 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       .single();
 
     const prizeName = couponInfo?.prizes?.name || 'Premio';
+    
+    // ✅ Invalidar caché del dashboard para reflejar cupón canjeado inmediatamente
+    revalidatePath('/admin/dashboard');
+    
     return { success: true, message: `Cupón "${prizeName}" redimido exitosamente.` };
 
   } catch (error) {

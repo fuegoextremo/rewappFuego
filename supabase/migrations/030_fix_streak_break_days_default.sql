@@ -1,5 +1,9 @@
--- Migración para corregir valor por defecto de streak_break_days y lógica de racha rota
--- Cambios: fallback '1' → '12' + racha rota inicia en 1 (no 0) para permitir mostrar imagen "rota"
+-- ============================================
+-- MIGRACIÓN 030: Ajustar configuración de racha rota
+-- ============================================
+-- Cambios mínimos respecto a migración 029:
+-- 1. Cambiar default de streak_break_days: '1' → '12'
+-- 2. Cuando racha se rompe, resetear a 1 (no a 0) para permitir mostrar imagen "rota" en frontend
 
 CREATE OR REPLACE FUNCTION public.process_checkin(
   p_user uuid,
@@ -35,11 +39,8 @@ BEGIN
   v_final_spins := COALESCE(p_spins, get_system_setting('checkin_points_daily', '1')::int);
   v_max_checkins_daily := get_system_setting('max_checkins_per_day', '1')::int;
   v_expiry_days := get_system_setting('streak_expiry_days', '90')::int;
-  v_break_days := get_system_setting('streak_break_days', '12')::int; -- ✅ CAMBIADO: '1' → '12'
+  v_break_days := get_system_setting('streak_break_days', '12')::int; -- ✅ CAMBIO 1: '1' → '12'
 
-  -- Resto de la función permanece igual...
-  -- [El resto del código se mantiene exactamente como está]
-  
   -- ============================================
   -- 2. VALIDACIONES DE SEGURIDAD (COMO EN 017)
   -- ============================================
@@ -139,18 +140,17 @@ BEGIN
     NOW()
   )
   ON CONFLICT (user_id) DO UPDATE SET
-    -- 🔥 LÓGICA CORREGIDA: Expiración/Ruptura van a 0, no a 1
     current_count = CASE
       -- Si estaba "recién completada", iniciar nueva racha en 1
       WHEN streaks.is_just_completed = true THEN 1
-      -- Racha expirada: Nueva temporada desde 0 (reinicio automático de temporada)
+      -- Racha expirada: Nueva temporada desde 0
       WHEN v_streak_expired THEN 0
-      -- Racha rota: Empezar nueva racha en 1 (permitir mostrar imagen "rota" antes)
+      -- ✅ CAMBIO 2: Racha rota resetea a 1 (era 0) para mostrar imagen "rota"
       WHEN v_streak_broken THEN 1
       -- Último check-in fue ayer: Continuar racha incrementando
       WHEN streaks.last_check_in::date = CURRENT_DATE - INTERVAL '1 day' THEN 
         streaks.current_count + 1
-      -- 🔥 NUEVO: Último check-in fue hoy Y permite múltiples check-ins: INCREMENTAR
+      -- Último check-in fue hoy Y permite múltiples check-ins: INCREMENTAR
       WHEN streaks.last_check_in::date = CURRENT_DATE AND v_max_checkins_daily > 1 THEN 
         streaks.current_count + 1
       -- Último check-in fue hoy pero solo permite 1 check-in: mantener
@@ -165,12 +165,9 @@ BEGIN
     
     -- Actualizar max_count considerando incrementos múltiples
     max_count = CASE 
-      -- Si fue recién completada o expirada: mantener max actual (reinicio de temporada)
-      WHEN streaks.is_just_completed = true OR v_streak_expired THEN 
+      -- Si fue recién completada, expirada o rota: max_count no menor que actual
+      WHEN streaks.is_just_completed = true OR v_streak_expired OR v_streak_broken THEN 
         GREATEST(streaks.max_count, 0)
-      -- Si fue rota: mantener max actual (nueva racha empezó en 1)
-      WHEN v_streak_broken THEN 
-        GREATEST(streaks.max_count, 1)
       -- Último check-in fue ayer: actualizar con nueva cuenta
       WHEN streaks.last_check_in::date = CURRENT_DATE - INTERVAL '1 day' THEN 
         GREATEST(streaks.max_count, streaks.current_count + 1)
@@ -201,56 +198,43 @@ BEGIN
   -- ============================================
   -- 10. GENERAR CUPONES AUTOMÁTICOS POR THRESHOLD
   -- ============================================
-  IF v_new_current_count IS NOT NULL AND v_new_current_count > 0 THEN
-    FOR v_prize_record IN
-      SELECT id, name, description, streak_threshold, image_url
-      FROM public.prizes
-      WHERE type = 'streak'
-        AND is_active = true
-        AND (deleted_at IS NULL)
-        AND streak_threshold = v_new_current_count
-        AND streak_threshold IS NOT NULL
-    LOOP
-      -- Verificar si ya existe un cupón para este premio y usuario
-      IF NOT EXISTS (
-        SELECT 1 FROM public.coupons
-        WHERE user_id = p_user 
-        AND prize_id = v_prize_record.id
-        AND created_at::date = CURRENT_DATE
-      ) THEN
-        -- Generar cupón automático
-        INSERT INTO public.coupons (
-          user_id,
-          prize_id,
-          coupon_code,
-          status,
-          expires_at,
-          created_at,
-          updated_at
-        ) VALUES (
-          p_user,
-          v_prize_record.id,
-          'STREAK-' || v_prize_record.streak_threshold || '-' || EXTRACT(EPOCH FROM NOW())::bigint,
-          'active',
-          NOW() + INTERVAL '30 days',
-          NOW(),
-          NOW()
-        );
-      END IF;
-    END LOOP;
-  END IF;
+  FOR v_prize_record IN 
+    SELECT id, streak_threshold, validity_days, name
+    FROM public.prizes 
+    WHERE type = 'streak' 
+      AND is_active = true 
+      AND streak_threshold = v_new_current_count
+      AND (deleted_at IS NULL)
+  LOOP
+    -- Generar cupón automático para este threshold
+    PERFORM public.grant_manual_coupon(
+      p_user, 
+      v_prize_record.id, 
+      COALESCE(v_prize_record.validity_days, 30)
+    );
+    
+    RAISE NOTICE 'Cupón automático generado: Usuario %, Premio "%" por racha %', 
+      p_user, v_prize_record.name, v_prize_record.streak_threshold;
+  END LOOP;
 
   -- ============================================
-  -- 11. MARCAR RACHA COMO COMPLETADA SI ALCANZÓ EL MÁXIMO
+  -- 11. VERIFICAR COMPLETACIÓN DE RACHA MÁXIMA
   -- ============================================
-  IF v_new_current_count >= v_max_threshold THEN
+  IF v_max_threshold IS NOT NULL AND v_new_current_count >= v_max_threshold THEN
     UPDATE public.streaks 
     SET 
-      is_just_completed = true,
       completed_count = completed_count + 1,
+      current_count = v_max_threshold,
+      is_just_completed = true,
       updated_at = NOW()
     WHERE user_id = p_user;
+    
+    RAISE NOTICE 'Racha completada para usuario %: % visitas alcanzadas, contador mantenido en: %', 
+      p_user, v_new_current_count, v_max_threshold;
   END IF;
 
 END;
 $$;
+
+COMMENT ON FUNCTION public.process_checkin(uuid, uuid, int) IS 
+'Función de check-in con ajustes de racha rota: break_days=12 y reseteo a 1 (no 0)';

@@ -213,13 +213,13 @@ BEGIN
     LOOP
       -- Verificar si ya existe un cupón para este premio y usuario
       IF NOT EXISTS (
-        SELECT 1 FROM public.user_coupons
+        SELECT 1 FROM public.coupons
         WHERE user_id = p_user 
         AND prize_id = v_prize_record.id
         AND created_at::date = CURRENT_DATE
       ) THEN
         -- Generar cupón automático
-        INSERT INTO public.user_coupons (
+        INSERT INTO public.coupons (
           user_id,
           prize_id,
           coupon_code,

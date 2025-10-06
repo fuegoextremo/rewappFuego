@@ -55,7 +55,7 @@ export default async function AdminLayout({
         </div>
         
         {/* Content Container con bordes redondeados */}
-        <div className="p-4 md:p-6 pb-24 md:pb-6">
+        <div className="">
           <div className="mx-auto max-w-7xl bg-white rounded-lg shadow-sm min-h-full p-4 md:p-6">
             {/* Banner de error */}
             <UnauthorizedBanner />

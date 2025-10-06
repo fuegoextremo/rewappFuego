@@ -12,6 +12,7 @@ export default async function Page() {
     supabase
       .from("prizes")
       .select("*")
+      .is("deleted_at", null)  // ✅ Solo premios no eliminados
       .order("created_at", { ascending: false }),
     getPrizeStats()
   ]);

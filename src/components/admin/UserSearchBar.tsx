@@ -54,7 +54,7 @@ export function UserSearchBar({ onSearch, branches = [], isLoading }: UserSearch
   const loading = isPending || isLoading
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-card rounded-lg border">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search Input */}
         <div className="flex-1 relative">

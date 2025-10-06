@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { getPrizeStats } from "@/app/admin/prizes/actions";
 
 // Helper functions for rarity system
@@ -416,6 +417,27 @@ export default function PrizeForm({ open, onOpenChange, onSubmit, prize }: Prize
                 }
               />
             </div> */}
+
+            {/* Switch para activar/desactivar premio */}
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-gray-50">
+              <div className="space-y-0.5">
+                <Label htmlFor="is_active" className="text-sm font-medium">
+                  Estado del premio
+                </Label>
+                <p className="text-xs text-gray-500">
+                  {formData.is_active 
+                    ? "El premio está activo y disponible en la aplicación" 
+                    : "El premio está desactivado y no se mostrará a los usuarios"}
+                </p>
+              </div>
+              <Switch
+                id="is_active"
+                checked={formData.is_active ?? true}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, is_active: checked })
+                }
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button 

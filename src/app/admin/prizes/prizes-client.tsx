@@ -93,13 +93,13 @@ export default function PrizesClient({
       await deletePrize(prizeId);
       setPrizes(prizes.filter((p) => p.id !== prizeId));
       toast({
-        title: "Éxito",
-        description: "Premio eliminado correctamente",
+        title: "Premio desactivado",
+        description: "El premio ya no aparecerá en la ruleta. Puedes reactivarlo editándolo.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Error al eliminar el premio",
+        description: error instanceof Error ? error.message : "Error al desactivar el premio",
         variant: "destructive",
       });
     }
@@ -132,7 +132,7 @@ export default function PrizesClient({
       
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900">Gestión de Premios</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Gestión de Premios</h1>
         <p className="text-gray-600">
           Administra los premios de la ruleta y los premios por racha de la aplicación
         </p>
@@ -244,10 +244,14 @@ export default function PrizesClient({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Desactivar este premio?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. El premio se marcará como inactivo y no estará
-              disponible para futuras operaciones.
+              El premio se marcará como inactivo y dejará de aparecer en la ruleta y lista de premios.
+              Podrás reactivarlo en cualquier momento desde el botón &quot;Editar&quot;.
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+                <strong className="text-blue-900">💡 Nota:</strong>
+                <span className="text-blue-800"> Los cupones ya generados seguirán siendo válidos.</span>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -260,7 +264,7 @@ export default function PrizesClient({
                 }
               }}
             >
-              Eliminar
+              Desactivar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

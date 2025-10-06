@@ -86,7 +86,6 @@ export async function grantCoupon(userId: string, prizeId: string, validityDays?
 
     try {
       // Llamar a la nueva función con control de inventario usando postgrest
-      // @ts-expect-error - Función custom no tipada en supabase
       const { data, error } = await supabase.rpc('grant_manual_coupon', {
         p_user_id: userId,
         p_prize_id: prizeId,

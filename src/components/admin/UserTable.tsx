@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserWithDetails } from "@/app/admin/users/page";
+import { UserWithDetails } from "@/app/admin/users/actions";
 import { 
   Pencil, 
   Trash2, 

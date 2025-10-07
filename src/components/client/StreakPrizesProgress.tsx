@@ -209,20 +209,6 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
             )}
           </div>
         )}
-
-        {/* 🔍 DEBUG TEMPORAL: Info adicional cuando no se muestra mensaje principal */}
-        {(currentStreak === 0 || daysUntilStreakBreaks === null || daysUntilStreakBreaks <= 0) && (
-          <div className="mt-4 text-center">
-            <div className="text-xs text-gray-400 space-y-1">
-              <div>🔍 DEBUG - Estado actual:</div>
-              <div>📊 current_streak: {currentStreak}</div>
-              <div>📅 last_check_in: {lastCheckinDate || 'No disponible'}</div>
-              <div>⚙️ streak_break_days: {streakBreakDays}d</div>
-              <div>⏰ daysUntilStreakBreaks: {daysUntilStreakBreaks}</div>
-              <div>🎯 Mostrar mensaje: {daysUntilStreakBreaks !== null && daysUntilStreakBreaks > 0 && currentStreak > 0 ? 'SÍ' : 'NO'}</div>
-            </div>
-          </div>
-        )}
     </div>
   )
 }

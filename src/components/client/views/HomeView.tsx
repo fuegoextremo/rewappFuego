@@ -1,5 +1,5 @@
 import { useAppDispatch, useUser, useCurrentStreak, useAvailableSpins, useMaxStreak } from "@/store/hooks";
-import { setCurrentView } from "@/store/slices/uiSlice";
+import { setCurrentView, setOpenCheckin } from "@/store/slices/uiSlice";
 import { useBlockedDispatch } from "@/hooks/useBlockedDispatch";
 import { useSystemSettings } from "@/hooks/use-system-settings";
 import { StreakSection } from "@/components/client/StreakSection";
@@ -9,7 +9,6 @@ import { RecentActivity } from "@/components/client/RecentActivity";
 import { StreakPrizesList } from "@/components/client/StreakPrizesList";
 import { StreakPrizesProgress } from "@/components/client/StreakPrizesProgress";
 import { FloatingHeader } from "@/components/client/FloatingHeader";
-import { SimpleStreakTest } from "@/components/debug/SimpleStreakTest"; // 🧪 DEBUG
 //import { ParticleExplosion } from "@/components/client/ParticleExplosionFixed";
 import { useUserRealtime } from '@/hooks/useUserRealtime'
 import { FerrisWheel, Flame, History } from "lucide-react";
@@ -85,9 +84,6 @@ export default function HomeView() {
 
   return (
     <>
-      {/* 🧪 DEBUG: Test component */}
-      <SimpleStreakTest />
-      
       {/* Floating Header - Fixed at top */}
       <FloatingHeader />
 
@@ -157,7 +153,7 @@ export default function HomeView() {
           <div className="p-3 space-y-6">
             {/* Botón CTA principal */}
             <div
-              onClick={() => safeDispatch(setCurrentView("roulette"))}
+              onClick={() => safeDispatch(setOpenCheckin(true))}
               className="cursor-pointer"
             >
               <CTAButton>Registra tu visita</CTAButton>

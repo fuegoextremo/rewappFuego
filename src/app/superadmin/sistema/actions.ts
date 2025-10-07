@@ -3,7 +3,7 @@
 import { createClientServer } from "@/lib/supabase/server";
 
 // Tipos para las configuraciones
-export type SystemSettingCategory = 'prizes' | 'coupons' | 'general' | 'notifications';
+export type SystemSettingCategory = 'prizes' | 'coupons' | 'general' | 'notifications' | 'analytics';
 
 export interface SystemSetting {
   id: string;
@@ -209,7 +209,7 @@ export async function getSuperAdminSettings() {
       .from('system_settings')
       .select('*')
       .eq('is_active', true)
-      .in('category', ['prizes', 'coupons', 'general', 'notifications'])
+      .in('category', ['prizes', 'coupons', 'general', 'notifications', 'analytics'])
       .order('category, key');
 
     if (error) {
@@ -298,7 +298,14 @@ export async function resetSettingsToDefault(category: SystemSettingCategory) {
       'company_contact_phone': '',
       'company_address': '',
       'company_terms_conditions': 'Términos y condiciones por definir...',
-      'company_privacy_policy': 'Política de privacidad por definir...'
+      'company_privacy_policy': 'Política de privacidad por definir...',
+      // Analytics
+      'analytics_checkin_value': '50',
+      'analytics_coupon_avg_value': '150',
+      'analytics_user_acquisition_cost': '200',
+      'analytics_spin_cost': '10',
+      'analytics_retention_multiplier': '1.5',
+      'analytics_premium_branch_multiplier': '1.2',
     };
 
     // Obtener configuraciones de la categoría

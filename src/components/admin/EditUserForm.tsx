@@ -34,6 +34,7 @@ const formSchema = z.object({
   phone: z.string().optional(),
   birth_date: z.string().optional(),
   role: z.enum(["client", "verifier", "admin"]), // Limitado: sin superadmin
+  branch_id: z.string().nullable().optional(), // Sucursal (solo para no-clientes)
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -41,6 +42,7 @@ type FormData = z.infer<typeof formSchema>;
 interface EditUserFormProps {
   profile: Tables<"user_profiles">;
   authUser: User;
+  branches: Array<{ id: string; name: string }>;
 }
 
 const roleOptions = [
@@ -49,7 +51,7 @@ const roleOptions = [
   { value: "admin", label: "Administrador", description: "Acceso completo al panel de administración" },
 ];
 
-export default function EditUserForm({ profile, authUser }: EditUserFormProps) {
+export default function EditUserForm({ profile, authUser, branches }: EditUserFormProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -62,8 +64,12 @@ export default function EditUserForm({ profile, authUser }: EditUserFormProps) {
       birth_date: profile.birth_date || "",
       // Si el rol actual es superadmin, lo mantenemos como admin para el form
       role: (profile.role === "superadmin" ? "admin" : profile.role as FormData['role']) || "client",
+      branch_id: profile.branch_id || null,
     },
   });
+
+  // Observar cambios en el rol para manejar la lógica de sucursal
+  const currentRole = form.watch("role");
 
   function onSubmit(values: FormData) {
     startTransition(async () => {
@@ -172,6 +178,39 @@ export default function EditUserForm({ profile, authUser }: EditUserFormProps) {
               </FormItem>
             )}
           />
+          
+          {/* Campo de Sucursal - Solo visible para roles que no sean "client" */}
+          {currentRole !== "client" && (
+            <FormField
+              control={form.control}
+              name="branch_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sucursal Asignada</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value || undefined} 
+                    disabled={isPending}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una sucursal" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Sin sucursal asignada</SelectItem>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
         <Button type="submit" disabled={isPending}>
           {isPending ? "Guardando..." : "Guardar Cambios"}

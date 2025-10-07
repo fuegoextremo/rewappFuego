@@ -12,6 +12,7 @@ const updateUserSchema = z.object({
   phone: z.string().optional(),
   birth_date: z.string().optional(),
   role: z.enum(["client", "verifier", "admin"]), // Limitado: sin superadmin
+  branch_id: z.string().nullable().optional(), // Sucursal (solo para no-clientes)
 });
 
 // Schema for granting spins
@@ -147,16 +148,37 @@ export async function updateUser(userId: string, formData: z.infer<typeof update
 
   const supabase = createAdminClient();
 
+  // Preparar datos de actualización
+  const updateData: {
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    birth_date?: string;
+    role: "client" | "verifier" | "admin";
+    branch_id?: string | null;
+    updated_at: string;
+  } = {
+    first_name: validatedFields.data.first_name,
+    last_name: validatedFields.data.last_name,
+    phone: validatedFields.data.phone,
+    birth_date: validatedFields.data.birth_date,
+    role: validatedFields.data.role,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Si el rol es "client", asegurarse de que branch_id sea null
+  // Si el rol no es "client", usar el branch_id proporcionado
+  if (validatedFields.data.role === "client") {
+    updateData.branch_id = null;
+  } else if (validatedFields.data.branch_id === "none") {
+    updateData.branch_id = null;
+  } else if (validatedFields.data.branch_id) {
+    updateData.branch_id = validatedFields.data.branch_id;
+  }
+
   const { data, error } = await supabase
     .from("user_profiles")
-    .update({
-      first_name: validatedFields.data.first_name,
-      last_name: validatedFields.data.last_name,
-      phone: validatedFields.data.phone,
-      birth_date: validatedFields.data.birth_date,
-      role: validatedFields.data.role,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", userId)
     .select();
 
@@ -210,4 +232,133 @@ export async function deleteUser(userId: string) {
   // Redirect to the users list after deletion
   revalidatePath("/admin/users");
   redirect("/admin/users");
+}
+
+// ============================================================
+// PAGINATION ACTIONS
+// ============================================================
+
+// Tipos para las respuestas
+export type CheckInWithDetails = {
+  id: string
+  user_id: string | null
+  branch_id: string | null
+  verified_by: string | null
+  check_in_date: string | null
+  spins_earned: number | null
+  created_at: string | null
+  updated_at: string | null
+  branches: { name: string } | null
+  user_profiles: { first_name: string | null; last_name: string | null } | null
+}
+
+export type CouponWithDetails = {
+  id: string
+  user_id: string | null
+  prize_id: string | null
+  branch_id: string | null
+  unique_code: string | null
+  is_redeemed: boolean | null
+  redeemed_at: string | null
+  redeemed_by: string | null
+  created_at: string | null
+  expires_at: string | null
+  updated_at: string | null
+  source: string | null
+  stock_recovered: boolean | null
+  prizes: { name: string; description: string | null } | null
+}
+
+export type PaginatedResponse<T> = {
+  data: T[]
+  total: number
+}
+
+/**
+ * Server action para obtener check-ins paginados de un usuario
+ */
+export async function getCheckinsPaginated(
+  userId: string,
+  page: number = 1,
+  pageSize: number = 20
+): Promise<PaginatedResponse<CheckInWithDetails>> {
+  try {
+    const supabase = createAdminClient()
+
+    // Calcular el rango para la paginación
+    const start = (page - 1) * pageSize
+    const end = start + pageSize - 1
+
+    // Query con paginación y count
+    const { data, error, count } = await supabase
+      .from("check_ins")
+      .select(
+        `
+        *,
+        branches(name),
+        user_profiles!check_ins_verified_by_fkey(first_name, last_name)
+      `,
+        { count: 'exact' }
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(start, end)
+
+    if (error) {
+      console.error('Error fetching paginated check-ins:', error)
+      return { data: [], total: 0 }
+    }
+
+    return {
+      data: (data || []) as CheckInWithDetails[],
+      total: count || 0
+    }
+  } catch (error) {
+    console.error('Unexpected error in getCheckinsPaginated:', error)
+    return { data: [], total: 0 }
+  }
+}
+
+/**
+ * Server action para obtener cupones paginados de un usuario
+ */
+export async function getCouponsPaginated(
+  userId: string,
+  page: number = 1,
+  pageSize: number = 20
+): Promise<PaginatedResponse<CouponWithDetails>> {
+  try {
+    const supabase = createAdminClient()
+
+    // Calcular el rango para la paginación
+    const start = (page - 1) * pageSize
+    const end = start + pageSize - 1
+
+    // Query con paginación y count
+    const { data, error, count } = await supabase
+      .from("coupons")
+      .select(
+        `
+        *,
+        prizes(name, description)
+      `,
+        { count: 'exact' }
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(start, end)
+
+    if (error) {
+      console.error('Error fetching paginated coupons:', error)
+      return { data: [], total: 0 }
+    }
+
+    return {
+      data: (data || []) as CouponWithDetails[],
+      total: count || 0
+    }
+  } catch (error) {
+    console.error('Unexpected error in getCouponsPaginated:', error)
+    return { data: [], total: 0 }
+  }
 }

@@ -9,8 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import CheckinHistoryTable from "@/components/admin/CheckinHistoryTable";
-import CouponHistoryTable from "@/components/admin/CouponHistoryTable";
+import { CheckinHistoryClient } from "@/components/admin/CheckinHistoryClient";
+import { CouponHistoryClient } from "@/components/admin/CouponHistoryClient";
 import GrantSpinsModal from "@/components/admin/GrantSpinsModal";
 import GrantCouponModal from "@/components/admin/GrantCouponModal";
 import DeleteUserDialog from "@/components/admin/DeleteUserDialog";
@@ -28,8 +28,9 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { id } = params;
   const supabase = createAdminClient();
 
-  // Fetch all data in parallel
-  const [profileResult, authUserResult, checkinsResult, couponsResult, prizesResult] =
+  // Fetch all data in parallel - check-ins y coupons con paginación (primera página)
+  const initialPageSize = 20;
+  const [profileResult, authUserResult, checkinsResult, couponsResult, prizesResult, branchesResult] =
     await Promise.all([
       supabase.from("user_profiles").select("*").eq("id", id).single(),
       supabase.auth.admin.getUserById(id),
@@ -38,16 +39,23 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         .select(
           `*,
            branches ( name ),
-           user_profiles!check_ins_verified_by_fkey ( first_name, last_name )`
+           user_profiles!check_ins_verified_by_fkey ( first_name, last_name )`,
+          { count: 'exact' }
         )
         .eq("user_id", id)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .range(0, initialPageSize - 1),
       supabase
         .from("coupons")
-        .select(`*, prizes ( name, description )`)
+        .select(
+          `*, prizes ( name, description )`,
+          { count: 'exact' }
+        )
         .eq("user_id", id)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .range(0, initialPageSize - 1),
       supabase.from("prizes").select("*").eq("is_active", true),
+      supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
     ]);
 
   const { data: profile, error: profileError } = profileResult;
@@ -55,9 +63,10 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     data: { user: authUser },
     error: authError,
   } = authUserResult;
-  const { data: checkins, error: checkinsError } = checkinsResult;
-  const { data: coupons, error: couponsError } = couponsResult;
+  const { data: checkins, error: checkinsError, count: checkinsCount } = checkinsResult;
+  const { data: coupons, error: couponsError, count: couponsCount } = couponsResult;
   const { data: prizes, error: prizesError } = prizesResult;
+  const { data: branches } = branchesResult;
 
   if (profileError || authError || !profile || !authUser) {
     return notFound();
@@ -94,7 +103,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <EditUserForm profile={profile} authUser={authUser} />
+              <EditUserForm 
+                profile={profile} 
+                authUser={authUser} 
+                branches={branches || []}
+              />
             </CardContent>
           </Card>
         </div>
@@ -144,7 +157,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           {checkinsError ? (
             <p className="text-red-500">Error al cargar el historial de visitas.</p>
           ) : (
-            <CheckinHistoryTable checkins={checkins || []} />
+            <CheckinHistoryClient 
+              userId={id}
+              initialCheckins={checkins || []} 
+              initialTotal={checkinsCount || 0}
+            />
           )}
         </CardContent>
       </Card>
@@ -160,7 +177,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           {couponsError ? (
             <p className="text-red-500">Error al cargar el historial de cupones.</p>
           ) : (
-            <CouponHistoryTable coupons={coupons || []} userId={id} />
+            <CouponHistoryClient 
+              userId={id}
+              initialCoupons={coupons || []} 
+              initialTotal={couponsCount || 0}
+            />
           )}
         </CardContent>
       </Card>

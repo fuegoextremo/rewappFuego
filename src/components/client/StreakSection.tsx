@@ -139,16 +139,10 @@ const areStreakPropsEqual = (prevProps: Props, nextProps: Props) => {
 };
 
 const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoading: externalLoading }: Props) {
-  console.log('🔍 StreakSection render:', { currentCount, externalLoading });
-  console.log('🔍 StreakSection - RENDERIZADO CON currentCount:', currentCount, 'type:', typeof currentCount);
-  
-  // 🔍 LOG DETALLADO: Comparación de props
-  console.log('🟨 STREAKSECTION PROPS RECIBIDOS:', {
-    currentCount: currentCount,
-    currentCountType: typeof currentCount,
-    externalLoading: externalLoading,
-    timestamp: new Date().toLocaleTimeString()
-  });
+  // Logs removidos para reducir noise en consola
+  // console.log('🔍 StreakSection render:', { currentCount, externalLoading });
+  // console.log('🔍 StreakSection - RENDERIZADO CON currentCount:', currentCount, 'type:', typeof currentCount);
+  // console.log('🟨 STREAKSECTION PROPS RECIBIDOS:', { ... });
   
   const [imageLoading, setImageLoading] = useState(false)
   const [previousImageUrl, setPreviousImageUrl] = useState<string>('')
@@ -180,13 +174,8 @@ const StreakSectionComponent = memo(function StreakSection({ currentCount, isLoa
   // ✨ NUEVO: Obtener días para romper racha desde settings
   const streakBreakDays = settings?.streak_break_days ? parseInt(settings.streak_break_days) : 12
   
-  console.log('🔍 StreakSection settings:', { 
-    hasSettings: !!stableSettings, 
-    settingsLoading,
-    settingsKeys: stableSettings ? Object.keys(stableSettings).length : 0,
-    lastCheckIn,
-    streakBreakDays
-  });
+  // Settings debug log removido para reducir noise
+  // console.log('🔍 StreakSection settings:', { ... })
 
   // ✨ OPTIMIZACIÓN: Memoizar onError callbacks
   const handleRiveError = useCallback((src: string) => {

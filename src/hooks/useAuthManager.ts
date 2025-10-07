@@ -31,7 +31,9 @@ export function useAuthManager() {
     // Listener de cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔐 Auth event:', event, session?.user?.id)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔐 Auth event:', event, session?.user?.id?.substring(0, 8) + '...')
+        }
         
         switch (event) {
           case 'SIGNED_IN':
@@ -40,11 +42,15 @@ export function useAuthManager() {
               const isReconnection = userRef.current?.id === session.user.id
               
               if (isReconnection) {
-                console.log('🔄 Auth: SIGNED_IN detectado como reconexión - saltando cargas innecesarias')
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('🔄 Auth: SIGNED_IN detectado como reconexión - saltando cargas innecesarias')
+                }
                 return // Skip cargas duplicadas durante reconexión
               }
               
-              console.log('🔑 Auth: Nuevo login detectado - cargando datos del usuario')
+              if (process.env.NODE_ENV === 'development') {
+                console.log('🔑 Auth: Nuevo login detectado - cargando datos del usuario')
+              }
               // Cargar perfil del usuario
               dispatch(loadUserProfile(session.user.id))
               // Cargar configuraciones
@@ -63,11 +69,15 @@ export function useAuthManager() {
               const isAlreadyLoaded = userRef.current?.id === session.user.id
               
               if (isAlreadyLoaded) {
-                console.log('🔄 Auth: INITIAL_SESSION detectado con usuario ya cargado - saltando')
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('🔄 Auth: INITIAL_SESSION detectado con usuario ya cargado - saltando')
+                }
                 return // Skip para prevenir loop infinito
               }
               
-              console.log('🔑 Auth: INITIAL_SESSION con nuevo usuario - cargando datos')
+              if (process.env.NODE_ENV === 'development') {
+                console.log('🔑 Auth: INITIAL_SESSION con nuevo usuario - cargando datos')
+              }
               // Cargar perfil del usuario
               dispatch(loadUserProfile(session.user.id))
               // Cargar configuraciones
@@ -114,20 +124,27 @@ export function useAuthManager() {
         }
 
         if (session?.user) {
-          console.log('📱 Sesión inicial encontrada:', session.user.id)
+          // Sesión encontrada, carga solo en desarrollo
+          if (process.env.NODE_ENV === 'development') {
+            console.log('📱 Sesión inicial encontrada:', session.user.id.substring(0, 8) + '...')
+          }
           
           // 🎯 OPTIMIZACIÓN: Solo cargar si no hay usuario en store
           const isAlreadyLoaded = userRef.current?.id === session.user.id
           
           if (isAlreadyLoaded) {
-            console.log('🔄 Auth: checkInitialSession - usuario ya cargado, saltando')
+            if (process.env.NODE_ENV === 'development') {
+              console.log('🔄 Auth: checkInitialSession - usuario ya cargado, saltando')
+            }
             return // Prevenir doble carga con INITIAL_SESSION event
           }
           
           dispatch(loadUserProfile(session.user.id))
           dispatch(loadSettings())
         } else {
-          console.log('❌ No hay sesión inicial')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('❌ No hay sesión inicial')
+          }
           dispatch(setUser(null))
         }
       } catch (error) {

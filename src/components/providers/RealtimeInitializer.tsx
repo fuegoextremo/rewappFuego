@@ -38,11 +38,13 @@ export function RealtimeInitializer({ children }: RealtimeInitializerProps) {
     if (shouldSync) {
       const reason = missingCriticalData ? 'datos_incompletos' : 'primer_mount_garantizar_datos_frescos'
       
-      console.log(`🔄 Sincronización inicial: ${reason}`, {
-        userId: user.id,
-        total_checkins: user.total_checkins,
-        hasSyncedBefore: hasSyncedOnce.current
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔄 Sincronización inicial: ${reason}`, {
+          userId: user.id.substring(0, 8) + '...',
+          total_checkins: user.total_checkins,
+          hasSyncedBefore: hasSyncedOnce.current
+        })
+      }
       
       // Forzar carga de datos frescos
       Promise.all([
@@ -51,7 +53,9 @@ export function RealtimeInitializer({ children }: RealtimeInitializerProps) {
         dispatch(loadStreakData(user.id))       // userData: streakData
       ])
         .then(() => {
-          console.log('✅ Sincronización inicial completada: authSlice + userData cargados')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Sincronización inicial completada: authSlice + userData cargados')
+          }
           hasSyncedOnce.current = true
         })
         .catch((error) => {

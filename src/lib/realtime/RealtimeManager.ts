@@ -26,6 +26,22 @@ class RealtimeLogger {
     return new Date().toISOString()
   }
 
+  private static sanitizeData(data?: Record<string, unknown>): Record<string, unknown> | undefined {
+    if (!data) return data
+    
+    const sanitized = { ...data }
+    
+    // Ocultar información sensible
+    if (sanitized.userId && typeof sanitized.userId === 'string') {
+      sanitized.userId = sanitized.userId.substring(0, 8) + '...'
+    }
+    if (sanitized.user_id && typeof sanitized.user_id === 'string') {
+      sanitized.user_id = sanitized.user_id.substring(0, 8) + '...'
+    }
+    
+    return sanitized
+  }
+
   private static formatLogEntry(level: LogLevel, context: string, message: string, data?: Record<string, unknown>): LogEntry {
     return {
       timestamp: this.formatTimestamp(),
@@ -37,23 +53,29 @@ class RealtimeLogger {
   }
 
   static info(context: string, message: string, data?: Record<string, unknown>) {
-    const entry = this.formatLogEntry('info', context, message, data)
-    console.log(`🔵 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+    // Solo logear en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      const entry = this.formatLogEntry('info', context, message, this.sanitizeData(data))
+      console.log(`🔵 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+    }
   }
 
   static warn(context: string, message: string, data?: Record<string, unknown>) {
-    const entry = this.formatLogEntry('warn', context, message, data)
+    const entry = this.formatLogEntry('warn', context, message, this.sanitizeData(data))
     console.warn(`🟡 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
   }
 
   static error(context: string, message: string, data?: Record<string, unknown>) {
-    const entry = this.formatLogEntry('error', context, message, data)
+    const entry = this.formatLogEntry('error', context, message, this.sanitizeData(data))
     console.error(`🔴 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
   }
 
   static debug(context: string, message: string, data?: Record<string, unknown>) {
-    const entry = this.formatLogEntry('debug', context, message, data)
-    console.log(`🔍 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+    // Solo logear en desarrollo para evitar spam en producción
+    if (process.env.NODE_ENV === 'development') {
+      const entry = this.formatLogEntry('debug', context, message, data)
+      console.log(`🔍 [${entry.timestamp}] [RealtimeManager::${entry.context}] ${entry.message}`, entry.data || '')
+    }
   }
 }
 

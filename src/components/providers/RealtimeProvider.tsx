@@ -43,7 +43,10 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
 
   // ✨ SINGLE useEffect - simplificado al máximo
   useEffect(() => {
-    console.log('� RealtimeProvider useEffect ejecutado para userId:', userId)
+    // Log solo en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 RealtimeProvider useEffect ejecutado para userId:', userId?.substring(0, 8) + '...')
+    }
     
     // 🔒 Sin usuario - limpiar todo
     if (!userId) {
@@ -59,13 +62,18 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
 
     // ✅ Ya conectado - IDEMPOTENCIA
     if (connectedUserIdRef.current === userId && channelRef.current) {
-      console.log('✅ Realtime ya conectado para usuario:', userId)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Realtime ya conectado para usuario:', userId.substring(0, 8) + '...')
+      }
       return
     }
 
     // 🔄 Cambio de usuario - limpiar anterior
     if (channelRef.current && connectedUserIdRef.current !== userId) {
-      console.log('🔄 Cambiando usuario Realtime:', connectedUserIdRef.current, '→', userId)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 Cambiando usuario Realtime:', 
+          connectedUserIdRef.current?.substring(0, 8) + '...', '→', userId.substring(0, 8) + '...')
+      }
       const supabase = createClientBrowser()
       supabase.removeChannel(channelRef.current)
       channelRef.current = null
@@ -75,7 +83,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
       // ✨ Esperar un momento antes de reconectar para evitar conflictos
       setTimeout(() => {
         // Re-ejecutar el efecto después del delay
-        if (userId) {
+        if (userId && process.env.NODE_ENV === 'development') {
           console.log('🔄 Reconectando después del delay...')
         }
       }, 1000)
@@ -83,7 +91,9 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
     }
 
     // 🚀 Nueva conexión optimizada
-    console.log('🚀 Conectando Realtime para usuario:', userId)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🚀 Conectando Realtime para usuario:', userId.substring(0, 8) + '...')
+    }
     const supabase = createClientBrowser()
     
     const channel = supabase

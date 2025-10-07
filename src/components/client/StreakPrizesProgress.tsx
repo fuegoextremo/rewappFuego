@@ -29,8 +29,8 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
 
   // Calcular días hasta que se rompa la racha
   const daysUntilStreakBreaks = useMemo(() => {
-    // 🎯 FASE 1: Log prioritario para verificar datos realtime
-    if (lastCheckinDate) {
+    // 🎯 FASE 1: Log solo en desarrollo para verificar datos realtime
+    if (lastCheckinDate && process.env.NODE_ENV === 'development') {
       console.log('🟦 [FASE1] StreakProgress: last_check_in desde realtime =', lastCheckinDate)
     }
     
@@ -198,13 +198,15 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
               Visita antes de <strong>{daysUntilStreakBreaks}d</strong> para no perder la racha
             </p>
             
-            {/* 🔍 DEBUG TEMPORAL: Mostrar datos de cálculo */}
-            <div className="mt-2 text-xs text-gray-500 space-y-1">
-              <div>📅 last_check_in: {lastCheckinDate || 'No disponible'}</div>
-              <div>⚙️ streak_break_days config: {streakBreakDays}d</div>
-              <div>🧮 Días transcurridos: {lastCheckinDate ? Math.floor((new Date().getTime() - new Date(lastCheckinDate).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A'}</div>
-              <div>🎯 Cálculo: {streakBreakDays} - {lastCheckinDate ? Math.floor((new Date().getTime() - new Date(lastCheckinDate).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A'} = {daysUntilStreakBreaks}</div>
-            </div>
+            {/* 🔍 DEBUG TEMPORAL: Solo en desarrollo */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-2 text-xs text-gray-500 space-y-1">
+                <div>📅 last_check_in: {lastCheckinDate || 'No disponible'}</div>
+                <div>⚙️ streak_break_days config: {streakBreakDays}d</div>
+                <div>🧮 Días transcurridos: {lastCheckinDate ? Math.floor((new Date().getTime() - new Date(lastCheckinDate).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A'}</div>
+                <div>🎯 Cálculo: {streakBreakDays} - {lastCheckinDate ? Math.floor((new Date().getTime() - new Date(lastCheckinDate).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A'} = {daysUntilStreakBreaks}</div>
+              </div>
+            )}
           </div>
         )}
 

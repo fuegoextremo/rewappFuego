@@ -107,7 +107,10 @@ const initialState: AuthState = {
 export const loadUserProfile = createAsyncThunk(
   'auth/loadUserProfile',
   async (userId: string) => {
-    console.log('🔄 loadUserProfile STARTED for userId:', userId);
+    // Log solo en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 loadUserProfile STARTED for userId:', userId.substring(0, 8) + '...');
+    }
     const supabase = createClientBrowser()
     
     // 1. Cargar perfil del usuario desde user_profiles
@@ -140,11 +143,13 @@ export const loadUserProfile = createAsyncThunk(
 
     // ❌ ELIMINADO: Variables de racha y spins - ahora se manejan en userData
     
-    console.log('🔄 loadUserProfile COMPLETED:', { 
-      userId, 
-      totalCheckins
-      // ❌ ELIMINADO: Campos de racha y spins - ahora se manejan en userData
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 loadUserProfile COMPLETED:', { 
+        userId: userId.substring(0, 8) + '...', 
+        totalCheckins
+        // ❌ ELIMINADO: Campos de racha y spins - ahora se manejan en userData
+      });
+    }
     
     return {
       id: profile.id,

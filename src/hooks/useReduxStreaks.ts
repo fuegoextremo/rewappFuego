@@ -13,12 +13,8 @@ import type { RootState } from '@/store'
 
 // 🔥 Hook que reemplaza useUserStreak de React Query
 // ❌ DEPRECATED: useUserStreakRedux migrado a userData + hooks
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function useUserStreakRedux(userId: string) {
-  console.log('🔍 useUserStreakRedux (DEPRECATED):', { 
-    userId, 
-    note: 'Usar useStreakCount(), useStreakData() de userData'
-  })
-  
   // ❌ NO hacer dispatch - los datos vienen de userData ahora
   // Los datos de racha se manejan via realtime en userData
   
@@ -51,11 +47,8 @@ export function useStreakPrizesRedux() {
     }
     
     if (shouldRefresh()) {
-      console.log('🔄 Refrescando streakPrizes:', {
-        loaded: streakPrizesLoaded,
-        lastUpdate: streakPrizesLastUpdate ? new Date(streakPrizesLastUpdate).toLocaleString() : 'nunca',
-        minutosDesdeUpdate: streakPrizesLastUpdate ? Math.round((Date.now() - streakPrizesLastUpdate) / 60000) : 'N/A'
-      })
+      // Log removido para reducir noise en consola
+      // console.log('🔄 Refrescando streakPrizes:', { ... })
       dispatch(loadStreakPrizes())
     }
   }, [streakPrizesLoaded, streakPrizesLastUpdate, dispatch])
@@ -95,7 +88,8 @@ export function useRecentActivityRedux(userId: string) {
   // 3. NO se está cargando actualmente
   useEffect(() => {
     if (userId && !recentActivityLoaded && !recentActivityLoading) {
-      console.log('🔄 Dispatching loadRecentActivity for userId:', userId)
+      // Log removido para reducir noise
+      // console.log('🔄 Dispatching loadRecentActivity for userId:', userId)
       dispatch(loadRecentActivity(userId))
     }
   }, [userId, recentActivityLoaded, recentActivityLoading, dispatch])

@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -13,7 +13,8 @@ import { useToast } from '@/hooks/use-toast'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import LoginForm from '@/components/auth/LoginForm'
 
-export default function LoginPage() {
+// Componente interno que usa useSearchParams
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -77,5 +78,18 @@ export default function LoginPage() {
     >
       <LoginForm />
     </AuthLayout>
+  )
+}
+
+// Componente principal envuelto en Suspense
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }

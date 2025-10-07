@@ -6,8 +6,8 @@ import { useCurrentStreak } from '@/store/hooks'
 export function SimpleStreakTest() {
   const currentStreak = useCurrentStreak()
   
-  // Este log nos dirá si useCurrentStreak causa re-renders
-  console.log('🧪 SimpleStreakTest render:', { currentStreak, timestamp: Date.now() })
+  // Log removido para reducir noise en consola
+  // console.log('🧪 SimpleStreakTest render:', { currentStreak, timestamp: Date.now() })
   
   return (
     <div style={{ 

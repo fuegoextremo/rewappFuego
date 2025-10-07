@@ -16,6 +16,7 @@ export type SearchFilters = {
   search: string
   role: string
   branch: string
+  provider: string
 }
 
 type UserSearchBarProps = {
@@ -29,10 +30,11 @@ export function UserSearchBar({ onSearch, branches = [], isLoading }: UserSearch
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('all')
   const [branch, setBranch] = useState('all')
+  const [provider, setProvider] = useState('all')
 
   const handleSearch = () => {
     startTransition(() => {
-      onSearch({ search, role, branch })
+      onSearch({ search, role, branch, provider })
     })
   }
 
@@ -40,8 +42,9 @@ export function UserSearchBar({ onSearch, branches = [], isLoading }: UserSearch
     setSearch('')
     setRole('all')
     setBranch('all')
+    setProvider('all')
     startTransition(() => {
-      onSearch({ search: '', role: 'all', branch: 'all' })
+      onSearch({ search: '', role: 'all', branch: 'all', provider: 'all' })
     })
   }
 
@@ -78,27 +81,22 @@ export function UserSearchBar({ onSearch, branches = [], isLoading }: UserSearch
             <SelectItem value="all">Todos los roles</SelectItem>
             <SelectItem value="client">Cliente</SelectItem>
             <SelectItem value="verifier">Verificador</SelectItem>
-            <SelectItem value="manager">Manager</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
           </SelectContent>
         </Select>
 
-        {/* Branch Filter */}
-        {branches.length > 0 && (
-          <Select value={branch} onValueChange={setBranch} disabled={loading}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Sucursal" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las sucursales</SelectItem>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        {/* Provider Filter */}
+        <Select value={provider} onValueChange={setProvider} disabled={loading}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Proveedor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="email">Email</SelectItem>
+            <SelectItem value="google">Google</SelectItem>
+            <SelectItem value="facebook">Facebook</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* Action Buttons */}
         <div className="flex gap-2">
@@ -122,7 +120,7 @@ export function UserSearchBar({ onSearch, branches = [], isLoading }: UserSearch
       </div>
 
       {/* Active Filters Display */}
-      {(search || role !== 'all' || branch !== 'all') && (
+      {(search || role !== 'all' || branch !== 'all' || provider !== 'all') && (
         <div className="flex flex-wrap gap-2 text-sm">
           <span className="text-muted-foreground">Filtros activos:</span>
           {search && (
@@ -138,6 +136,11 @@ export function UserSearchBar({ onSearch, branches = [], isLoading }: UserSearch
           {branch !== 'all' && (
             <span className="px-2 py-1 bg-primary/10 text-primary rounded">
               Sucursal: {branches.find((b) => b.id === branch)?.name || branch}
+            </span>
+          )}
+          {provider !== 'all' && (
+            <span className="px-2 py-1 bg-primary/10 text-primary rounded">
+              Proveedor: {provider === 'email' ? 'Email' : provider.charAt(0).toUpperCase() + provider.slice(1)}
             </span>
           )}
         </div>

@@ -75,10 +75,10 @@ export function RouteGuard({
         if (!role || !allowedRoles.includes(role)) {
           console.log(`🚫 Rol '${role}' no autorizado. Roles permitidos:`, allowedRoles)
           
-          // Redirigir según el rol del usuario
+          // Redirigir según el rol del usuario (debe coincidir con middleware)
           const roleRedirects = {
             'client': '/client',
-            'verifier': '/admin/dashboard',
+            'verifier': '/admin/scanner',
             'manager': '/admin/dashboard',
             'admin': '/admin/dashboard',
             'superadmin': '/superadmin/dashboard'

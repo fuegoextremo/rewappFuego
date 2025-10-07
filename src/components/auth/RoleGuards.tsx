@@ -36,6 +36,47 @@ export function StaffGuard({ children }: { children: React.ReactNode }) {
   )
 }
 
+// 🔐 Guards específicos para páginas admin
+export function ScannerGuard({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteGuard allowedRoles={['verifier', 'manager', 'admin', 'superadmin']}>
+      {children}
+    </RouteGuard>
+  )
+}
+
+export function DashboardGuard({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteGuard allowedRoles={['manager', 'admin', 'superadmin']}>
+      {children}
+    </RouteGuard>
+  )
+}
+
+export function UsersGuard({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteGuard allowedRoles={['manager', 'admin', 'superadmin']}>
+      {children}
+    </RouteGuard>
+  )
+}
+
+export function PrizesGuard({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteGuard allowedRoles={['manager', 'admin', 'superadmin']}>
+      {children}
+    </RouteGuard>
+  )
+}
+
+export function SettingsGuard({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteGuard allowedRoles={['admin', 'superadmin']}>
+      {children}
+    </RouteGuard>
+  )
+}
+
 export function ManagerGuard({ children }: { children: React.ReactNode }) {
   return (
     <RouteGuard allowedRoles={['manager', 'admin', 'superadmin']}>

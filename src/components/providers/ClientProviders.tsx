@@ -1,21 +1,20 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactNode } from 'react'
 import { RealtimeInitializer } from '@/components/providers/RealtimeInitializer'
+import { ModalProvider } from '@/components/providers/ModalProvider'
 
 interface ClientProvidersProps {
   children: ReactNode
 }
 
+// Providers específicos del cliente (NO incluye QueryClient, ya está en root)
 export function ClientProviders({ children }: ClientProvidersProps) {
-  const [queryClient] = useState(() => new QueryClient())
-  
   return (
-    <QueryClientProvider client={queryClient}>
-      <RealtimeInitializer>
+    <RealtimeInitializer>
+      <ModalProvider>
         {children}
-      </RealtimeInitializer>
-    </QueryClientProvider>
+      </ModalProvider>
+    </RealtimeInitializer>
   )
 }

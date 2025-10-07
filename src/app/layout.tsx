@@ -2,12 +2,14 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
-import { Providers } from '@/components/providers/Providers'
+import { GlobalQueryProvider } from '@/components/providers/GlobalQueryProvider'
 import '@/lib/supabase/env' // Log del ambiente en consola
 
 const inter = Inter({ subsets: ['latin'] })
 
-const isLocal = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1')
+// Detectar si está en desarrollo local (127.0.0.1 o IP local + puerto 54321)
+const isLocal = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1') || 
+                process.env.NEXT_PUBLIC_SUPABASE_URL?.includes(':54321')
 
 export const metadata: Metadata = {
   title: 'REWAPP - Sistema de Recompensas',
@@ -28,11 +30,12 @@ export default function RootLayout({
             🏠 DESARROLLO LOCAL - Base de datos de prueba
           </div>
         )}
-        <Providers>
+        {/* QueryClient global para toda la app (admin y client) */}
+        <GlobalQueryProvider>
           <div className={isLocal ? 'mt-8' : ''}>
             {children}
           </div>
-        </Providers>
+        </GlobalQueryProvider>
         <Toaster />
       </body>
     </html>

@@ -7,6 +7,7 @@ export type UserFilters = {
   search?: string;
   role?: string;
   branch?: string;
+  provider?: string;
   page?: number;
   pageSize?: number;
 };
@@ -49,6 +50,7 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
     search = '',
     role,
     branch,
+    provider,
     page = 1,
     pageSize = 20
   } = filters;
@@ -58,6 +60,21 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
   const end = start + pageSize - 1;
 
   try {
+    // 🔍 Primero, obtener todos los usuarios con sus proveedores desde auth.users
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    
+    if (authError) {
+      console.error('❌ Error fetching auth users:', authError);
+    }
+
+    // Crear mapa de user_id -> provider
+    const providerMap = new Map<string, string>();
+    authUsers?.users.forEach(user => {
+      // El provider está en app_metadata.provider o en el primer identity
+      const authProvider = user.app_metadata?.provider || user.identities?.[0]?.provider || 'email';
+      providerMap.set(user.id, authProvider);
+    });
+
     // Query builder
     let query = supabase
       .from('user_profiles')
@@ -114,13 +131,13 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
       };
     }
 
-    // ✅ Normalizar counts (asegurar que siempre sean arrays)
-    const users: UserWithDetails[] = (data || []).map((user): UserWithDetails => ({
+    // ✅ Normalizar counts y agregar provider desde auth.users
+    let users: UserWithDetails[] = (data || []).map((user): UserWithDetails => ({
       id: user.id,
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
-      provider: undefined, // Not available in user_profiles, only in auth metadata
+      provider: providerMap.get(user.id) || 'email', // Provider desde auth.users
       phone: user.phone,
       birth_date: user.birth_date,
       role: user.role,
@@ -137,13 +154,23 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
         : [{ count: 0 }],
     }));
 
-    const totalPages = Math.ceil((count || 0) / pageSize);
+    // 🔍 Filtrar por proveedor si se especifica (post-query porque no está en user_profiles)
+    if (provider && provider !== 'all') {
+      users = users.filter(user => user.provider === provider);
+    }
 
-    console.log(`✅ Users fetched: ${users.length}/${count} (page ${page}/${totalPages})`);
+    // Ajustar totales después del filtro de proveedor
+    const finalTotal = provider && provider !== 'all' ? users.length : (count || 0);
+    const totalPages = Math.ceil(finalTotal / pageSize);
+
+    console.log(`✅ Users fetched: ${users.length}/${finalTotal} (page ${page}/${totalPages})`);
+    if (provider && provider !== 'all') {
+      console.log(`🔍 Filtrado por proveedor: ${provider}`);
+    }
 
     return {
       users,
-      total: count || 0,
+      total: finalTotal,
       page,
       pageSize,
       totalPages

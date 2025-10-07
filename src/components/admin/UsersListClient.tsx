@@ -31,6 +31,7 @@ export function UsersListClient({
     search: '',
     role: 'all',
     branch: 'all',
+    provider: 'all',
   })
 
   const fetchUsers = useCallback(async (newPage: number, newPageSize: number, newFilters: SearchFilters) => {
@@ -40,6 +41,7 @@ export function UsersListClient({
         search: newFilters.search,
         role: newFilters.role === 'all' ? undefined : newFilters.role,
         branch: newFilters.branch === 'all' ? undefined : newFilters.branch,
+        provider: newFilters.provider === 'all' ? undefined : newFilters.provider,
         page: newPage,
         pageSize: newPageSize,
       })

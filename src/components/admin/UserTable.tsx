@@ -21,7 +21,8 @@ import {
   Chrome, 
   Users,
   CheckCircle,
-  Gift
+  Gift,
+  Facebook
 } from "lucide-react";
 import Link from "next/link";
 
@@ -35,6 +36,8 @@ const ProviderIcon = ({ provider }: { provider: string | undefined }) => {
       return <Mail className="h-4 w-4 text-blue-600" />;
     case "google":
       return <Chrome className="h-4 w-4 text-red-500" />;
+    case "facebook":
+      return <Facebook className="h-4 w-4 text-blue-700" />;
     default:
       return <UserIcon className="h-4 w-4 text-gray-400" />;
   }

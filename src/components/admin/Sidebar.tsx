@@ -21,13 +21,35 @@ import { useEffect, useState } from "react";
 import { createClientBrowser } from "@/lib/supabase/client";
 import { signOut } from "@/lib/auth/actions";
 
-const links = [
+const allLinks = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Usuarios", href: "/users", icon: Users },
   { name: "Premios", href: "/prizes", icon: Award },
   { name: "Scanner", href: "/scanner", icon: QrCode },
   { name: "Ajustes", href: "/settings", icon: Settings },
 ];
+
+// 🔐 Filtrar links según el rol del usuario
+function getVisibleLinks(userRole: string | null) {
+  if (!userRole) return []
+  
+  // Verifier: solo scanner
+  if (userRole === 'verifier') {
+    return allLinks.filter(link => link.href === '/scanner')
+  }
+  
+  // Manager: todo excepto ajustes
+  if (userRole === 'manager') {
+    return allLinks.filter(link => link.href !== '/settings')
+  }
+  
+  // Admin y SuperAdmin: todo
+  if (userRole === 'admin' || userRole === 'superadmin') {
+    return allLinks
+  }
+  
+  return []
+}
 
 interface UserProfile {
   first_name: string | null;
@@ -81,6 +103,9 @@ export default function Sidebar() {
 
   const isSuperAdmin = userProfile?.role === 'superadmin';
 
+  // ⭐ Obtener links visibles según rol
+  const visibleLinks = getVisibleLinks(userProfile?.role || null)
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -94,7 +119,7 @@ export default function Sidebar() {
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
         <div className="flex justify-around items-center py-2 px-1">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const LinkIcon = link.icon;
             const isActive = pathname === `/admin${link.href}`;
             return (
@@ -176,7 +201,7 @@ export default function Sidebar() {
         <div className="flex-1 flex flex-col">
           <nav className="flex-1 p-3">
             <div className="space-y-1">
-              {links.map((link) => {
+              {visibleLinks.map((link) => {
                 const LinkIcon = link.icon;
                 const isActive = pathname === `/admin${link.href}`;
                 return (

@@ -4,6 +4,7 @@ import PremiosSection from "./components/PremiosSection";
 import CuponesSection from "./components/CuponesSection";
 import EmpresaSection from "./components/EmpresaSection";
 import NotificacionesSection from "./components/NotificacionesSection";
+import SEOSection from "./components/SEOSection";
 import AnalyticsSection from "@/components/superadmin/AnalyticsSection";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CogIcon } from "@heroicons/react/24/outline";
@@ -50,6 +51,13 @@ export default async function SistemaPage() {
 
       {/* Configuraciones */}
       <div className="space-y-8">
+        {/* SEO y Branding - Lo más importante primero */}
+        <Suspense fallback={<div className="animate-pulse bg-gray-100 h-96 rounded-lg" />}>
+          <SEOSection 
+            settings={('seo' in settingsResult.data) ? settingsResult.data.seo : []} 
+          />
+        </Suspense>
+
         <Suspense fallback={<div className="animate-pulse bg-gray-100 h-48 rounded-lg" />}>
           <PremiosSection 
             settings={('prizes' in settingsResult.data) ? settingsResult.data.prizes : []} 

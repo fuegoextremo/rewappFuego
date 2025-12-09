@@ -29,6 +29,14 @@ export type SystemSettings = {
   analytics_spin_cost?: string // Costo por giro de ruleta
   analytics_retention_multiplier?: string // Multiplicador de retención
   analytics_premium_branch_multiplier?: string // Multiplicador sucursal premium
+  // Configuraciones SEO y Branding
+  seo_title?: string // Título SEO de la aplicación
+  seo_description?: string // Descripción SEO para motores de búsqueda
+  seo_keywords?: string // Palabras clave SEO
+  seo_author?: string // Autor/Empresa para metadatos
+  favicon_url?: string // URL del favicon
+  apple_touch_icon_url?: string // URL del icono para iOS
+  og_image_url?: string // URL de imagen para redes sociales
 }
 
 // Configuraciones por defecto (única fuente de verdad)
@@ -60,4 +68,12 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   analytics_spin_cost: '10', // Costo por giro de ruleta (MXN)
   analytics_retention_multiplier: '1.5', // Multiplicador de retención (usuarios retenidos valen 1.5x)
   analytics_premium_branch_multiplier: '1.2', // Multiplicador sucursal premium (20% más valor)
+  // Valores por defecto para SEO y Branding
+  seo_title: 'Fuego Extremo - Programa de Recompensas',
+  seo_description: 'Acumula puntos con cada visita, gira la ruleta y gana increíbles premios. El programa de fidelización más emocionante.',
+  seo_keywords: 'recompensas, puntos, ruleta, premios, fidelización, cupones',
+  seo_author: '',
+  favicon_url: '',
+  apple_touch_icon_url: '',
+  og_image_url: '',
 }

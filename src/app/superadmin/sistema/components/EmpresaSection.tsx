@@ -26,9 +26,11 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
     return setting?.value || defaultValue;
   };
 
+  // Obtener logo desde settings (se configura en SEO y Branding)
+  const companyLogoUrl = getSettingValue('company_logo_url', '');
+
   const [formData, setFormData] = useState({
     company_name: getSettingValue('company_name', 'Mi Empresa'),
-    company_logo_url: getSettingValue('company_logo_url', ''),
     company_theme_primary: getSettingValue('company_theme_primary', '#8b5cf6'),
     company_theme_secondary: getSettingValue('company_theme_secondary', '#a855f7'),
     company_contact_email: getSettingValue('company_contact_email', ''),
@@ -84,7 +86,6 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
         // Actualizar el formulario con valores por defecto
         setFormData({
           company_name: 'Mi Empresa',
-          company_logo_url: '',
           company_theme_primary: '#8b5cf6',
           company_theme_secondary: '#a855f7',
           company_contact_email: '',
@@ -154,20 +155,9 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
                 disabled={isLoading}
                 placeholder="Nombre de tu empresa"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="company_logo" className="text-sm font-medium text-gray-700">
-                URL del logo
-              </Label>
-              <Input
-                id="company_logo"
-                value={formData.company_logo_url}
-                onChange={(e) => handleInputChange('company_logo_url', e.target.value)}
-                className="border-blue-200 focus:border-blue-400"
-                disabled={isLoading}
-                placeholder="https://ejemplo.com/logo.png"
-              />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 El logo se configura en la sección "SEO y Branding"
+              </p>
             </div>
           </div>
         </div>
@@ -313,9 +303,9 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                {formData.company_logo_url && (
+                {companyLogoUrl && (
                   <Image 
-                    src={formData.company_logo_url} 
+                    src={companyLogoUrl} 
                     alt="Logo" 
                     width={32}
                     height={32}

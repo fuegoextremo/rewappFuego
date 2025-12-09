@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Configuración de imágenes remotas (Supabase Storage)
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'wapzrqysraazykcfmrhd.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
   // Optimizaciones para navegación más rápida
   experimental: {
     optimizePackageImports: ['@supabase/supabase-js', 'lucide-react'],

@@ -42,10 +42,11 @@ export function AuthLayout({
               <Image
                 src={logoUrl}
                 alt={`Logo ${companyName}`}
-                width={80}
-                height={80}
+                width={160}
+                height={160}
                 className="object-contain w-full h-full"
                 priority
+                unoptimized
               />
             </div>
           ) : (

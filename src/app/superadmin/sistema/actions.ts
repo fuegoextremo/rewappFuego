@@ -3,7 +3,7 @@
 import { createClientServer } from "@/lib/supabase/server";
 
 // Tipos para las configuraciones
-export type SystemSettingCategory = 'prizes' | 'coupons' | 'general' | 'notifications' | 'analytics';
+export type SystemSettingCategory = 'prizes' | 'coupons' | 'general' | 'notifications' | 'analytics' | 'seo';
 
 export interface SystemSetting {
   id: string;
@@ -161,20 +161,42 @@ export async function updateSystemSettings(updates: SystemSettingsUpdate) {
       }
     }
 
-    // Actualizar cada configuración
-    const updatePromises = Object.entries(updates).map(([key, value]) => {
+    // Determinar categoría basada en el key para UPSERT
+    const getCategoryForKey = (key: string): SystemSettingCategory => {
+      if (key.startsWith('seo_') || key.endsWith('_url') && (
+        key.includes('favicon') || key.includes('og_image') || key.includes('apple_touch') || key.includes('logo')
+      )) {
+        return 'seo';
+      }
+      if (key.startsWith('company_')) return 'general';
+      if (key.startsWith('prize') || key.includes('prize')) return 'prizes';
+      if (key.startsWith('coupon')) return 'coupons';
+      if (key.startsWith('notification')) return 'notifications';
+      return 'general';
+    };
+
+    // Usar UPSERT para crear settings que no existen
+    const upsertPromises = Object.entries(updates).map(([key, value]) => {
+      // Buscar si ya existe para determinar la categoría
+      const existingSetting = currentSettings?.find(s => s.key === key);
+      const category = existingSetting?.category || getCategoryForKey(key);
+      
       return supabase
         .from('system_settings')
-        .update({
+        .upsert({
+          key,
           value: String(value),
+          category,
+          setting_type: 'text',
+          is_active: true,
           updated_by: user.id,
           updated_at: new Date().toISOString()
-        })
-        .eq('key', key)
-        .eq('is_active', true);
+        }, {
+          onConflict: 'key'
+        });
     });
 
-    const results = await Promise.all(updatePromises);
+    const results = await Promise.all(upsertPromises);
 
     // Verificar errores
     for (const result of results) {
@@ -209,7 +231,7 @@ export async function getSuperAdminSettings() {
       .from('system_settings')
       .select('*')
       .eq('is_active', true)
-      .in('category', ['prizes', 'coupons', 'general', 'notifications', 'analytics'])
+      .in('category', ['prizes', 'coupons', 'general', 'notifications', 'analytics', 'seo'])
       .order('category, key');
 
     if (error) {

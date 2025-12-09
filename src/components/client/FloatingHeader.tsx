@@ -29,15 +29,16 @@ export function FloatingHeader({ className = '' }: FloatingHeaderProps) {
       }}
     >
       {/* Logo del negocio */}
-      <div className="w-[35px] h-[35px] rounded-[13px] overflow-hidden bg-white flex-shrink-0 flex items-center justify-center p-1">
+      <div className="w-[35px] h-[35px] rounded-[13px] overflow-hidden bg-white flex-shrink-0">
         {logoUrl ? (
           <Image 
             src={logoUrl} 
             alt={companyName}
             width={35}
             height={35}
-            className="object-contain w-full h-full"
+            className="object-cover w-full h-full"
             priority
+            unoptimized
           />
         ) : (
           <div className="text-gray-800 text-sm font-bold">

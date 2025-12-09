@@ -5,6 +5,7 @@ import { useUser, useAppDispatch } from '@/store/hooks'
 import { setUser } from '@/store/slices/authSlice'
 import { useUpdateUserProfile } from '@/hooks/queries/useUserQueries'
 import { useExtendedProfileData } from '@/hooks/use-extended-profile'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 import { User, Phone, Calendar, Save, Loader2 } from 'lucide-react'
 
 interface EditProfileFormProps {
@@ -16,6 +17,8 @@ export default function EditProfileForm({ onSuccess }: EditProfileFormProps) {
   const dispatch = useAppDispatch()
   const updateProfile = useUpdateUserProfile()
   const extendedData = useExtendedProfileData(user?.id)
+  const { data: settings } = useSystemSettings()
+  const primaryColor = settings?.company_theme_primary || '#D73527'
   const [isPending, startTransition] = useTransition()
   
   const [formData, setFormData] = useState({
@@ -197,7 +200,8 @@ export default function EditProfileForm({ onSuccess }: EditProfileFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center space-x-2 text-white py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ backgroundColor: primaryColor }}
       >
         {isLoading ? (
           <>

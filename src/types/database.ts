@@ -393,6 +393,7 @@ export type Database = {
           is_active: boolean | null
           last_name: string | null
           phone: string | null
+          provider: string | null
           role: string | null
           unique_code: string | null
           updated_at: string | null
@@ -407,6 +408,7 @@ export type Database = {
           is_active?: boolean | null
           last_name?: string | null
           phone?: string | null
+          provider?: string | null
           role?: string | null
           unique_code?: string | null
           updated_at?: string | null
@@ -421,6 +423,7 @@ export type Database = {
           is_active?: boolean | null
           last_name?: string | null
           phone?: string | null
+          provider?: string | null
           role?: string | null
           unique_code?: string | null
           updated_at?: string | null

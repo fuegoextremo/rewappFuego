@@ -28,7 +28,6 @@ export interface TopClient {
   email: string;
   checkins: number;
   coupons: number;
-  totalPoints: number;
 }
 
 // Obtener estadísticas del dashboard (OPTIMIZADO)
@@ -230,7 +229,7 @@ async function getTopClients(supabase: ReturnType<typeof createAdminClient>, sta
       couponQuery,
       supabase
         .from('user_profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, email')
         .eq('role', 'client')
         .not('is_active', 'eq', false)
     ]);
@@ -255,20 +254,11 @@ async function getTopClients(supabase: ReturnType<typeof createAdminClient>, sta
       }
     });
 
-    // Obtener emails solo para los usuarios activos
-    const activeUserIds = usersData.data.map(user => user.id);
-    const { data: authUsers } = await supabase.auth.admin.listUsers();
-    const emailMap = new Map(
-      authUsers.users
-        .filter(user => activeUserIds.includes(user.id))
-        .map(user => [user.id, user.email])
-    );
-
-    // Procesar usuarios y calcular estadísticas
+    // Procesar usuarios y calcular estadísticas (email ya viene de user_profiles)
     const processedUsers = usersData.data.map(user => {
       const checkins = checkinCounts.get(user.id) || 0;
       const coupons = couponCounts.get(user.id) || 0;
-      const email = emailMap.get(user.id) || '';
+      const email = user.email || '';
       
       const name = user.first_name && user.last_name 
         ? `${user.first_name} ${user.last_name}`
@@ -280,7 +270,6 @@ async function getTopClients(supabase: ReturnType<typeof createAdminClient>, sta
         email,
         checkins,
         coupons,
-        totalPoints: checkins * 10, // 10 puntos por check-in
       };
     });
 

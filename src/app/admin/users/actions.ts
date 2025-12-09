@@ -60,22 +60,7 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
   const end = start + pageSize - 1;
 
   try {
-    // 🔍 Primero, obtener todos los usuarios con sus proveedores desde auth.users
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      console.error('❌ Error fetching auth users:', authError);
-    }
-
-    // Crear mapa de user_id -> provider
-    const providerMap = new Map<string, string>();
-    authUsers?.users.forEach(user => {
-      // El provider está en app_metadata.provider o en el primer identity
-      const authProvider = user.app_metadata?.provider || user.identities?.[0]?.provider || 'email';
-      providerMap.set(user.id, authProvider);
-    });
-
-    // Query builder
+    // Query builder - ahora incluye provider directamente de user_profiles
     let query = supabase
       .from('user_profiles')
       .select(`
@@ -83,6 +68,7 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
         first_name,
         last_name,
         email,
+        provider,
         phone,
         birth_date,
         role,
@@ -96,7 +82,7 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
       `, { count: 'exact' })
       .neq('role', 'superadmin');
 
-    // 🔍 Búsqueda por texto (email, nombre, teléfono)
+    // Busqueda por texto (email, nombre, telefono)
     if (search && search.trim()) {
       const searchTerm = search.trim();
       query = query.or(
@@ -104,23 +90,28 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
       );
     }
 
-    // 🏷️ Filtro por rol
+    // Filtro por rol
     if (role && role !== 'all') {
       query = query.eq('role', role);
     }
 
-    // 🏢 Filtro por sucursal
+    // Filtro por sucursal
     if (branch && branch !== 'all') {
       query = query.eq('branch_id', branch);
     }
 
-    // 📊 Paginación y orden
+    // Filtro por proveedor (ahora a nivel de DB, no post-query)
+    if (provider && provider !== 'all') {
+      query = query.eq('provider', provider);
+    }
+
+    // Paginacion y orden
     const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .range(start, end);
 
     if (error) {
-      console.error('❌ Error fetching users:', error);
+      console.error('Error fetching users:', error);
       return { 
         users: [], 
         total: 0, 
@@ -131,13 +122,13 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
       };
     }
 
-    // ✅ Normalizar counts y agregar provider desde auth.users
-    let users: UserWithDetails[] = (data || []).map((user): UserWithDetails => ({
+    // Normalizar counts - provider ya viene de la query
+    const users: UserWithDetails[] = (data || []).map((user): UserWithDetails => ({
       id: user.id,
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
-      provider: providerMap.get(user.id) || 'email', // Provider desde auth.users
+      provider: user.provider || 'email',
       phone: user.phone,
       birth_date: user.birth_date,
       role: user.role,
@@ -154,29 +145,17 @@ export async function getUsersPaginated(filters: UserFilters = {}): Promise<Pagi
         : [{ count: 0 }],
     }));
 
-    // 🔍 Filtrar por proveedor si se especifica (post-query porque no está en user_profiles)
-    if (provider && provider !== 'all') {
-      users = users.filter(user => user.provider === provider);
-    }
-
-    // Ajustar totales después del filtro de proveedor
-    const finalTotal = provider && provider !== 'all' ? users.length : (count || 0);
-    const totalPages = Math.ceil(finalTotal / pageSize);
-
-    console.log(`✅ Users fetched: ${users.length}/${finalTotal} (page ${page}/${totalPages})`);
-    if (provider && provider !== 'all') {
-      console.log(`🔍 Filtrado por proveedor: ${provider}`);
-    }
+    const totalPages = Math.ceil((count || 0) / pageSize);
 
     return {
       users,
-      total: finalTotal,
+      total: count || 0,
       page,
       pageSize,
       totalPages
     };
   } catch (error) {
-    console.error('❌ Unexpected error in getUsersPaginated:', error);
+    console.error('Unexpected error in getUsersPaginated:', error);
     return { 
       users: [], 
       total: 0, 

@@ -75,14 +75,6 @@ export default function TopClients({ periodClients, allTimeClients, periodLabel 
                         Cupones
                       </p>
                     </div>
-                    <div className="text-center">
-                      <p className={`font-bold ${isTopThree ? 'text-blue-700' : 'text-blue-600'}`}>
-                        {client.totalPoints}
-                      </p>
-                      <p className={`text-xs ${isTopThree ? 'text-amber-700' : 'text-muted-foreground'}`}>
-                        Puntos
-                      </p>
-                    </div>
                   </div>
                 </div>
               );

@@ -358,7 +358,7 @@ export class RealtimeManager {
       if (this.reduxDispatch) {
         import('@/store/slices/authSlice').then(({ 
           incrementTotalCheckins, 
-          prependRecentActivity
+          loadRecentActivity
         }) => {
           // Incrementar visitas totales
           this.reduxDispatch!(incrementTotalCheckins())
@@ -367,16 +367,12 @@ export class RealtimeManager {
           // 🔄 NUEVO: Los giros se actualizan solo via user_spins (evita race condition)
           RealtimeLogger.debug('check-ins', 'Giros se actualizarán via evento user_spins')
           
-          // 🔥 NUEVO: Agregar el check-in a recentActivity en Redux
-          const newCheckin = {
-            id: payload.new?.id as string,
-            check_in_date: payload.new?.check_in_date as string | null,
-            spins_earned: payload.new?.spins_earned as number | null,
-            created_at: payload.new?.created_at as string | null,
-            branches: null // Se puede cargar después si es necesario
+          // 🔥 OPTIMIZADO: Recargar actividad reciente desde la DB (fuente de verdad)
+          // Esto evita race conditions con prependRecentActivity
+          if (this.currentUserId) {
+            this.reduxDispatch!(loadRecentActivity(this.currentUserId))
+            RealtimeLogger.info('check-ins', 'Recargando actividad reciente desde DB')
           }
-          this.reduxDispatch!(prependRecentActivity(newCheckin))
-          console.log('🔥 RealtimeManager: ✅ Agregando check-in a recentActivity:', newCheckin)
         })
       }
 

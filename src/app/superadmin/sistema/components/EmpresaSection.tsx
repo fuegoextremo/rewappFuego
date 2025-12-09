@@ -156,7 +156,7 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
                 placeholder="Nombre de tu empresa"
               />
               <p className="text-xs text-gray-500 mt-1">
-                💡 El logo se configura en la sección "SEO y Branding"
+                El logo se configura en la seccion SEO y Branding
               </p>
             </div>
           </div>

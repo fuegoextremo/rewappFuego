@@ -34,11 +34,11 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    // Verificar sesión
-    const { data: { session } } = await supabase.auth.getSession()
+    // SEGURIDAD: Usar getUser() que verifica el JWT contra el servidor
+    // getSession() solo lee la cookie local sin verificar - vulnerable a manipulación
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (!session?.user) {
-      console.log('🚫 Sin sesión, redirigiendo a login')
+    if (authError || !user) {
       return NextResponse.redirect(new URL('/login', req.url))
     }
 
@@ -46,7 +46,7 @@ export async function middleware(req: NextRequest) {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
     
     const userRole = profile?.role

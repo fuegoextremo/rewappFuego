@@ -10,7 +10,7 @@ const items = [
   { view: 'home', label: 'Inicio', icon: Home },
   { view: 'roulette', label: 'Ruleta', icon: FerrisWheel },
   { view: 'checkin', label: 'QR', icon: QrCode },
-  { view: 'coupons', label: 'Cupones', icon: Ticket },
+  { view: 'coupons', label: 'Premios', icon: Ticket },
   { view: 'profile', label: 'Perfil', icon: User },
 ] as const
 

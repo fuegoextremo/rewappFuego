@@ -202,7 +202,8 @@ export class RealtimeManager {
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'check_ins'
+        table: 'check_ins',
+        filter: `user_id=eq.${userId}`
       }, (payload: RealtimePayload) => {
         RealtimeLogger.debug('check-ins', 'Raw checkin event recibido', { payload })
         console.log('🟡 CHECK-IN EVENT recibido:', {

@@ -7,7 +7,7 @@ import { queryKeys } from '@/lib/queryClient'
 import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
-import { loadUserProfile, loadStreakPrizes } from '@/store/slices/authSlice'
+import { loadUserProfile, loadStreakPrizes, loadRecentActivity } from '@/store/slices/authSlice'
 // ❌ ELIMINADO: loadUserStreakData - migrado a userData
 import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
@@ -63,6 +63,9 @@ export function AppShell({ children }: AppShellProps) {
       await Promise.all([
         // 🔥 DATOS CRÍTICOS: Refrescar datos del usuario (realtime)
         dispatch(loadUserProfile(user.id)).unwrap(),
+        
+        // 🔄 ACTIVIDAD RECIENTE: Recuperar check-ins que Realtime pudo haber perdido
+        dispatch(loadRecentActivity(user.id)).unwrap(),
         
         // ❌ ELIMINADO: loadUserStreakData - datos de racha se manejan via realtime en userData
         
@@ -261,38 +264,46 @@ export function AppShell({ children }: AppShellProps) {
                   className="space-y-1"
                 >
                   <motion.div
-                    className="text-xl"
-                    animate={{ 
-                      rotate: [0, 10, -10, 0],
-                      scale: [1, 1.1, 1]
-                    }}
-                    transition={{ 
-                      duration: 0.6, 
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
+                    animate={{ rotate: 180 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-6 h-6 mx-auto text-blue-500"
                   >
-                    🔄
+                    <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
+                      <path 
+                        d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 .79-.15 1.56-.44 2.25l1.52 1.52C19.68 14.62 20 13.34 20 12c0-4.42-3.58-8-8-8z" 
+                        fill="currentColor"
+                      />
+                      <path 
+                        d="M12 20c-3.31 0-6-2.69-6-6 0-.79.15-1.56.44-2.25L4.92 10.23C4.32 11.38 4 12.66 4 14c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" 
+                        fill="currentColor"
+                        opacity="0.5"
+                      />
+                    </svg>
                   </motion.div>
                   <p className="text-xs text-blue-600 font-medium">Suelta para actualizar</p>
                 </motion.div>
               ) : (
-                <motion.div
-                  animate={{ y: Math.sin(Date.now() / 500) * 2 }} // 🎯 Menos movimiento
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="space-y-1" // 🎯 Menos espacio
-                >
+                <motion.div className="space-y-1">
                   <motion.div
-                    className="text-xl" // 🎯 Más pequeño
+                    className="w-6 h-6 mx-auto text-gray-400"
                     animate={{ 
-                      scale: [1, 1.05, 1], // 🎯 Menos escalado
-                      rotate: [0, 3, -3, 0] // 🎯 Menos rotación
+                      rotate: (pullDistance / 80) * 180
                     }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
+                    transition={{ duration: 0.1 }}
                   >
-                    ⬇️
+                    <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
+                      <path 
+                        d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 .79-.15 1.56-.44 2.25l1.52 1.52C19.68 14.62 20 13.34 20 12c0-4.42-3.58-8-8-8z" 
+                        fill="currentColor"
+                      />
+                      <path 
+                        d="M12 20c-3.31 0-6-2.69-6-6 0-.79.15-1.56.44-2.25L4.92 10.23C4.32 11.38 4 12.66 4 14c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" 
+                        fill="currentColor"
+                        opacity="0.5"
+                      />
+                    </svg>
                   </motion.div>
-                  <p className="text-xs text-gray-500">Tira hacia abajo</p>
+                  <p className="text-xs text-gray-500">Desliza para actualizar</p>
                 </motion.div>
               )}
             </div> {/* 🎯 Cerramos el div sin rotación */}

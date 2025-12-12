@@ -12,9 +12,15 @@ interface RealtimeInitializerProps {
 
 /**
  * Componente que inicializa RealtimeManager + Sincronización Híbrida Inteligente
+ * 
+ * IMPORTANTE: El orden es crítico:
+ * 1. Primero se suscribe a Realtime (useRealtimeManager)
+ * 2. Luego carga datos iniciales (sincronización)
+ * Esto evita perder eventos que lleguen entre carga y suscripción.
  */
 export function RealtimeInitializer({ children }: RealtimeInitializerProps) {
-  // Este hook se encarga de toda la lógica de inicialización de realtime
+  // 🔌 PASO 1: Suscribirse a Realtime PRIMERO (antes de cargar datos)
+  // Esto garantiza que no perdemos eventos durante la carga inicial
   useRealtimeManager()
   
   // 🎯 SINCRONIZACIÓN HÍBRIDA: Hooks para detectar datos incompletos

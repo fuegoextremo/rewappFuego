@@ -59,9 +59,9 @@ export default function CouponsView() {
             transition={{ delay: 0.1 }}
             className="text-center px-8 mb-2"
           >
-            <h1 className="text-3xl font-semibold mb-2">Mis Cupones</h1>
+            <h1 className="text-3xl font-semibold mb-2">Mis Premios</h1>
             <p className="text-sm opacity-90">
-              Gestiona tus cupones activos y revisa tu historial
+              Gestiona tus premios activos y revisa tu historial
             </p>
           </motion.div>
         </div>

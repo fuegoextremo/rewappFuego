@@ -2,6 +2,56 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// ============================================
+// HELPERS DE ZONA HORARIA - MEXICO (UTC-6)
+// ============================================
+const MEXICO_TZ = 'America/Mexico_City';
+
+/**
+ * Obtiene la fecha actual en zona horaria de México
+ */
+function getMexicoNow(): Date {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: MEXICO_TZ }));
+}
+
+/**
+ * Convierte una fecha UTC a fecha en México (para agrupar por día)
+ */
+function toMexicoDate(utcDateString: string): string {
+  const date = new Date(utcDateString);
+  return date.toLocaleDateString('en-US', { timeZone: MEXICO_TZ });
+}
+
+/**
+ * Obtiene medianoche de hoy en México, convertido a UTC para queries
+ */
+function getMexicoMidnightUTC(): Date {
+  const mexicoNow = getMexicoNow();
+  mexicoNow.setHours(0, 0, 0, 0);
+  // Convertir de vuelta a UTC sumando el offset de México (+6 horas)
+  return new Date(mexicoNow.getTime() + (6 * 60 * 60 * 1000));
+}
+
+/**
+ * Obtiene el inicio de un día específico en México, convertido a UTC
+ */
+function getMexicoDayStartUTC(date: Date): Date {
+  const mexicoDate = new Date(date.toLocaleString('en-US', { timeZone: MEXICO_TZ }));
+  mexicoDate.setHours(0, 0, 0, 0);
+  return new Date(mexicoDate.getTime() + (6 * 60 * 60 * 1000));
+}
+
+/**
+ * Formatea una fecha para mostrar en la UI (en zona México)
+ */
+function formatMexicoDate(date: Date): string {
+  return date.toLocaleDateString('es-MX', { 
+    timeZone: MEXICO_TZ,
+    month: 'short', 
+    day: 'numeric' 
+  });
+}
+
 export interface DashboardStats {
   today: {
     checkins: number;
@@ -35,36 +85,36 @@ export async function getDashboardStats(days: number = 7): Promise<{ success: bo
   try {
     const supabase = createAdminClient();
     
-    // Calcular fechas
-    const endDate = new Date();
-    const startDate = new Date();
+    // Calcular fechas usando zona horaria de México
+    const mexicoNow = getMexicoNow();
+    const endDate = new Date(mexicoNow);
+    const startDate = new Date(mexicoNow);
     startDate.setDate(endDate.getDate() - days);
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Hoy en México (medianoche México convertida a UTC para queries)
+    const todayMidnightUTC = getMexicoMidnightUTC();
+    const tomorrowMidnightUTC = new Date(todayMidnightUTC.getTime() + (24 * 60 * 60 * 1000));
 
     // Optimizar consultas de hoy usando Promise.all con consultas más simples
     const [todayStats, periodData, topClientsPeriod, topClientsAllTime] = await Promise.all([
       // Estadísticas de hoy en una sola consulta por tabla
       Promise.all([
         supabase.from('check_ins').select('id', { count: 'exact', head: true })
-          .gte('created_at', today.toISOString())
-          .lt('created_at', tomorrow.toISOString()),
+          .gte('created_at', todayMidnightUTC.toISOString())
+          .lt('created_at', tomorrowMidnightUTC.toISOString()),
         
         supabase.from('user_profiles').select('id', { count: 'exact', head: true })
-          .gte('created_at', today.toISOString())
-          .lt('created_at', tomorrow.toISOString()),
+          .gte('created_at', todayMidnightUTC.toISOString())
+          .lt('created_at', tomorrowMidnightUTC.toISOString()),
         
         supabase.from('coupons').select('id', { count: 'exact', head: true })
-          .gte('created_at', today.toISOString())
-          .lt('created_at', tomorrow.toISOString()),
+          .gte('created_at', todayMidnightUTC.toISOString())
+          .lt('created_at', tomorrowMidnightUTC.toISOString()),
 
         supabase.from('coupons').select('id', { count: 'exact', head: true })
           .eq('is_redeemed', true)
-          .gte('redeemed_at', today.toISOString())
-          .lt('redeemed_at', tomorrow.toISOString())
+          .gte('redeemed_at', todayMidnightUTC.toISOString())
+          .lt('redeemed_at', tomorrowMidnightUTC.toISOString())
       ]),
       
       // Datos del período para gráficas
@@ -101,9 +151,15 @@ export async function getDashboardStats(days: number = 7): Promise<{ success: bo
   }
 }
 
-// Obtener datos del período para las gráficas (OPTIMIZADO)
+// Obtener datos del período para las gráficas (OPTIMIZADO - Zona horaria México)
 async function getPeriodData(supabase: ReturnType<typeof createAdminClient>, startDate: Date, endDate: Date) {
-  const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  // Calcular días incluyendo tanto inicio como fin (+1)
+  const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Convertir fechas a UTC para queries (considerando zona México)
+  const startUTC = getMexicoDayStartUTC(startDate);
+  const endUTC = getMexicoDayStartUTC(endDate);
+  endUTC.setDate(endUTC.getDate() + 1); // Incluir todo el último día
   
   // Hacer todas las consultas en paralelo una sola vez
   const [checkinsData, usersData, couponsData, redeemedCouponsData] = await Promise.all([
@@ -111,30 +167,30 @@ async function getPeriodData(supabase: ReturnType<typeof createAdminClient>, sta
     supabase
       .from('check_ins')
       .select('created_at')
-      .gte('created_at', startDate.toISOString())
-      .lt('created_at', endDate.toISOString()),
+      .gte('created_at', startUTC.toISOString())
+      .lt('created_at', endUTC.toISOString()),
 
     // Todos los usuarios nuevos del período
     supabase
       .from('user_profiles')
       .select('created_at')
-      .gte('created_at', startDate.toISOString())
-      .lt('created_at', endDate.toISOString()),
+      .gte('created_at', startUTC.toISOString())
+      .lt('created_at', endUTC.toISOString()),
 
     // Todos los cupones ganados del período
     supabase
       .from('coupons')
       .select('created_at')
-      .gte('created_at', startDate.toISOString())
-      .lt('created_at', endDate.toISOString()),
+      .gte('created_at', startUTC.toISOString())
+      .lt('created_at', endUTC.toISOString()),
 
     // Todos los cupones canjeados del período
     supabase
       .from('coupons')
       .select('redeemed_at')
       .eq('is_redeemed', true)
-      .gte('redeemed_at', startDate.toISOString())
-      .lt('redeemed_at', endDate.toISOString())
+      .gte('redeemed_at', startUTC.toISOString())
+      .lt('redeemed_at', endUTC.toISOString())
   ]);
 
   // Inicializar arrays para cada día
@@ -144,51 +200,52 @@ async function getPeriodData(supabase: ReturnType<typeof createAdminClient>, sta
   const couponsWon: number[] = [];
   const couponsRedeemed: number[] = [];
 
-  // Crear mapas para contar por día
+  // Crear mapas para contar por día (usando zona horaria México)
   const checkinsByDay = new Map<string, number>();
   const usersByDay = new Map<string, number>();
   const couponsByDay = new Map<string, number>();
   const redeemedByDay = new Map<string, number>();
 
-  // Procesar check-ins
+  // Procesar check-ins (agrupar por día en zona México)
   checkinsData.data?.forEach(item => {
     if (item.created_at) {
-      const day = new Date(item.created_at).toDateString();
+      const day = toMexicoDate(item.created_at);
       checkinsByDay.set(day, (checkinsByDay.get(day) || 0) + 1);
     }
   });
 
-  // Procesar usuarios
+  // Procesar usuarios (agrupar por día en zona México)
   usersData.data?.forEach(item => {
     if (item.created_at) {
-      const day = new Date(item.created_at).toDateString();
+      const day = toMexicoDate(item.created_at);
       usersByDay.set(day, (usersByDay.get(day) || 0) + 1);
     }
   });
 
-  // Procesar cupones ganados
+  // Procesar cupones ganados (agrupar por día en zona México)
   couponsData.data?.forEach(item => {
     if (item.created_at) {
-      const day = new Date(item.created_at).toDateString();
+      const day = toMexicoDate(item.created_at);
       couponsByDay.set(day, (couponsByDay.get(day) || 0) + 1);
     }
   });
 
-  // Procesar cupones canjeados
+  // Procesar cupones canjeados (agrupar por día en zona México)
   redeemedCouponsData.data?.forEach(item => {
     if (item.redeemed_at) {
-      const day = new Date(item.redeemed_at).toDateString();
+      const day = toMexicoDate(item.redeemed_at);
       redeemedByDay.set(day, (redeemedByDay.get(day) || 0) + 1);
     }
   });
 
-  // Generar datos para cada día
+  // Generar datos para cada día (en zona México)
   for (let i = 0; i < days; i++) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
-    const dayKey = date.toDateString();
+    // Usar la misma conversión para la key del mapa
+    const dayKey = date.toLocaleDateString('en-US', { timeZone: MEXICO_TZ });
 
-    dates.push(date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }));
+    dates.push(formatMexicoDate(date));
     checkins.push(checkinsByDay.get(dayKey) || 0);
     newUsers.push(usersByDay.get(dayKey) || 0);
     couponsWon.push(couponsByDay.get(dayKey) || 0);
@@ -198,7 +255,7 @@ async function getPeriodData(supabase: ReturnType<typeof createAdminClient>, sta
   return { dates, checkins, newUsers, couponsWon, couponsRedeemed };
 }
 
-// Obtener top clientes (OPTIMIZADO)
+// Obtener top clientes (OPTIMIZADO - Zona horaria México)
 async function getTopClients(supabase: ReturnType<typeof createAdminClient>, startDate?: Date, endDate?: Date): Promise<TopClient[]> {
   try {
     // Construir consultas base
@@ -212,15 +269,19 @@ async function getTopClients(supabase: ReturnType<typeof createAdminClient>, sta
       .select('user_id')
       .not('user_id', 'is', null);
 
-    // Aplicar filtros de fecha si es necesario
+    // Aplicar filtros de fecha si es necesario (convertir a UTC considerando zona México)
     if (startDate && endDate) {
+      const startUTC = getMexicoDayStartUTC(startDate);
+      const endUTC = getMexicoDayStartUTC(endDate);
+      endUTC.setDate(endUTC.getDate() + 1); // Incluir todo el último día
+      
       checkinQuery = checkinQuery
-        .gte('created_at', startDate.toISOString())
-        .lt('created_at', endDate.toISOString());
+        .gte('created_at', startUTC.toISOString())
+        .lt('created_at', endUTC.toISOString());
       
       couponQuery = couponQuery
-        .gte('created_at', startDate.toISOString())
-        .lt('created_at', endDate.toISOString());
+        .gte('created_at', startUTC.toISOString())
+        .lt('created_at', endUTC.toISOString());
     }
 
     // Ejecutar consultas en paralelo
@@ -285,7 +346,7 @@ async function getTopClients(supabase: ReturnType<typeof createAdminClient>, sta
   }
 }
 
-// Obtener datos para período personalizado
+// Obtener datos para período personalizado (Zona horaria México)
 export async function getCustomPeriodStats(
   startDate: string, 
   endDate: string
@@ -293,41 +354,40 @@ export async function getCustomPeriodStats(
   try {
     const supabase = createAdminClient();
     
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // Incluir todo el día final
+    // Las fechas del selector vienen como strings locales (ej: "2025-12-01")
+    // Las interpretamos como fechas en México
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T23:59:59');
     
-    // Obtener estadísticas del último día del período
-    const lastDay = new Date(end);
-    lastDay.setHours(0, 0, 0, 0);
-    const nextDay = new Date(lastDay);
-    nextDay.setDate(lastDay.getDate() + 1);
+    // Convertir a UTC para queries considerando zona México
+    const lastDayMidnightUTC = getMexicoDayStartUTC(end);
+    const nextDayMidnightUTC = new Date(lastDayMidnightUTC.getTime() + (24 * 60 * 60 * 1000));
 
     const [dayCheckins, dayUsers, dayCoupons, dayRedeemedCoupons] = await Promise.all([
       supabase
         .from('check_ins')
         .select('id')
-        .gte('created_at', lastDay.toISOString())
-        .lt('created_at', nextDay.toISOString()),
+        .gte('created_at', lastDayMidnightUTC.toISOString())
+        .lt('created_at', nextDayMidnightUTC.toISOString()),
       
       supabase
         .from('user_profiles')
         .select('id')
-        .gte('created_at', lastDay.toISOString())
-        .lt('created_at', nextDay.toISOString()),
+        .gte('created_at', lastDayMidnightUTC.toISOString())
+        .lt('created_at', nextDayMidnightUTC.toISOString()),
       
       supabase
         .from('coupons')
         .select('id')
-        .gte('created_at', lastDay.toISOString())
-        .lt('created_at', nextDay.toISOString()),
+        .gte('created_at', lastDayMidnightUTC.toISOString())
+        .lt('created_at', nextDayMidnightUTC.toISOString()),
 
       supabase
         .from('coupons')
         .select('id')
         .eq('is_redeemed', true)
-        .gte('redeemed_at', lastDay.toISOString())
-        .lt('redeemed_at', nextDay.toISOString())
+        .gte('redeemed_at', lastDayMidnightUTC.toISOString())
+        .lt('redeemed_at', nextDayMidnightUTC.toISOString())
     ]);
 
     // Obtener datos del período para gráficas

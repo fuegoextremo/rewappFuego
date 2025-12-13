@@ -362,3 +362,57 @@ export async function getCouponsPaginated(
     return { data: [], total: 0 }
   }
 }
+
+// ============================================
+// ELIMINAR CHECK-IN (Solo Admin)
+// ============================================
+export async function deleteCheckin(checkinId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createAdminClient();
+
+    // 1. Verificar que el check-in existe y pertenece al usuario
+    const { data: checkin, error: fetchError } = await supabase
+      .from('check_ins')
+      .select('id, user_id')
+      .eq('id', checkinId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !checkin) {
+      return { success: false, error: 'Check-in no encontrado' };
+    }
+
+    // 2. Eliminar el check-in
+    const { error: deleteError } = await supabase
+      .from('check_ins')
+      .delete()
+      .eq('id', checkinId);
+
+    if (deleteError) {
+      return { success: false, error: `Error al eliminar: ${deleteError.message}` };
+    }
+
+    // 3. Decrementar current_count en streaks (MIN 0)
+    const { data: currentStreak } = await supabase
+      .from('streaks')
+      .select('current_count')
+      .eq('user_id', userId)
+      .single();
+
+    if (currentStreak) {
+      const newCount = Math.max(0, (currentStreak.current_count || 0) - 1);
+      await supabase
+        .from('streaks')
+        .update({ current_count: newCount, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+    }
+
+    // 4. Revalidar la página
+    revalidatePath(`/admin/users/${userId}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in deleteCheckin:', error);
+    return { success: false, error: 'Error interno del servidor' };
+  }
+}

@@ -8,6 +8,7 @@ import { useAuthManager } from '@/hooks/useAuthManager'
 import { useUser, useCurrentView, useOpenCheckin, useAppDispatch } from '@/store/hooks'
 import { setOpenCheckin, setRefreshing } from '@/store/slices/uiSlice'
 import { loadUserProfile, loadStreakPrizes, loadRecentActivity } from '@/store/slices/authSlice'
+import { loadUserStats, loadStreakData } from '@/store/slices/userDataSlice'
 // ❌ ELIMINADO: loadUserStreakData - migrado a userData
 import { BottomNav } from '@/components/client/BottomNav'
 import CheckinSheet from '@/components/client/CheckinSheet'
@@ -67,7 +68,11 @@ export function AppShell({ children }: AppShellProps) {
         // 🔄 ACTIVIDAD RECIENTE: Recuperar check-ins que Realtime pudo haber perdido
         dispatch(loadRecentActivity(user.id)).unwrap(),
         
-        // ❌ ELIMINADO: loadUserStreakData - datos de racha se manejan via realtime en userData
+        // 🎯 DATOS DE USUARIO: Spins y estadísticas (userData slice)
+        dispatch(loadUserStats(user.id)).unwrap(),
+        
+        // 🔥 DATOS DE RACHA: current_count, expires_at (userData slice)
+        dispatch(loadStreakData(user.id)).unwrap(),
         
         // 🏆 STREAK PRIZES: Forzar reload desde Redux (temporal hasta migración a React Query)
         dispatch(loadStreakPrizes()).unwrap(),

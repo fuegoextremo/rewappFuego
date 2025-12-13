@@ -5,13 +5,13 @@ import { useAppDispatch, useAuth } from '@/store/hooks'
 import { 
   loadUserProfile, 
   setUser, 
-  setInitialLoading,    // 🆕 NUEVO import
+  setInitialLoading,    // NUEVO import
   logout as logoutAction,
-  // 🔥 NUEVOS: Cargar datos que estaban en React Query
+  // Cargar datos que estaban en React Query
   loadRecentActivity,
   loadStreakPrizes
-  // ❌ ELIMINADO: loadUserStreakData - migrado a userData
 } from '@/store/slices/authSlice'
+import { loadUserStats, loadStreakData } from '@/store/slices/userDataSlice'
 import { loadSettings } from '@/store/slices/settingsSlice'
 
 // 🔗 HOOK PRINCIPAL DE AUTENTICACIÓN
@@ -56,10 +56,13 @@ export function useAuthManager() {
               // Cargar configuraciones
               dispatch(loadSettings())
               
-              // 🔥 NUEVOS: Cargar datos que estaban en React Query
+              // Cargar datos de actividad y premios
               dispatch(loadRecentActivity(session.user.id))
-              dispatch(loadStreakPrizes()) // Solo una vez, no depende del usuario
-              // ❌ ELIMINADO: loadUserStreakData - migrado a userData
+              dispatch(loadStreakPrizes())
+              
+              // Cargar datos de userData (spins y racha)
+              dispatch(loadUserStats(session.user.id))
+              dispatch(loadStreakData(session.user.id))
             }
             break
 
@@ -83,10 +86,13 @@ export function useAuthManager() {
               // Cargar configuraciones
               dispatch(loadSettings())
               
-              // 🔥 NUEVOS: Cargar datos que estaban en React Query
+              // Cargar datos de actividad y premios
               dispatch(loadRecentActivity(session.user.id))
               dispatch(loadStreakPrizes())
-              // ❌ ELIMINADO: loadUserStreakData - migrado a userData
+              
+              // Cargar datos de userData (spins y racha)
+              dispatch(loadUserStats(session.user.id))
+              dispatch(loadStreakData(session.user.id))
             }
             break
             
@@ -96,10 +102,13 @@ export function useAuthManager() {
               dispatch(loadUserProfile(session.user.id))
               dispatch(loadSettings())
               
-              // 🔥 NUEVOS: También cargar estos datos
+              // Cargar datos de actividad y premios
               dispatch(loadRecentActivity(session.user.id))
               dispatch(loadStreakPrizes())
-              // ❌ ELIMINADO: loadUserStreakData - migrado a userData
+              
+              // Cargar datos de userData (spins y racha)
+              dispatch(loadUserStats(session.user.id))
+              dispatch(loadStreakData(session.user.id))
             }
             break
             

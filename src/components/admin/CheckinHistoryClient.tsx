@@ -42,6 +42,11 @@ export function CheckinHistoryClient({
     },
   })
 
+  const handleCheckinDeleted = () => {
+    // Refrescar la página actual para actualizar la lista
+    handlePageChange(page);
+  };
+
   return (
     <div className="space-y-4">
       {/* Tabla de check-ins */}
@@ -54,7 +59,11 @@ export function CheckinHistoryClient({
             </div>
           </div>
         )}
-        <CheckinHistoryTable checkins={checkins} />
+        <CheckinHistoryTable 
+          checkins={checkins} 
+          userId={userId}
+          onCheckinDeleted={handleCheckinDeleted}
+        />
       </div>
 
       {/* Controles de paginación */}

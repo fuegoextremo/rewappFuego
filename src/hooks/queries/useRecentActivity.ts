@@ -53,10 +53,12 @@ export function useRecentActivity(userId: string) {
 }
 
 // 🎯 Helper para formatear fecha y hora
+// NOTA: check_in_date es la fecha REAL de la visita, created_at es cuando se insertó en DB
 export function formatCheckInDateTime(created_at: string | null, check_in_date: string | null): string {
   if (!created_at && !check_in_date) return 'Fecha no disponible'
   
-  const date = created_at ? new Date(created_at) : new Date(check_in_date!)
+  // Priorizar check_in_date (fecha real de visita) sobre created_at (fecha de inserción)
+  const date = check_in_date ? new Date(check_in_date + 'T12:00:00') : new Date(created_at!)
   const now = new Date()
   const diffHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60)
   

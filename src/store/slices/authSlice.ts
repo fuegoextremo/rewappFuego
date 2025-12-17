@@ -236,7 +236,7 @@ export const loadRecentActivity = createAsyncThunk(
         )
       `)
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      .order('check_in_date', { ascending: false })
       .limit(ITEMS_PER_PAGE)
 
     if (error) throw new Error(error.message)

@@ -144,11 +144,12 @@ export const loadUserStats = createAsyncThunk(
       if (spinsError) throw spinsError
 
       // 📅 Obtener ultimo check-in REAL de la tabla check_ins
+      // IMPORTANTE: Ordenar por check_in_date (fecha real de visita), no por created_at (fecha de inserción)
       const { data: lastCheckinData } = await supabase
         .from('check_ins')
-        .select('created_at')
+        .select('check_in_date')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .order('check_in_date', { ascending: false })
         .limit(1)
         .single()
       
@@ -156,7 +157,7 @@ export const loadUserStats = createAsyncThunk(
         total_checkins: totalCheckins || 0,
         max_streak: streakData?.max_count || 0,
         available_spins: spinsData?.available_spins || 0,
-        last_check_in: lastCheckinData?.created_at || null,  // CORREGIDO: de check_ins, no de streaks
+        last_check_in: lastCheckinData?.check_in_date || null,
       } as UserStats
       
     } catch (error: unknown) {

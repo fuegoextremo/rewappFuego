@@ -373,7 +373,7 @@ export async function deleteCheckin(checkinId: string, userId: string): Promise<
     // 1. Verificar que el check-in existe y pertenece al usuario
     const { data: checkin, error: fetchError } = await supabase
       .from('check_ins')
-      .select('id, user_id')
+      .select('id, user_id, created_at')
       .eq('id', checkinId)
       .eq('user_id', userId)
       .single();
@@ -392,7 +392,16 @@ export async function deleteCheckin(checkinId: string, userId: string): Promise<
       return { success: false, error: `Error al eliminar: ${deleteError.message}` };
     }
 
-    // 3. Decrementar current_count en streaks (MIN 0)
+    // 3. Obtener el check-in anterior para actualizar last_check_in
+    const { data: previousCheckin } = await supabase
+      .from('check_ins')
+      .select('created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    // 4. Actualizar streaks: decrementar current_count Y actualizar last_check_in
     const { data: currentStreak } = await supabase
       .from('streaks')
       .select('current_count')
@@ -401,13 +410,26 @@ export async function deleteCheckin(checkinId: string, userId: string): Promise<
 
     if (currentStreak) {
       const newCount = Math.max(0, (currentStreak.current_count || 0) - 1);
+      const updateData: { current_count: number; updated_at: string; last_check_in?: string | null } = {
+        current_count: newCount,
+        updated_at: new Date().toISOString()
+      };
+
+      // Si hay un check-in anterior, usarlo como last_check_in
+      // Si no hay más check-ins, poner null
+      if (previousCheckin?.created_at) {
+        updateData.last_check_in = previousCheckin.created_at;
+      } else {
+        updateData.last_check_in = null;
+      }
+
       await supabase
         .from('streaks')
-        .update({ current_count: newCount, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('user_id', userId);
     }
 
-    // 4. Revalidar la página
+    // 5. Revalidar la página
     revalidatePath(`/admin/users/${userId}`);
 
     return { success: true };

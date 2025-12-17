@@ -418,12 +418,12 @@ export class RealtimeManager {
           console.log('🔄 Procesando cambio de streak:', { currentCount, maxCount: payload.new?.max_count })
           
           // Actualizar streakData completo (fuente única de verdad para current_count)
+          // NOTA: last_check_in de streaks NO se usa, se obtiene de check_ins via loadUserStats
           const userDataStreakData = {
             current_count: currentCount,
             completed_count: (payload.new?.completed_count as number) || 0,
             is_just_completed: (payload.new?.is_just_completed as boolean) || false,
-            expires_at: payload.new?.expires_at as string | null,
-            last_check_in: payload.new?.last_check_in as string | null
+            expires_at: payload.new?.expires_at as string | null
           }
           
           try {
@@ -433,13 +433,10 @@ export class RealtimeManager {
             console.error('❌ Error en updateStreakData:', error)
           }
           
-          // Actualizar userStats con last_check_in y max_streak si es necesario
+          // Actualizar userStats: max_streak y recargar last_check_in desde check_ins
           const userStatsUpdate: Partial<{
-            last_check_in: string | null
             max_streak: number
-          }> = {
-            last_check_in: payload.new?.last_check_in as string | null
-          }
+          }> = {}
           
           // 🔥 LÓGICA max_streak: Usar max_count del payload (ya calculado en el servidor)
           const maxCount = (payload.new?.max_count as number)
@@ -451,6 +448,15 @@ export class RealtimeManager {
           try {
             this.reduxDispatch!(updateUserStats(userStatsUpdate))
             console.log('✅ updateUserStats dispatch exitoso:', userStatsUpdate)
+            
+            // 📅 CORREGIDO: Recargar last_check_in desde check_ins (fuente real)
+            // Esto asegura que last_check_in sea el dato correcto de la tabla check_ins
+            if (this.currentUserId) {
+              import('@/store/slices/userDataSlice').then(({ loadUserStats }) => {
+                this.reduxDispatch!(loadUserStats(this.currentUserId!))
+                console.log('🔄 Recargando userStats para obtener last_check_in real')
+              })
+            }
           } catch (error) {
             console.error('❌ Error en updateUserStats:', error)
           }

@@ -125,10 +125,10 @@ export const loadUserStats = createAsyncThunk(
       
       if (checkinsError) throw checkinsError
       
-      // 🔥 Obtener datos de racha
+      // 🔥 Obtener datos de racha (solo max_count, no last_check_in)
       const { data: streakData, error: streakError } = await supabase
         .from('streaks')
-        .select('current_count, max_count, last_check_in')
+        .select('current_count, max_count')
         .eq('user_id', userId)
         .single()
       
@@ -142,12 +142,21 @@ export const loadUserStats = createAsyncThunk(
         .single()
       
       if (spinsError) throw spinsError
+
+      // 📅 Obtener ultimo check-in REAL de la tabla check_ins
+      const { data: lastCheckinData } = await supabase
+        .from('check_ins')
+        .select('created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
       
       return {
         total_checkins: totalCheckins || 0,
         max_streak: streakData?.max_count || 0,
         available_spins: spinsData?.available_spins || 0,
-        last_check_in: streakData?.last_check_in || null,
+        last_check_in: lastCheckinData?.created_at || null,  // CORREGIDO: de check_ins, no de streaks
       } as UserStats
       
     } catch (error: unknown) {

@@ -97,34 +97,41 @@ export default function RegisterForm() {
         throw new Error('No se pudo crear el usuario')
       }
 
-      // Esperar un momento para que el trigger cree el perfil
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 2. Esperar a que el trigger cree el perfil, luego actualizar datos adicionales
+      const userId = authData.user.id
+      let profileUpdated = false
 
-      // 2. Actualizar el perfil existente con los datos adicionales
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          phone: data.phone,
-          birth_date: data.birthDate,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', authData.user.id)
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data: existing } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', userId)
+          .single()
 
-      if (profileError) {
-        console.error('Error actualizando perfil:', profileError)
-        throw new Error('Error completando el perfil de usuario')
+        if (existing) {
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .update({
+              phone: data.phone,
+              birth_date: data.birthDate,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+
+          if (!profileError) {
+            profileUpdated = true
+            break
+          }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
 
-      toast({
-        title: "¡Registro exitoso!",
-        description: "Tu cuenta ha sido creada. Te estamos redirigiendo...",
-        variant: "default",
-      })
+      if (!profileUpdated) {
+        console.error('No se pudo actualizar el perfil tras varios intentos')
+      }
 
-      // Esperar un momento para mostrar el toast
-      await new Promise(resolve => setTimeout(resolve, 1500))
-
-      // 3. Auto-login después del registro exitoso
+      // 3. Auto-login despues del registro
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password
@@ -132,19 +139,23 @@ export default function RegisterForm() {
 
       if (loginError) {
         console.error('Error en auto-login:', loginError)
-        // Si falla el auto-login, redirigir a login manual
         router.push('/login?message=' + encodeURIComponent('Cuenta creada. Por favor inicia sesión.'))
         return
       }
 
-      // 4. Obtener rol del usuario para redirección
+      toast({
+        title: "¡Registro exitoso!",
+        description: "Te estamos redirigiendo...",
+        variant: "default",
+      })
+
+      // 4. Redirigir segun el rol
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('role')
         .eq('id', loginData.user.id)
         .single()
 
-      // 5. Redirigir según el rol
       const destination = profile?.role === 'client' ? '/client' : 
                         profile?.role === 'superadmin' ? '/superadmin/dashboard' : 
                         '/admin/dashboard'

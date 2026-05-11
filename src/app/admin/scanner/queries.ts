@@ -118,26 +118,38 @@ async function fetchScanHistoryPaginated(
   // Paso 1: conteo global + filas paginadas de la vista UNION ALL.
   // Los JOINs se hacen en pasos separados porque PostgREST no infiere FK
   // en vistas UNION ALL (las FK están en las tablas base, no en la vista).
-  const [{ count }, { data: rows }] = await Promise.all([
-    supabase.from('scan_history').select('*', { count: 'exact', head: true }),
-    supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
+  type ScanHistoryRow = {
+    id: string
+    timestamp: string
+    type: string
+    coupon_code: string | null
+    user_id: string | null
+    verified_by_id: string | null
+    branch_id: string | null
+    prize_id: string | null
+  }
+  const [{ count }, { data: rawRows }] = await Promise.all([
+    db.from('scan_history').select('*', { count: 'exact', head: true }),
+    db
       .from('scan_history')
       .select('id, timestamp, type, coupon_code, user_id, verified_by_id, branch_id, prize_id')
       .order('timestamp', { ascending: false })
       .range(offset, offset + pageSize - 1),
   ])
+  const rows: ScanHistoryRow[] = rawRows ?? []
 
-  if (!rows || rows.length === 0) {
+  if (rows.length === 0) {
     return { data: [], total: count ?? 0 }
   }
 
   // Paso 2: recolectar IDs únicos para lookups secundarios en paralelo.
-  const userIds = [...new Set([
-    ...rows.map((r) => r.user_id),
-    ...rows.map((r) => r.verified_by_id),
-  ].filter(Boolean))]
-  const branchIds = [...new Set(rows.map((r) => r.branch_id).filter(Boolean))]
-  const prizeIds = [...new Set(rows.map((r) => r.prize_id).filter(Boolean))]
+  const userIds = Array.from(new Set(
+    [...rows.map((r) => r.user_id), ...rows.map((r) => r.verified_by_id)].filter((id): id is string => !!id)
+  ))
+  const branchIds = Array.from(new Set(rows.map((r) => r.branch_id).filter((id): id is string => !!id)))
+  const prizeIds = Array.from(new Set(rows.map((r) => r.prize_id).filter((id): id is string => !!id)))
 
   const [{ data: users }, { data: branches }, { data: prizes }] = await Promise.all([
     userIds.length > 0
@@ -156,10 +168,10 @@ async function fetchScanHistoryPaginated(
   const prizeMap = new Map((prizes ?? []).map((p) => [p.id, p]))
 
   const activities: ScanActivity[] = rows.map((r) => {
-    const user = userMap.get(r.user_id)
-    const verifier = userMap.get(r.verified_by_id)
-    const branch = branchMap.get(r.branch_id)
-    const prize = prizeMap.get(r.prize_id)
+    const user = r.user_id ? userMap.get(r.user_id) : undefined
+    const verifier = r.verified_by_id ? userMap.get(r.verified_by_id) : undefined
+    const branch = r.branch_id ? branchMap.get(r.branch_id) : undefined
+    const prize = r.prize_id ? prizeMap.get(r.prize_id) : undefined
     return {
       id: r.id,
       type: r.type as 'checkin' | 'redemption',

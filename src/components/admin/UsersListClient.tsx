@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { UserSearchBar, SearchFilters } from './UserSearchBar'
 import { UserPagination } from './UserPagination'
 import UserTable from './UserTable'
-import { getUsersPaginated, UserWithDetails } from '@/app/admin/users/actions'
+import { getUsersPaginated, UserWithDetails } from '@/app/admin/users/queries'
 
 type UsersListClientProps = {
   initialUsers: UserWithDetails[]

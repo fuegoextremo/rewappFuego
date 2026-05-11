@@ -1,6 +1,6 @@
 import Breadcrumbs from '@/components/shared/Breadcrumbs';
 import { UsersListClient } from '@/components/admin/UsersListClient';
-import { getUsersPaginated } from './actions';
+import { getUsersPaginated } from './queries';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export default async function Page() {
@@ -9,18 +9,12 @@ export default async function Page() {
     { label: 'Usuarios', current: true }
   ];
 
-  // Fetch initial data
-  const initialData = await getUsersPaginated({ 
-    page: 1, 
-    pageSize: 20 
-  });
-
-  // Fetch branches for filter dropdown
+  // Fetch inicial en paralelo: usuarios página 1 + sucursales para filtros
   const supabase = createAdminClient();
-  const { data: branches } = await supabase
-    .from('branches')
-    .select('id, name')
-    .order('name');
+  const [initialData, { data: branches }] = await Promise.all([
+    getUsersPaginated({ page: 1, pageSize: 20 }),
+    supabase.from('branches').select('id, name').order('name'),
+  ]);
 
   return (
     <div className="container mx-auto p-4 space-y-6">

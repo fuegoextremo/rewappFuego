@@ -4,8 +4,9 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 //import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/queryClient'
-import { useAppDispatch } from '@/store/hooks'
+import { useAppDispatch, useUser, useAvailableSpins } from '@/store/hooks'
 import { startSpin, endSpin } from '@/store/slices/rouletteSlice'
+import { updateUserStats } from '@/store/slices/userDataSlice'
 import { useNavigationBlock } from '@/hooks/useNavigationBlock'
 import { useSystemSettings } from '@/hooks/use-system-settings'
 import ResultSheet from '@/components/client/ResultSheet'
@@ -15,7 +16,17 @@ import WheelRive, { WheelRiveRef } from '@/components/client/WheelRive'
 const RIVE_ANIMATION_DURATION = 5000 // 5.5s spin + 1s transition = 6.5s total
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-type SpinResult = { won: boolean; prize_name?: string | null }
+type SpinResult = {
+  won: boolean
+  prize_name?: string | null
+  reason?: 'no_spins' | string
+}
+type SpinApiResponse = {
+  ok: boolean
+  error?: string
+  result?: SpinResult
+  remaining_spins?: number | null
+}
 
 export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [pending, start] = useTransition()
@@ -24,6 +35,8 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [spinning, setSpinning] = useState(false) // Estado para la animación RIVE
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   const dispatch = useAppDispatch()
+  const user = useUser()
+  const availableSpins = useAvailableSpins()
   const queryClient = useQueryClient()
   
   // 🔒 Activar hook de bloqueo de navegación
@@ -74,7 +87,7 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
       try {
         // 1️⃣ Obtener resultado del API primero
         const res = await fetch('/api/roulette', { method: 'POST' })
-        const json = await res.json()
+        const json = (await res.json()) as SpinApiResponse
 
         if (!res.ok || !json.ok) {
           setMsg(json?.error ?? 'No se pudo girar')
@@ -84,7 +97,37 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
           return
         }
 
-        const { result: spinResult } = json as { result: SpinResult }
+        const spinResult = json.result
+        if (!spinResult) {
+          setMsg('Respuesta inválida del servidor')
+          dispatch(endSpin())
+          return
+        }
+
+        // Si backend indica que no hay giros, no animar como "derrota normal"
+        if (spinResult.reason === 'no_spins') {
+          setMsg('No tienes giros disponibles')
+          dispatch(endSpin())
+
+          if (user?.id) {
+            dispatch(updateUserStats({ available_spins: 0 }))
+            queryClient.setQueryData(queryKeys.user.spins(user.id), { availableSpins: 0 })
+          }
+
+          return
+        }
+
+        // Sincronizar spins de inmediato para evitar depender solo de Realtime
+        if (user?.id) {
+          const nextSpins =
+            typeof json.remaining_spins === 'number'
+              ? json.remaining_spins
+              : Math.max((availableSpins || 0) - 1, 0)
+
+          dispatch(updateUserStats({ available_spins: nextSpins }))
+          queryClient.setQueryData(queryKeys.user.spins(user.id), { availableSpins: nextSpins })
+        }
+
         console.log('🎰 Resultado obtenido:', spinResult)
 
         // 2️⃣ Activar animación RIVE con el resultado

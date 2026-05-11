@@ -23,6 +23,17 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 })
   }
 
+  // 3) Leer spins actuales para sincronizar UI incluso si Realtime se retrasa
+  const { data: spinsRow } = await admin
+    .from('user_spins')
+    .select('available_spins')
+    .eq('user_id', user.id)
+    .single()
+
   // data es el JSON que retorna tu función (won, prize_id, prize_name, coupon_id)
-  return NextResponse.json({ ok: true, result: data })
+  return NextResponse.json({
+    ok: true,
+    result: data,
+    remaining_spins: spinsRow?.available_spins ?? null,
+  })
 }

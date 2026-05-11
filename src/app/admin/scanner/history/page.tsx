@@ -1,9 +1,9 @@
-import { getScanHistory } from '../queries'
+import { getScanHistoryPaginated } from '../queries'
 import Breadcrumbs from '@/components/shared/Breadcrumbs'
-import ScanHistoryTable from '@/components/scanner/ScanHistoryTable'
+import { ScanHistoryClient } from '@/components/scanner/ScanHistoryClient'
 
 export default async function ScanHistoryPage() {
-  const { activities } = await getScanHistory()
+  const { data: initialData, total: initialTotal } = await getScanHistoryPaginated(1, 20)
 
   const breadcrumbItems = [
     { label: 'Scanner', href: '/admin/scanner' },
@@ -23,8 +23,8 @@ export default async function ScanHistoryPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <ScanHistoryTable activities={activities} />
+      {/* Table con paginación */}
+      <ScanHistoryClient initialData={initialData} initialTotal={initialTotal} />
     </div>
   )
 }

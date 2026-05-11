@@ -377,12 +377,15 @@ export async function updatePrize(prizeId: string, prize: Partial<Tables<"prizes
 export async function deletePrize(prizeId: string) {
   const supabase = createAdminClient();
 
-  // En lugar de eliminar, marcamos como eliminado
+  // Soft-delete permanente: el premio no vuelve a circular.
+  // inventory_count se resetea para no dejar stock huérfano.
+  // Los cupones ya emitidos siguen siendo válidos.
   const { error } = await supabase
     .from("prizes")
     .update({
       is_active: false,
       deleted_at: new Date().toISOString(),
+      inventory_count: 0,
     })
     .eq("id", prizeId);
 

@@ -79,8 +79,8 @@ const primaryColor = settings?.company_theme_primary || "#D73527";
       {/* Título de la sección */}
       <div className="p-2">
         <div className='flex gap-2 align-text-bottom'><Trophy size={26} style={{ color: primaryColor }} />
-        <h3 className="text-lg font-bold text-gray-900 ">Premios por Racha</h3></div>
-        <p className="text-sm text-gray-600">Mantén tu racha para desbloquear premios increíbles</p>
+        <h3 className="text-lg font-bold text-gray-900 ">Premios por Visitas</h3></div>
+        <p className="text-sm text-gray-600">Mantén tu racha de visitas para desbloquear premios increíbles</p>
       </div>
       
       {displayedRewards.map((reward) => (

@@ -39,12 +39,14 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [birthDateDisplay, setBirthDateDisplay] = useState('')
 
   const {
     register,
     handleSubmit,
     watch,
     control,
+    setValue,
     formState: { errors, isValid }
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -179,28 +181,20 @@ export default function RegisterForm() {
 
   return (
     <div className="space-y-6">
-        {/* OAuth Buttons */}
+        {/* OAuth deshabilitado temporalmente
         <div className="space-y-3">
-          <SocialButton 
-            provider="google" 
-            disabled={true}
-            className="w-full"
-          />
-          
-          <SocialButton 
-            provider="facebook" 
-            disabled={true}
-            className="w-full"
-          />
-        </div>      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-300" />
+          <SocialButton provider="google" disabled={true} className="w-full" />
+          <SocialButton provider="facebook" disabled={true} className="w-full" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-gray-500">O registrarse con email</span>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-gray-500">O registrarse con email</span>
+          </div>
         </div>
-      </div>
+        */}
 
       {/* Register Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -301,7 +295,7 @@ export default function RegisterForm() {
           )}
         </div>
 
-        {/* Fecha de nacimiento */}
+        {/* Fecha de nacimiento - input DD/MM/AAAA */}
         <div className="space-y-2">
           <Label htmlFor="birthDate" className="text-sm font-medium text-gray-700">
             Fecha de nacimiento *
@@ -312,9 +306,30 @@ export default function RegisterForm() {
             </div>
             <Input
               id="birthDate"
-              type="date"
+              type="text"
+              inputMode="numeric"
+              placeholder="DD/MM/AAAA"
+              value={birthDateDisplay}
+              maxLength={10}
               className={`pl-12 h-12 rounded-lg ${errors.birthDate ? 'border-red-500' : ''}`}
-              {...register('birthDate')}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+                let formatted = digits
+                if (digits.length > 4) {
+                  formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+                } else if (digits.length > 2) {
+                  formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`
+                }
+                setBirthDateDisplay(formatted)
+                if (digits.length === 8) {
+                  const day = digits.slice(0, 2)
+                  const month = digits.slice(2, 4)
+                  const year = digits.slice(4)
+                  setValue('birthDate', `${year}-${month}-${day}`, { shouldValidate: true })
+                } else {
+                  setValue('birthDate', '', { shouldValidate: false })
+                }
+              }}
             />
           </div>
           {errors.birthDate && (

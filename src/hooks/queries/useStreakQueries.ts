@@ -44,6 +44,7 @@ export function useStreakPrizes() {
         .select('id, name, description, streak_threshold, image_url, validity_days')
         .eq('type', 'streak')
         .eq('is_active', true)
+        .is('deleted_at', null)
         .order('streak_threshold', { ascending: true })
 
       if (error) throw error

@@ -1,6 +1,7 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { unstable_cache, revalidateTag } from "next/cache"
 
 export type ScanActivity = {
   id: string
@@ -13,141 +14,183 @@ export type ScanActivity = {
   verified_by_name: string
 }
 
-export async function getRecentScanActivity(limit: number = 5): Promise<ScanActivity[]> {
+// Tag para invalidar el cache después de cada escaneo
+const SCAN_ACTIVITY_TAG = 'scan-activity'
+
+async function fetchRecentScanActivity(limit: number): Promise<ScanActivity[]> {
   const supabase = createAdminClient()
-  
-  try {
-    const activities: ScanActivity[] = []
 
-    // Obtener check-ins recientes - query simple
-    const { data: checkins } = await supabase
+  // 2 queries en paralelo con JOINs — reemplaza ~50 queries individuales en serie.
+  // user_profiles.email está disponible desde migración 031, eliminando llamadas
+  // a auth.admin.getUserById por usuario.
+  const [{ data: checkins }, { data: redemptions }] = await Promise.all([
+    supabase
       .from('check_ins')
-      .select('id, created_at, user_id, branch_id, verified_by')
+      .select(`
+        id,
+        created_at,
+        user:user_profiles!check_ins_user_id_fkey(email, unique_code),
+        branch:branches!check_ins_branch_id_fkey(name),
+        verifier:user_profiles!check_ins_verified_by_fkey(email, unique_code)
+      `)
       .order('created_at', { ascending: false })
-      .limit(limit)
+      .limit(limit),
 
-    // Obtener redenciones recientes - query simple  
-    const { data: redemptions } = await supabase
+    supabase
       .from('coupons')
-      .select('id, redeemed_at, user_id, prize_id, redeemed_by')
+      .select(`
+        id,
+        redeemed_at,
+        user:user_profiles!coupons_user_id_fkey(email, unique_code),
+        prize:prizes!coupons_prize_id_fkey(name),
+        redeemer:user_profiles!coupons_redeemed_by_fkey(email, unique_code)
+      `)
       .not('redeemed_at', 'is', null)
       .order('redeemed_at', { ascending: false })
-      .limit(limit)
+      .limit(limit),
+  ])
 
-    // Para check-ins, obtener detalles de usuarios y sucursales
-    if (checkins) {
-      for (const checkin of checkins) {
-        if (!checkin.user_id || !checkin.verified_by) continue
+  const activities: ScanActivity[] = []
 
-        // Obtener usuario
-        const { data: user } = await supabase
-          .from('user_profiles')
-          .select('first_name, last_name, unique_code')
-          .eq('id', checkin.user_id)
-          .single()
+  for (const c of checkins ?? []) {
+    const user = Array.isArray(c.user) ? c.user[0] : c.user
+    const verifier = Array.isArray(c.verifier) ? c.verifier[0] : c.verifier
+    const branch = Array.isArray(c.branch) ? c.branch[0] : c.branch
+    activities.push({
+      id: c.id,
+      type: 'checkin',
+      user_name: user?.email || `#${user?.unique_code || 'N/A'}`,
+      user_unique_code: user?.unique_code || '',
+      timestamp: c.created_at || '',
+      branch_name: branch?.name,
+      verified_by_name: verifier?.email || `#${verifier?.unique_code || 'N/A'}`,
+    })
+  }
 
-        // Obtener email del usuario (siempre disponible)
-        const { data: authUser } = await supabase.auth.admin.getUserById(checkin.user_id)
-        const userEmail = authUser.user?.email || `Usuario #${user?.unique_code || 'N/A'}`
+  for (const r of redemptions ?? []) {
+    const user = Array.isArray(r.user) ? r.user[0] : r.user
+    const redeemer = Array.isArray(r.redeemer) ? r.redeemer[0] : r.redeemer
+    const prize = Array.isArray(r.prize) ? r.prize[0] : r.prize
+    activities.push({
+      id: r.id,
+      type: 'redemption',
+      user_name: user?.email || `#${user?.unique_code || 'N/A'}`,
+      user_unique_code: user?.unique_code || '',
+      timestamp: r.redeemed_at || '',
+      prize_name: prize?.name,
+      verified_by_name: redeemer?.email || `#${redeemer?.unique_code || 'N/A'}`,
+    })
+  }
 
-        // Obtener sucursal
-        const { data: branch } = checkin.branch_id ? await supabase
-          .from('branches')
-          .select('name')
-          .eq('id', checkin.branch_id)
-          .single() : { data: null }
+  return activities
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, limit)
+}
 
-        // Obtener verificador
-        const { data: verifier } = await supabase
-          .from('user_profiles')
-          .select('first_name, last_name, unique_code')
-          .eq('id', checkin.verified_by)
-          .single()
+// Cache de 60 segundos, invalidable por tag después de cada escaneo
+const getCachedScanActivity = unstable_cache(
+  (limit: number) => fetchRecentScanActivity(limit),
+  ['recent-scan-activity'],
+  { revalidate: 60, tags: [SCAN_ACTIVITY_TAG] }
+)
 
-        // Obtener email del verificador
-        const { data: authVerifier } = await supabase.auth.admin.getUserById(checkin.verified_by)
-        const verifierEmail = authVerifier.user?.email || `Staff #${verifier?.unique_code || 'N/A'}`
-
-        activities.push({
-          id: checkin.id,
-          type: 'checkin',
-          user_name: userEmail,
-          user_unique_code: user?.unique_code || '',
-          timestamp: checkin.created_at || '',
-          branch_name: branch?.name,
-          verified_by_name: verifierEmail
-        })
-      }
-    }
-
-    // Para redenciones, obtener detalles de usuarios y premios
-    if (redemptions) {
-      for (const redemption of redemptions) {
-        if (!redemption.user_id || !redemption.redeemed_by) continue
-
-        // Obtener usuario
-        const { data: user } = await supabase
-          .from('user_profiles')
-          .select('first_name, last_name, unique_code')
-          .eq('id', redemption.user_id)
-          .single()
-
-        // Obtener email del usuario (siempre disponible)
-        const { data: authUser2 } = await supabase.auth.admin.getUserById(redemption.user_id)
-        const userEmail2 = authUser2.user?.email || `Usuario #${user?.unique_code || 'N/A'}`
-
-        // Obtener premio
-        const { data: prize } = redemption.prize_id ? await supabase
-          .from('prizes')
-          .select('name')
-          .eq('id', redemption.prize_id)
-          .single() : { data: null }
-
-        // Obtener verificador
-        const { data: verifier } = await supabase
-          .from('user_profiles')
-          .select('first_name, last_name, unique_code')
-          .eq('id', redemption.redeemed_by)
-          .single()
-
-        // Obtener email del verificador
-        const { data: authVerifier2 } = await supabase.auth.admin.getUserById(redemption.redeemed_by)
-        const verifierEmail2 = authVerifier2.user?.email || `Staff #${verifier?.unique_code || 'N/A'}`
-
-        activities.push({
-          id: redemption.id,
-          type: 'redemption',
-          user_name: userEmail2,
-          user_unique_code: user?.unique_code || '',
-          timestamp: redemption.redeemed_at || '',
-          prize_name: prize?.name,
-          verified_by_name: verifierEmail2
-        })
-      }
-    }
-
-    // Ordenar por timestamp más reciente
-    return activities
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, limit)
-
+export async function getRecentScanActivity(limit: number = 5): Promise<ScanActivity[]> {
+  try {
+    return await getCachedScanActivity(limit)
   } catch (error) {
     console.error('Error fetching scan activity:', error)
     return []
   }
 }
 
-export async function getScanHistory(): Promise<{
-  activities: ScanActivity[]
-  totalCount: number
-  totalPages: number
-}> {
-  // Por ahora usamos la función simple, después implementaremos paginación
-  const activities = await getRecentScanActivity(50)
-  
-  return {
-    activities,
-    totalCount: activities.length,
-    totalPages: 1
+// Llamar desde actions.ts después de cada escaneo exitoso para refrescar el cache
+export async function invalidateScanActivityCache() {
+  revalidateTag(SCAN_ACTIVITY_TAG)
+}
+
+async function fetchScanHistoryPaginated(
+  page: number,
+  pageSize: number
+): Promise<{ data: ScanActivity[]; total: number }> {
+  const supabase = createAdminClient()
+  const offset = (page - 1) * pageSize
+
+  // Paso 1: conteo global + filas paginadas de la vista UNION ALL.
+  // Los JOINs se hacen en pasos separados porque PostgREST no infiere FK
+  // en vistas UNION ALL (las FK están en las tablas base, no en la vista).
+  const [{ count }, { data: rows }] = await Promise.all([
+    supabase.from('scan_history').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('scan_history')
+      .select('id, timestamp, type, coupon_code, user_id, verified_by_id, branch_id, prize_id')
+      .order('timestamp', { ascending: false })
+      .range(offset, offset + pageSize - 1),
+  ])
+
+  if (!rows || rows.length === 0) {
+    return { data: [], total: count ?? 0 }
+  }
+
+  // Paso 2: recolectar IDs únicos para lookups secundarios en paralelo.
+  const userIds = [...new Set([
+    ...rows.map((r) => r.user_id),
+    ...rows.map((r) => r.verified_by_id),
+  ].filter(Boolean))]
+  const branchIds = [...new Set(rows.map((r) => r.branch_id).filter(Boolean))]
+  const prizeIds = [...new Set(rows.map((r) => r.prize_id).filter(Boolean))]
+
+  const [{ data: users }, { data: branches }, { data: prizes }] = await Promise.all([
+    userIds.length > 0
+      ? supabase.from('user_profiles').select('id, email, unique_code').in('id', userIds)
+      : Promise.resolve({ data: [] }),
+    branchIds.length > 0
+      ? supabase.from('branches').select('id, name').in('id', branchIds)
+      : Promise.resolve({ data: [] }),
+    prizeIds.length > 0
+      ? supabase.from('prizes').select('id, name').in('id', prizeIds)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]))
+  const branchMap = new Map((branches ?? []).map((b) => [b.id, b]))
+  const prizeMap = new Map((prizes ?? []).map((p) => [p.id, p]))
+
+  const activities: ScanActivity[] = rows.map((r) => {
+    const user = userMap.get(r.user_id)
+    const verifier = userMap.get(r.verified_by_id)
+    const branch = branchMap.get(r.branch_id)
+    const prize = prizeMap.get(r.prize_id)
+    return {
+      id: r.id,
+      type: r.type as 'checkin' | 'redemption',
+      user_name: user?.email || `#${user?.unique_code || 'N/A'}`,
+      user_unique_code: user?.unique_code || '',
+      timestamp: r.timestamp || '',
+      branch_name: branch?.name,
+      prize_name: prize?.name,
+      verified_by_name: verifier?.email || `#${verifier?.unique_code || 'N/A'}`,
+    }
+  })
+
+  return { data: activities, total: count ?? 0 }
+}
+
+// Cache por página: cada (page, pageSize) tiene su propia entrada.
+// Mismo tag que la actividad reciente — se invalida automáticamente después de cada escaneo.
+const getCachedScanHistory = unstable_cache(
+  (page: number, pageSize: number) => fetchScanHistoryPaginated(page, pageSize),
+  ['scan-history-paginated'],
+  { revalidate: 60, tags: [SCAN_ACTIVITY_TAG] }
+)
+
+export async function getScanHistoryPaginated(
+  page: number = 1,
+  pageSize: number = 20
+): Promise<{ data: ScanActivity[]; total: number }> {
+  try {
+    return await getCachedScanHistory(page, pageSize)
+  } catch (error) {
+    console.error('Error fetching scan history:', error)
+    return { data: [], total: 0 }
   }
 }

@@ -93,8 +93,8 @@ export default function PrizesClient({
       await deletePrize(prizeId);
       setPrizes(prizes.filter((p) => p.id !== prizeId));
       toast({
-        title: "Premio desactivado",
-        description: "El premio ya no aparecerá en la ruleta. Puedes reactivarlo editándolo.",
+        title: "Premio eliminado",
+        description: "El premio fue eliminado. Los cupones ya generados siguen siendo válidos.",
       });
     } catch (error) {
       toast({
@@ -134,7 +134,7 @@ export default function PrizesClient({
       <div className="space-y-2">
         <h1 className="text-2xl font-bold text-gray-900">Gestión de Premios</h1>
         <p className="text-gray-600">
-          Administra los premios de la ruleta y los premios por racha de la aplicación
+          Administra los premios de la ruleta y los premios por visitas de la aplicación
         </p>
       </div>
 
@@ -152,7 +152,7 @@ export default function PrizesClient({
           </TabsTrigger>
           <TabsTrigger value="streak" className="flex items-center gap-2">
             <Target className="w-4 h-4" />
-            Premios por Racha
+            Premios por Visitas
           </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-2">
             <Package className="w-4 h-4" />
@@ -194,7 +194,7 @@ export default function PrizesClient({
         <TabsContent value="streak" className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Premios por Racha</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Premios por Visitas</h2>
               <div className="flex items-center gap-2 text-sm">
                 <span className={`font-medium ${prizeStats.streak.canCreate ? 'text-green-600' : 'text-red-600'}`}>
                   {prizeStats.streak.active}/{prizeStats.streak.limit} activos
@@ -207,7 +207,7 @@ export default function PrizesClient({
               </div>
             </div>
             <p className="text-sm text-gray-600">
-              Premios obtenibles por racha de check-ins consecutivos
+              Premios obtenibles por visitas consecutivas
             </p>
           </div>
           <PrizesTable
@@ -244,13 +244,13 @@ export default function PrizesClient({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Desactivar este premio?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar este premio?</AlertDialogTitle>
             <AlertDialogDescription>
-              El premio se marcará como inactivo y dejará de aparecer en la ruleta y lista de premios.
-              Podrás reactivarlo en cualquier momento desde el botón &quot;Editar&quot;.
-              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-                <strong className="text-blue-900">💡 Nota:</strong>
-                <span className="text-blue-800"> Los cupones ya generados seguirán siendo válidos.</span>
+              El premio será eliminado permanentemente y dejará de aparecer en la ruleta y lista de premios.
+              Esta acción no se puede deshacer desde la interfaz.
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+                <strong className="text-amber-900">Importante:</strong>
+                <span className="text-amber-800"> Los cupones ya generados seguirán siendo válidos y podrán canjearse normalmente.</span>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -264,7 +264,7 @@ export default function PrizesClient({
                 }
               }}
             >
-              Desactivar
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

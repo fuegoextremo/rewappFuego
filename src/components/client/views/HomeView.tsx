@@ -195,12 +195,22 @@ export default function HomeView() {
           </div>
         </motion.div>
 
+        {/* Premios por Visitas */}
+        <motion.div 
+          className="px-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <StreakPrizesList showCompleted={true} maxItems={5} />
+        </motion.div>
+
         {/* Actividad reciente - Componente funcional */}
         <motion.div 
           className="rounded-lg"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
         >
           <div className="p-4 mt-4">
           <div className="flex items-center gap-2">
@@ -215,16 +225,6 @@ export default function HomeView() {
             <RecentActivity userId={user.id} />
           </div>
           
-        </motion.div>
-
-        {/* Streak Prizes List */}
-        <motion.div 
-          className="px-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <StreakPrizesList showCompleted={true} maxItems={5} />
         </motion.div>
 
         {/* Logo del establecimiento */}

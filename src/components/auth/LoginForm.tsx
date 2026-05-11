@@ -116,13 +116,12 @@ export default function LoginForm() {
 
   return (
     <div className="space-y-6">
-      {/* Botones de OAuth */}
+      {/* OAuth deshabilitado temporalmente
       <div className="space-y-3">
         <SocialButton provider="google" disabled={isLoading} />
         <SocialButton provider="facebook" disabled={isLoading} />
       </div>
 
-      {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-gray-300" />
@@ -131,6 +130,7 @@ export default function LoginForm() {
           <span className="px-2 bg-white text-gray-500">o</span>
         </div>
       </div>
+      */}
 
       {/* Formulario de email/password */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

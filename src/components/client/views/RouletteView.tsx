@@ -150,20 +150,10 @@ export default function RouletteView() {
                       {prize.description && (
                         <p className="text-sm text-gray-600 mt-1">{prize.description}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${rarity.color}`}>
-                          {rarity.emoji} {rarity.label}
-                        </span>
-                        {/*prize.validity_days && (
-                          <span className="text-xs text-gray-500">
-                            Válido por {prize.validity_days} días
-                          </span>
-                        )*/}
-                      </div>
                     </div>
-                    <div className="text-xs text-gray-400 text-right">
-                      {prize.inventory_count ? `${prize.inventory_count} disponibles` : 'Stock ilimitado'}
-                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${rarity.color}`}>
+                      {rarity.emoji} {rarity.label}
+                    </span>
                   </div>
                 </div>
               )

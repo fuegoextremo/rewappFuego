@@ -19,11 +19,13 @@ function ScannerCard({
 }: {
   isScanning: boolean;
   isPending: boolean;
-  result: { success: boolean; message: string } | null;
+  result: { success: boolean; message: string; resultType?: 'checkin' | 'redeem' } | null;
   countdown: number | null;
   handleScanSuccess: (decodedText: string) => void;
   resetScanner: () => void;
 }) {
+  const isRedeemSuccess = result?.success && result?.resultType === 'redeem';
+
   return (
     <Card className="w-full">
       <CardHeader className="text-center pb-4">
@@ -58,11 +60,20 @@ function ScannerCard({
             <h3 className={`font-bold text-lg mb-2 ${
               result.success ? 'text-green-800' : 'text-red-800'
             }`}>
-              {result.success ? 'Operación Exitosa' : 'Operación Fallida'}
+              {result.success
+                ? isRedeemSuccess
+                  ? 'Canje Exitoso'
+                  : 'Operación Exitosa'
+                : 'Operación Fallida'}
             </h3>
             <p className={`mb-4 ${result.success ? 'text-green-700' : 'text-red-700'}`}>
               {result.message}
             </p>
+            {isRedeemSuccess && (
+              <p className="text-sm text-green-800 bg-green-100 border border-green-200 rounded-md p-2 mb-4 font-medium">
+                Muestra este mensaje al cliente antes de cerrar.
+              </p>
+            )}
             {result.success && countdown !== null && (
               <p className="text-sm text-green-600 mb-4 font-medium">
                 Reiniciando en {countdown}s...
@@ -72,7 +83,7 @@ function ScannerCard({
               onClick={resetScanner}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
             >
-              Escanear de nuevo
+              {isRedeemSuccess ? 'Cerrar y escanear de nuevo' : 'Escanear de nuevo'}
             </button>
           </div>
         )}
@@ -100,7 +111,7 @@ function ScannerCard({
 
 export default function ScannerPage() {
   const [isScanning, setIsScanning] = useState(true);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<{ success: boolean; message: string; resultType?: 'checkin' | 'redeem' } | null>(null);
   const [recentActivities, setRecentActivities] = useState<ScanActivity[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -141,21 +152,26 @@ export default function ScannerPage() {
         // Recargar actividades recientes después de un escaneo exitoso
         if (response.success) {
           await loadRecentActivities();
-          
-          // ✨ Iniciar countdown de 2 segundos
-          setCountdown(2);
-          const countdownInterval = setInterval(() => {
-            setCountdown(prev => {
-              if (prev === null || prev <= 1) {
-                clearInterval(countdownInterval);
-                // Auto-reinicio cuando llega a 0
-                setIsScanning(true);
-                setResult(null);
-                return null;
-              }
-              return prev - 1;
-            });
-          }, 1000);
+
+          // Para canje de cupón exitoso, mantener resultado visible hasta cierre manual.
+          if (response.resultType === 'redeem') {
+            setCountdown(null);
+          } else {
+            // Auto-reinicio para check-in exitoso.
+            setCountdown(2);
+            const countdownInterval = setInterval(() => {
+              setCountdown(prev => {
+                if (prev === null || prev <= 1) {
+                  clearInterval(countdownInterval);
+                  // Auto-reinicio cuando llega a 0
+                  setIsScanning(true);
+                  setResult(null);
+                  return null;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+          }
         }
 
       } catch (error) {
@@ -172,6 +188,7 @@ export default function ScannerPage() {
 
   const resetScanner = useCallback(() => {
     setIsScanning(true);
+    setCountdown(null);
     setResult(null);
   }, []);
 

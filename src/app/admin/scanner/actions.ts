@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 export type ActionResponse = {
   success: boolean;
   message: string;
+  resultType?: 'checkin' | 'redeem';
 };
 
 export async function processScannedQr(scannedValue: string): Promise<ActionResponse> {
@@ -44,7 +45,7 @@ export async function processCheckin(qrToken: string): Promise<ActionResponse> {
   // 1. Obtener el verificador y su sucursal
   const { data: { user: verifierUser } } = await supabase.auth.getUser();
   if (!verifierUser) {
-    return { success: false, message: "No autorizado. Inicia sesión de nuevo." };
+    return { success: false, message: "No autorizado. Inicia sesión de nuevo.", resultType: 'checkin' };
   }
 
   const { data: verifierProfile } = await adminSupabase
@@ -54,18 +55,18 @@ export async function processCheckin(qrToken: string): Promise<ActionResponse> {
     .single();
 
   if (!verifierProfile || !verifierProfile.branch_id) {
-    return { success: false, message: "No se pudo determinar la sucursal del verificador." };
+    return { success: false, message: "No se pudo determinar la sucursal del verificador.", resultType: 'checkin' };
   }
   const branchId = verifierProfile.branch_id;
 
   // 2. Validar el token del cliente
   const payload: RedeemPayload | null = verifyToken(normalizedToken);
   if (!payload) {
-    return { success: false, message: "Código QR de cliente inválido o expirado." };
+    return { success: false, message: "Código QR de cliente inválido o expirado.", resultType: 'checkin' };
   }
 
   if (payload.kind === 'redeem') {
-    return { success: false, message: "Este QR corresponde a un canje de premio, no a check-in." };
+    return { success: false, message: "Este QR corresponde a un canje de premio, no a check-in.", resultType: 'checkin' };
   }
 
   const customerUserId = payload.u;
@@ -80,18 +81,18 @@ export async function processCheckin(qrToken: string): Promise<ActionResponse> {
   if (error) {
     // Personalizar mensaje de error
     if (error.message.includes('límite de check-ins diarios')) {
-      return { success: false, message: "Has alcanzado el límite de check-ins diarios." };
+      return { success: false, message: "Has alcanzado el límite de check-ins diarios.", resultType: 'checkin' };
     }
     if (error.message.includes('ya realizó check-in hoy')) {
-      return { success: false, message: "Ya tienes un check-in registrado hoy." };
+      return { success: false, message: "Ya tienes un check-in registrado hoy.", resultType: 'checkin' };
     }
-    return { success: false, message: `Error en el check-in: ${error.message}` };
+    return { success: false, message: `Error en el check-in: ${error.message}`, resultType: 'checkin' };
   }
 
   // ✅ Invalidar caché del dashboard para reflejar nuevo check-in inmediatamente
   revalidatePath('/admin/dashboard');
 
-  return { success: true, message: "Check-in exitoso. Puntos otorgados según configuración!" };
+  return { success: true, message: "Check-in exitoso. Puntos otorgados según configuración!", resultType: 'checkin' };
 }
 
 export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
@@ -100,18 +101,18 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
 
     const payload = verifyToken(normalizedToken);
     if (!payload) {
-      return { success: false, message: "Código QR inválido o expirado." };
+      return { success: false, message: "Código QR inválido o expirado.", resultType: 'redeem' };
     }
 
     if (payload.kind === 'checkin') {
-      return { success: false, message: "Este QR corresponde a check-in, no a canje." };
+      return { success: false, message: "Este QR corresponde a check-in, no a canje.", resultType: 'redeem' };
     }
 
     const supabase = createAdminClient();
     const { data: { user: verifierUser } } = await createActionClient().auth.getUser();
     
     if (!verifierUser) {
-      return { success: false, message: "No autorizado. Inicia sesión de nuevo." };
+      return { success: false, message: "No autorizado. Inicia sesión de nuevo.", resultType: 'redeem' };
     }
 
     // Verificar que el cupón existe y no ha sido redimido
@@ -122,15 +123,15 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       .single();
 
     if (couponError || !coupon) {
-      return { success: false, message: "Cupón no encontrado." };
+      return { success: false, message: "Cupón no encontrado.", resultType: 'redeem' };
     }
 
     if (coupon.is_redeemed) {
-      return { success: false, message: "Este cupón ya ha sido redimido." };
+      return { success: false, message: "Este cupón ya ha sido redimido.", resultType: 'redeem' };
     }
 
     if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()) {
-      return { success: false, message: "Este cupón ha expirado." };
+      return { success: false, message: "Este cupón ha expirado.", resultType: 'redeem' };
     }
 
     // Marcar cupón como redimido de forma atómica para evitar doble canje concurrente.
@@ -147,11 +148,11 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       .maybeSingle();
 
     if (updateError) {
-      return { success: false, message: `Error al redimir cupón: ${updateError.message}` };
+      return { success: false, message: `Error al redimir cupón: ${updateError.message}`, resultType: 'redeem' };
     }
 
     if (!updatedCoupon) {
-      return { success: false, message: "Este cupón ya fue redimido por otro verificador." };
+      return { success: false, message: "Este cupón ya fue redimido por otro verificador.", resultType: 'redeem' };
     }
 
     // Obtener información del premio para el mensaje
@@ -168,10 +169,10 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
     // ✅ Invalidar caché del dashboard para reflejar cupón canjeado inmediatamente
     revalidatePath('/admin/dashboard');
     
-    return { success: true, message: `Cupón "${prizeName}" redimido exitosamente.` };
+    return { success: true, message: `Cupón "${prizeName}" redimido exitosamente.`, resultType: 'redeem' };
 
   } catch (error) {
     console.error('Error in redeemCoupon:', error);
-    return { success: false, message: "Error interno del servidor." };
+    return { success: false, message: "Error interno del servidor.", resultType: 'redeem' };
   }
 }

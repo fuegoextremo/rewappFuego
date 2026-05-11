@@ -494,6 +494,26 @@ export class RealtimeManager {
     connectionHealthMonitor.notifyDataReceived()
     
     if (payload.new && payload.new.user_id === this.currentUserId) {
+      const newCoupon = payload.new as Record<string, unknown>
+      const oldCoupon = (payload.old || {}) as Record<string, unknown>
+
+      // Evento explícito para cierre automático del RedeemSheet al redimirse un cupón.
+      if (
+        payload.eventType === 'UPDATE' &&
+        newCoupon?.id &&
+        newCoupon?.is_redeemed === true &&
+        oldCoupon?.is_redeemed !== true
+      ) {
+        window.dispatchEvent(
+          new CustomEvent('coupon-redeemed', {
+            detail: {
+              couponId: newCoupon.id,
+              source: newCoupon.source || null,
+            },
+          })
+        )
+      }
+
       // ✨ Actualizar Redux directamente - fuente única de verdad
       if (this.reduxDispatch) {
         import('@/store/slices/authSlice').then(async ({ 

@@ -20,16 +20,32 @@ export function signPayload(p: RedeemPayload) {
 export function normalizeScannedQrInput(input: string): string {
   if (!input) return input
 
-  if (input.startsWith('http')) {
+  const normalizedInput = input.trim()
+
+  // Caso principal: extraer ?t=token desde URLs absolutas o relativas.
+  if (normalizedInput.includes('?t=') || normalizedInput.includes('&t=')) {
     try {
-      const url = new URL(input)
-      return url.searchParams.get('t') || input
+      const url = normalizedInput.startsWith('http')
+        ? new URL(normalizedInput)
+        : new URL(normalizedInput, 'https://local')
+
+      const token = url.searchParams.get('t')
+      if (token) return decodeURIComponent(token)
     } catch {
-      return input
+      // Fallback manual para strings mal formados
+      const match = normalizedInput.match(/[?&]t=([^&]+)/)
+      if (match?.[1]) {
+        return decodeURIComponent(match[1])
+      }
     }
   }
 
-  return input
+  // Soporte para payload directo tipo "t=..."
+  if (normalizedInput.startsWith('t=')) {
+    return decodeURIComponent(normalizedInput.slice(2))
+  }
+
+  return normalizedInput
 }
 
 export function isUuid(value: string): boolean {

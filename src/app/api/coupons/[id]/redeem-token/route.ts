@@ -38,9 +38,12 @@ export async function GET(
   const exp = Math.floor(Date.now() / 1000) + 5 * 60
   const token = signPayload({ c: coupon.id, u: user.id, exp, kind: 'redeem' })
 
-  // 3) Construimos la cadena a codificar como QR
-  //     (URL para la vista del verificador o un deep-link interno)
-  const qrData = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/staff/redeem?t=${token}`
+  // 3) Construimos la cadena a codificar como QR.
+  // Si no hay base URL válida, usar token directo para garantizar compatibilidad del scanner.
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim()
+  const hasAbsoluteBaseUrl = /^https?:\/\//i.test(appUrl)
+  const safeBaseUrl = hasAbsoluteBaseUrl ? appUrl.replace(/\/$/, '') : ''
+  const qrData = safeBaseUrl ? `${safeBaseUrl}/staff/redeem?t=${token}` : token
 
   return NextResponse.json({
     ok: true,

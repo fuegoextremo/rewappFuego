@@ -69,14 +69,25 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
       onClose() // Cerrar inmediatamente junto con el toast
     }
 
+    const handleCouponRedeemed = (event: CustomEvent) => {
+      const redeemedCouponId = event.detail?.couponId as string | undefined
+      if (redeemedCouponId && redeemedCouponId === couponId) {
+        console.log('🎉 RedeemSheet: Evento coupon-redeemed detectado, cerrando automáticamente')
+        onClose()
+      }
+    }
+
     // Escuchar el evento personalizado que ya dispara RealtimeProvider
     window.addEventListener('user-data-updated', handleUserDataUpdate as EventListener)
     // Escuchar evento específico de premio de ruleta
     window.addEventListener('redemption-success', handleRedemptionSuccess)
+    // Escuchar evento explícito cuando este cupón se redime
+    window.addEventListener('coupon-redeemed', handleCouponRedeemed as EventListener)
 
     return () => {
       window.removeEventListener('user-data-updated', handleUserDataUpdate as EventListener)
       window.removeEventListener('redemption-success', handleRedemptionSuccess)
+      window.removeEventListener('coupon-redeemed', handleCouponRedeemed as EventListener)
     }
   }, [open, couponId, onClose])
 

@@ -29,6 +29,7 @@ export function useRoulettePrizes() {
         .eq('type', 'roulette')
         .eq('is_active', true)
         .gt('inventory_count', 0)
+        .is('deleted_at', null)
         .order('weight', { ascending: false })
 
       if (error) throw error

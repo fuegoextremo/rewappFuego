@@ -28,7 +28,7 @@ export async function GET() {
   if (!code) {
     return NextResponse.json({ ok: false, error: 'unique_code no disponible' }, { status: 500 })
   }
-  const payload = { c: code, u: user.id, exp: Math.floor(Date.now() / 1000) + 5 * 60 }
+  const payload = { c: code, u: user.id, exp: Math.floor(Date.now() / 1000) + 5 * 60, kind: 'checkin' as const }
   const qrData = signPayload(payload)
 
   return NextResponse.json({ ok: true, qrData, code: profile.unique_code })

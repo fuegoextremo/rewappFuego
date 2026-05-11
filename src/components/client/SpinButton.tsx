@@ -2,6 +2,8 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 //import { Loader2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queryClient'
 import { useAppDispatch } from '@/store/hooks'
 import { startSpin, endSpin } from '@/store/slices/rouletteSlice'
 import { useNavigationBlock } from '@/hooks/useNavigationBlock'
@@ -22,6 +24,7 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
   const [spinning, setSpinning] = useState(false) // Estado para la animación RIVE
   const { data: settings, isLoading: settingsLoading } = useSystemSettings()
   const dispatch = useAppDispatch()
+  const queryClient = useQueryClient()
   
   // 🔒 Activar hook de bloqueo de navegación
   useNavigationBlock()
@@ -100,7 +103,12 @@ export default function SpinButton({ disabled }: { disabled: boolean }) {
           console.log('🎰 Timeout de animación alcanzado, forzando reset y mostrando resultado')
           setResult(spinResult)
           setSpinning(false)
-          
+
+          // Invalidar cache de premios si ganó: el inventario cambió en DB
+          if (spinResult.won) {
+            queryClient.invalidateQueries({ queryKey: queryKeys.roulette.prizes })
+          }
+
           // ✨ REALTIME PURO: Confiando 100% en RealtimeProvider
           console.log('✨ Giro completado - Esperando Realtime para actualizar RouletteView y HomeView')
         } else {

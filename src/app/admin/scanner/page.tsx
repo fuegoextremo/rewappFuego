@@ -1,19 +1,15 @@
 "use client";
 
 import { useState, useTransition, useCallback, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SimpleQRScanner from '@/components/scanner/SimpleQRScanner';
 import RecentScanActivity from '@/components/scanner/RecentScanActivity';
 import Breadcrumbs from '@/components/shared/Breadcrumbs';
-import { processCheckin, redeemCoupon } from './actions';
+import { processScannedQr } from './actions';
 import { getRecentScanActivity, ScanActivity } from './queries';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-type ScanMode = "checkin" | "redeem";
-
 function ScannerCard({
-  mode,
   isScanning,
   isPending,
   result,
@@ -21,7 +17,6 @@ function ScannerCard({
   handleScanSuccess,
   resetScanner
 }: {
-  mode: ScanMode;
   isScanning: boolean;
   isPending: boolean;
   result: { success: boolean; message: string } | null;
@@ -32,14 +27,9 @@ function ScannerCard({
   return (
     <Card className="w-full">
       <CardHeader className="text-center pb-4">
-        <CardTitle className="text-lg">
-          {mode === 'checkin' ? 'Escanear QR de Check-in' : 'Escanear QR de Premio'}
-        </CardTitle>
+        <CardTitle className="text-lg">Escanear QR</CardTitle>
         <p className="text-sm text-gray-600">
-          {mode === 'checkin' 
-            ? 'Apunta la cámara al código QR del cliente para registrar su visita'
-            : 'Apunta la cámara al código QR del premio para validar la redención'
-          }
+          Apunta la cámara al código QR del cliente o del premio. El sistema detecta el tipo automáticamente.
         </p>
       </CardHeader>
       <CardContent className="flex flex-col items-center justify-center space-y-4 min-h-[400px]">
@@ -109,7 +99,6 @@ function ScannerCard({
 }
 
 export default function ScannerPage() {
-  const [mode, setMode] = useState<ScanMode>("checkin");
   const [isScanning, setIsScanning] = useState(true);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [recentActivities, setRecentActivities] = useState<ScanActivity[]>([]);
@@ -140,9 +129,7 @@ export default function ScannerPage() {
 
     startTransition(async () => {
       try {
-        const response = mode === "checkin"
-          ? await processCheckin(decodedText)
-          : await redeemCoupon(decodedText);
+        const response = await processScannedQr(decodedText);
         
         setResult(response);
         toast({
@@ -181,7 +168,7 @@ export default function ScannerPage() {
         });
       }
     });
-  }, [mode, toast, isPending]);
+  }, [toast, isPending]);
 
   const resetScanner = useCallback(() => {
     setIsScanning(true);
@@ -189,7 +176,6 @@ export default function ScannerPage() {
   }, []);
 
   const scannerProps = {
-    mode,
     isScanning,
     isPending,
     result,
@@ -211,23 +197,11 @@ export default function ScannerPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Centro de Escaneo</h1>
-          <p className="text-gray-600">Procesa check-ins de clientes y redención de premios</p>
+          <p className="text-gray-600">Procesa check-ins y canjes en un solo lector inteligente</p>
         </div>
       </div>
 
-      {/* Scanner Tabs */}
-      <Tabs value={mode} onValueChange={(value) => setMode(value as ScanMode)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="checkin">Check-in de Cliente</TabsTrigger>
-          <TabsTrigger value="redeem">Canjear Premio</TabsTrigger>
-        </TabsList>
-        <TabsContent value="checkin" className="mt-6">
-          <ScannerCard {...scannerProps} />
-        </TabsContent>
-        <TabsContent value="redeem" className="mt-6">
-          <ScannerCard {...scannerProps} />
-        </TabsContent>
-      </Tabs>
+      <ScannerCard {...scannerProps} />
 
       {/* Actividad reciente */}
       <RecentScanActivity activities={recentActivities} />

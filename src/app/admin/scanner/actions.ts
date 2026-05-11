@@ -2,7 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createActionClient } from "@/lib/supabase/actions";
-import { verifyToken, RedeemPayload } from "@/lib/utils/qr";
+import { verifyToken, RedeemPayload, normalizeScannedQrInput, isUuid } from "@/lib/utils/qr";
 import { revalidatePath } from "next/cache";
 
 export type ActionResponse = {
@@ -10,7 +10,34 @@ export type ActionResponse = {
   message: string;
 };
 
+export async function processScannedQr(scannedValue: string): Promise<ActionResponse> {
+  const normalizedToken = normalizeScannedQrInput(scannedValue);
+  const payload: RedeemPayload | null = verifyToken(normalizedToken);
+
+  if (!payload) {
+    return { success: false, message: "Código QR inválido o expirado." };
+  }
+
+  // Ruta principal para tokens nuevos con tipo explícito.
+  if (payload.kind === 'checkin') {
+    return processCheckin(normalizedToken);
+  }
+  if (payload.kind === 'redeem') {
+    return redeemCoupon(normalizedToken);
+  }
+
+  // Compatibilidad con tokens legacy sin 'kind':
+  // - c UUID => cupón (canje)
+  // - c no UUID => check-in
+  if (isUuid(payload.c)) {
+    return redeemCoupon(normalizedToken);
+  }
+
+  return processCheckin(normalizedToken);
+}
+
 export async function processCheckin(qrToken: string): Promise<ActionResponse> {
+  const normalizedToken = normalizeScannedQrInput(qrToken);
   const supabase = createActionClient();
   const adminSupabase = createAdminClient();
 
@@ -32,10 +59,15 @@ export async function processCheckin(qrToken: string): Promise<ActionResponse> {
   const branchId = verifierProfile.branch_id;
 
   // 2. Validar el token del cliente
-  const payload: RedeemPayload | null = verifyToken(qrToken);
+  const payload: RedeemPayload | null = verifyToken(normalizedToken);
   if (!payload) {
     return { success: false, message: "Código QR de cliente inválido o expirado." };
   }
+
+  if (payload.kind === 'redeem') {
+    return { success: false, message: "Este QR corresponde a un canje de premio, no a check-in." };
+  }
+
   const customerUserId = payload.u;
 
   // 3. Ejecutar el check-in (ahora usa configuraciones dinámicas internamente)
@@ -64,15 +96,15 @@ export async function processCheckin(qrToken: string): Promise<ActionResponse> {
 
 export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
   try {
-    // Si es una URL completa, extraer solo el token
-    if (qrToken.startsWith('http')) {
-      const url = new URL(qrToken);
-      qrToken = url.searchParams.get('t') || qrToken;
-    }
+    const normalizedToken = normalizeScannedQrInput(qrToken);
 
-    const payload = verifyToken(qrToken);
+    const payload = verifyToken(normalizedToken);
     if (!payload) {
       return { success: false, message: "Código QR inválido o expirado." };
+    }
+
+    if (payload.kind === 'checkin') {
+      return { success: false, message: "Este QR corresponde a check-in, no a canje." };
     }
 
     const supabase = createAdminClient();
@@ -101,18 +133,25 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       return { success: false, message: "Este cupón ha expirado." };
     }
 
-    // Marcar cupón como redimido (stock ya fue descontado al generar el cupón)
-    const { error: updateError } = await supabase
+    // Marcar cupón como redimido de forma atómica para evitar doble canje concurrente.
+    const { data: updatedCoupon, error: updateError } = await supabase
       .from('coupons')
       .update({
         is_redeemed: true,
         redeemed_at: new Date().toISOString(),
         redeemed_by: verifierUser.id
       })
-      .eq('id', payload.c);
+      .eq('id', payload.c)
+      .eq('is_redeemed', false)
+      .select('id')
+      .maybeSingle();
 
     if (updateError) {
       return { success: false, message: `Error al redimir cupón: ${updateError.message}` };
+    }
+
+    if (!updatedCoupon) {
+      return { success: false, message: "Este cupón ya fue redimido por otro verificador." };
     }
 
     // Obtener información del premio para el mensaje

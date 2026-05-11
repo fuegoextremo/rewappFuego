@@ -36,7 +36,7 @@ export async function GET(
 
   // 2) Generamos token corto con expiración (ej. 5 minutos)
   const exp = Math.floor(Date.now() / 1000) + 5 * 60
-  const token = signPayload({ c: coupon.id, u: user.id, exp })
+  const token = signPayload({ c: coupon.id, u: user.id, exp, kind: 'redeem' })
 
   // 3) Construimos la cadena a codificar como QR
   //     (URL para la vista del verificador o un deep-link interno)

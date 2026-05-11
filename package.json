@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "types:generate": "supabase gen types typescript --project-id wapzrqysraazykcfmrhd --schema public > src/types/database.ts",
+    "types:generate": "supabase gen types typescript --project-id wgerzzsdqvxfejwolqdh --schema public > src/types/database.ts",
     "types:generate:local": "supabase gen types typescript --local > src/types/database.ts",
     "env:local": "cp .env.local.supabase .env.local && echo '✅ Usando Supabase LOCAL'",
     "env:prod": "cp .env.local.production .env.local && echo '✅ Usando Supabase PRODUCCIÓN'",

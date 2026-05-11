@@ -12,7 +12,7 @@ interface RouletteState {
 const initialState: RouletteState = {
   isSpinning: false,
   spinStartTime: null,
-  lockDuration: 6500, // 5000ms animación + 3000ms para ver resultado
+  lockDuration: 9000, // 5000ms animación + 3000ms resultado + 1000ms margen
   isNavigationBlocked: false
 }
 

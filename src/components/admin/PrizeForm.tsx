@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { getPrizeStats } from "@/app/admin/prizes/actions";
+import { ImageUploader } from "@/components/shared/ImageUploader";
 
 // Helper functions for rarity system
 const getWeightFromRarity = (rarity: string): number => {
@@ -388,35 +389,22 @@ export default function PrizeForm({ open, onOpenChange, onSubmit, prize }: Prize
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="image">Imagen personalizada</Label>
-                    <Input
-                      id="image"
-                      type="text"
-                      placeholder="/images/racha.png o https://ejemplo.com/imagen.jpg"
+                    <ImageUploader
+                      bucket="prizes"
+                      fieldName="prize_image"
+                      label="Imagen del premio"
+                      description="Sube una imagen desde tu dispositivo o ingresa una URL externa. Formatos: PNG, JPG, WEBP. Máx. 2 MB."
                       value={formData.image_url ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, image_url: e.target.value })
+                      onChange={(url) =>
+                        setFormData({ ...formData, image_url: url })
                       }
                     />
-                    <div className="text-xs text-gray-500">
-                      Acepta URLs completas o rutas locales (/images/..., /animations/...)
-                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* <div className="space-y-2">
-              <Label htmlFor="image">URL de imagen</Label>
-              <Input
-                id="image"
-                type="url"
-                value={formData.image_url ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, image_url: e.target.value })
-                }
-              />
-            </div> */}
+
 
             {/* Switch para activar/desactivar premio */}
             <div className="flex items-center justify-between p-4 rounded-lg border bg-gray-50">

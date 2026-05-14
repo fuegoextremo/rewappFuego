@@ -8,6 +8,11 @@ const nextConfig = {
         hostname: 'wapzrqysraazykcfmrhd.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'wgerzzsdqvxfejwolqdh.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
   // Optimizaciones para navegación más rápida

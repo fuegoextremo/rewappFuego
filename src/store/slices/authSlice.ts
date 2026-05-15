@@ -47,7 +47,7 @@ export interface CouponRow {
   redeemed_at: string | null
   source: string | null
   created_at: string | null
-  prizes: { name: string; image_url: string | null } | null
+  prizes: { name: string; image_url: string | null; description: string | null } | null
 }
 
 interface AuthState {

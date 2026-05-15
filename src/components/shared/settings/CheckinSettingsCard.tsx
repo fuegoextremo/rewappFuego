@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import { ImageUploader } from "@/components/shared/ImageUploader";
 
 // Tipos importados directamente
 type SystemSetting = {
@@ -25,14 +26,12 @@ interface CheckinSettingsCardProps {
   settings: SystemSetting[];
   onUpdate: (updates: Record<string, string>) => Promise<{ success: boolean; message?: string; error?: string }>;
   onReset: () => Promise<{ success: boolean; message?: string; error?: string }>;
-  isAdminView?: boolean;
 }
 
 export default function CheckinSettingsCard({ 
   settings, 
   onUpdate, 
   onReset,
-  isAdminView = false 
 }: CheckinSettingsCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -49,6 +48,7 @@ export default function CheckinSettingsCard({
     max_checkins_per_day: getSettingValue('max_checkins_per_day', '1'),
     streak_break_days: getSettingValue('streak_break_days', '12'),
     streak_expiry_days: getSettingValue('streak_expiry_days', '90'),
+    streak_initial_image: getSettingValue('streak_initial_image', '/images/badge-default.png'),
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -113,6 +113,7 @@ export default function CheckinSettingsCard({
           max_checkins_per_day: '1',
           streak_break_days: '12',
           streak_expiry_days: '90',
+          streak_initial_image: '/images/badge-default.png',
         });
 
         toast({
@@ -238,6 +239,22 @@ export default function CheckinSettingsCard({
               onChange={(e) => handleInputChange('streak_expiry_days', e.target.value)}
               disabled={isLoading}
               className="w-20 text-right text-sm"
+            />
+          </div>
+
+          {/* Imagen por defecto (racha en cero) */}
+          <div className="px-4 py-3 bg-white space-y-1.5">
+            <ImageUploader
+              label="Imagen por defecto (racha en cero)"
+              description="Se muestra como punto de inicio en el medidor de racha cuando el usuario no ha alcanzado ningún premio"
+              fieldName="streak_initial"
+              bucket="branding"
+              value={formData.streak_initial_image}
+              onChange={(url) => handleInputChange('streak_initial_image', url)}
+              disabled={isLoading}
+              previewWidth={60}
+              previewHeight={60}
+              recommendedSize="60x60"
             />
           </div>
         </div>

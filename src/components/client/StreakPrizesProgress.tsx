@@ -54,10 +54,10 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
       .sort((a, b) => (a.streak_threshold || 0) - (b.streak_threshold || 0))
   }, [streakPrizes])
 
-  // Algoritmo de ventana deslizante inteligente
+  // Algoritmo de ventana deslizante inteligente (excluye el nodo inicio)
   const displayPrizes = useMemo(() => {
     if (validPrizes.length === 0) return []
-    if (validPrizes.length <= maxItems) return validPrizes
+    if (validPrizes.length <= maxItems - 1) return validPrizes
 
     // Encontrar el índice del próximo premio no alcanzado
     const nextUnreachedIndex = validPrizes.findIndex(
@@ -67,36 +67,39 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
     let startIndex = 0
     
     if (nextUnreachedIndex === -1) {
-      // Todos los premios alcanzados, mostrar los últimos 5
-      startIndex = Math.max(0, validPrizes.length - maxItems)
-    } else if (nextUnreachedIndex < maxItems - 1) {
-      // Próximo premio está en los primeros, mostrar desde el inicio
+      startIndex = Math.max(0, validPrizes.length - (maxItems - 1))
+    } else if (nextUnreachedIndex < maxItems - 2) {
       startIndex = 0
     } else {
-      // Centrar ventana alrededor del próximo premio
-      startIndex = Math.max(0, nextUnreachedIndex - Math.floor(maxItems / 2))
-      // Ajustar si nos pasamos del final
-      startIndex = Math.min(startIndex, validPrizes.length - maxItems)
+      startIndex = Math.max(0, nextUnreachedIndex - Math.floor((maxItems - 1) / 2))
+      startIndex = Math.min(startIndex, validPrizes.length - (maxItems - 1))
     }
 
-    return validPrizes.slice(startIndex, startIndex + maxItems)
+    return validPrizes.slice(startIndex, startIndex + maxItems - 1)
   }, [validPrizes, currentStreak, maxItems])
 
-  // Calcular progreso de la barra proporcional
+  // Nodo de inicio (threshold 0) con imagen configurable desde admin
+  const startNode = useMemo(() => ({
+    id: '__start__',
+    name: 'Inicio',
+    streak_threshold: 0,
+    image_url: settings?.streak_initial_image || null,
+  }), [settings?.streak_initial_image])
+
+  // Lista final: nodo inicio + premios
+  const allNodes = useMemo(() => [startNode, ...displayPrizes], [startNode, displayPrizes])
+
+  // Calcular progreso: siempre desde 0 hasta el último threshold visible
   const progressData = useMemo(() => {
     if (displayPrizes.length === 0) return { percentage: 0, total: 0 }
 
-    const firstThreshold = displayPrizes[0].streak_threshold || 0
     const lastThreshold = displayPrizes[displayPrizes.length - 1].streak_threshold || 0
-    const total = lastThreshold - firstThreshold
 
-    if (total === 0) return { percentage: 100, total }
+    if (lastThreshold === 0) return { percentage: 0, total: 0 }
 
-    // Calcular progreso desde el primer premio hasta el actual
-    const progress = Math.max(0, currentStreak - firstThreshold)
-    const percentage = Math.min(100, (progress / total) * 100)
+    const percentage = Math.min(100, (currentStreak / lastThreshold) * 100)
 
-    return { percentage, total }
+    return { percentage, total: lastThreshold }
   }, [displayPrizes, currentStreak])
 
   if (isLoading) {
@@ -125,17 +128,18 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
     <div className="px-4 mb-6">
         {/* Grid de premios */}
         <div className="flex justify-between gap-3 mb-4">
-          {displayPrizes.map((prize) => {
+          {allNodes.map((prize) => {
+            const isStart = prize.id === '__start__'
             const isAchieved = currentStreak >= (prize.streak_threshold || 0)
             const hasImage = prize.image_url && prize.image_url.trim() !== ''
 
             return (
               <div key={prize.id} className="flex flex-col items-center">
-                {/* Imagen del premio */}
+                {/* Imagen del nodo */}
                 <div className={`
                   w-10 h-10 rounded-[10px] overflow-hidden bg-gray-100 
                   flex items-center justify-center mb-2
-                  ${!isAchieved ? 'grayscale' : ''}
+                  ${!isAchieved && !isStart ? 'grayscale' : ''}
                 `}>
                   {hasImage ? (
                     <Image
@@ -146,14 +150,14 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
                       className="object-cover w-full h-full"
                     />
                   ) : (
-                    <div className="text-lg">🏆</div>
+                    <div className="text-lg">{isStart ? '🏅' : '🏆'}</div>
                   )}
                 </div>
                 
-                {/* Número de racha requerida */}
+                {/* Número de threshold — "0" para el nodo inicio */}
                 <div className={`
                   text-xs font-medium
-                  ${isAchieved ? 'text-gray-900' : 'text-gray-500'}
+                  ${isAchieved || isStart ? 'text-gray-900' : 'text-gray-500'}
                 `}>
                   {prize.streak_threshold}
                 </div>
@@ -174,9 +178,9 @@ export function StreakPrizesProgress({ maxItems = 5 }: StreakPrizesProgressProps
             />
           </div>
           
-          {/* Marcadores de posición (invisibles pero ayudan con el posicionamiento) */}
+          {/* Marcadores de posición */}
           <div className="absolute top-0 w-full h-2 flex justify-between">
-            {displayPrizes.map((_, index) => (
+            {allNodes.map((_, index) => (
               <div key={index} className="w-px h-full"></div>
             ))}
           </div>

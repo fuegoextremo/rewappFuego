@@ -19,7 +19,7 @@ export async function GET(
   // 1) Aseguramos que el cupón pertenezca al usuario y esté activo (no redimido / no vencido)
   const { data: coupon, error } = await supa
     .from('coupons')
-    .select('id, user_id, is_redeemed, expires_at, unique_code, prizes(name)')
+    .select('id, user_id, is_redeemed, expires_at, unique_code, prizes(name, description)')
     .eq('id', couponId)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -50,6 +50,7 @@ export async function GET(
     token,
     qrData,
     prizeName: coupon.prizes?.name ?? 'Premio',
+    prizeDescription: coupon.prizes?.description ?? null,
     code: coupon.unique_code,
     exp,
   })

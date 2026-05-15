@@ -58,7 +58,7 @@ export const useCoupons = () => {
         .from('coupons')
         .select(`
           id, unique_code, expires_at, is_redeemed, redeemed_at, source, created_at,
-          prizes ( name, image_url )
+          prizes ( name, image_url, description )
         `)
         .eq('user_id', user.id)
         .eq('is_redeemed', false)
@@ -71,7 +71,7 @@ export const useCoupons = () => {
         .from('coupons')
         .select(`
           id, unique_code, expires_at, is_redeemed, redeemed_at, source, created_at,
-          prizes ( name, image_url )
+          prizes ( name, image_url, description )
         `)
         .eq('user_id', user.id)
         .or(`is_redeemed.eq.true,expires_at.lt.${now}`)
@@ -105,7 +105,7 @@ export const useCoupons = () => {
         .from('coupons')
         .select(`
           id, unique_code, expires_at, is_redeemed, redeemed_at, source, created_at,
-          prizes ( name, image_url )
+          prizes ( name, image_url, description )
         `)
         .eq('user_id', user.id)
         .or(`is_redeemed.eq.true,expires_at.lt.${now}`)
@@ -135,7 +135,7 @@ export const useCoupons = () => {
         .from('coupons')
         .select(`
           id, unique_code, expires_at, is_redeemed, redeemed_at, source, created_at,
-          prizes ( name, image_url )
+          prizes ( name, image_url, description )
         `)
         .eq('user_id', user.id)
         .eq('is_redeemed', false)

@@ -10,7 +10,7 @@ type CouponRow = {
   redeemed_at: string | null
   source: string | null
   created_at: string | null
-  prizes: { name: string; image_url: string | null } | null
+  prizes: { name: string; image_url: string | null; description: string | null } | null
 }
 
 interface CouponCardProps {
@@ -190,6 +190,17 @@ export default function CouponCard({ coupon, isInStack = false, forceGrayStyle =
             >
               {coupon.prizes?.name ?? 'Premio'}
             </h4>
+            {coupon.prizes?.description && (
+              <p
+                className="text-xs mt-1 line-clamp-2"
+                style={{
+                  opacity: active ? 0.85 : 0.75,
+                  color: active ? textColor : '#374151'
+                }}
+              >
+                {coupon.prizes.description}
+              </p>
+            )}
             <p 
               className="text-xs mt-1"
               style={{ 

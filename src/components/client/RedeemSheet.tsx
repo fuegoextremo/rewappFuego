@@ -16,6 +16,7 @@ type ApiResp = {
   ok: boolean
   qrData?: string
   prizeName?: string
+  prizeDescription?: string | null
   code?: string
   error?: string
 }
@@ -24,13 +25,14 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
   const { data: settings } = useSystemSettings()
   const [img, setImg] = useState<string | null>(null)
   const [title, setTitle] = useState<string>('Reclamando…')
+  const [description, setDescription] = useState<string | null>(null)
   const [code, setCode] = useState<string>('—')
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
     async function run() {
-      setErr(null); setImg(null); setTitle('Reclamando…'); setCode('—')
+      setErr(null); setImg(null); setTitle('Reclamando…'); setCode('—'); setDescription(null)
       try {
         const res = await fetch(`/api/coupons/${couponId}/redeem-token`)
         const json: ApiResp = await res.json()
@@ -39,6 +41,7 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
         if (!mounted) return
         setImg(dataUrl)
         setTitle(json.prizeName ?? 'Premio')
+        setDescription(json.prizeDescription ?? null)
         setCode(json.code ?? '')
       } catch (e) {
         console.error('Error generando QR de cupón:', e)
@@ -111,7 +114,10 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
         <div className="relative px-6 pb-6">
           <div className="text-center space-y-1 m-6"> 
             <p className="text-xs tracking-wider text-white/80 uppercase">RECLAMANDO</p>
-            <h3 className="text-white font-semibold">{title}</h3> 
+            <h3 className="text-white font-semibold">{title}</h3>
+            {description && (
+              <p className="text-sm text-white/80 px-2">{description}</p>
+            )}
             {code && <p className="text-sm text-white/70">#{code}</p>}
           </div>
 

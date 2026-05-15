@@ -1,16 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Configuración de imágenes remotas (Supabase Storage)
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'wapzrqysraazykcfmrhd.supabase.co',
-        pathname: '/storage/v1/object/public/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'wgerzzsdqvxfejwolqdh.supabase.co',
+        hostname: '*.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
     ],

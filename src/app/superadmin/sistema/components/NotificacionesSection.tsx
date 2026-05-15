@@ -21,7 +21,6 @@ export default function NotificacionesSection({ settings }: NotificacionesSectio
       settings={settings}
       onUpdate={handleUpdate}
       onReset={handleReset}
-      isAdminView={false}
     />
   );
 }

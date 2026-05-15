@@ -284,6 +284,7 @@ export default function SEOSection({ settings }: SEOSectionProps) {
             </h3>
             <div className="border rounded-lg p-4 bg-white">
               <div className="flex items-center gap-2 mb-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 {formData.favicon_url && (
                   <img 
                     src={formData.favicon_url} 

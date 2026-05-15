@@ -69,15 +69,14 @@ deploy_project() {
       --region "$SB_REGION" \
       --output json 2>&1) || true
 
-  # Extraer project ref del output (asume jq disponible)
-  SB_REF=$(echo "$SB_OUTPUT" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+  # Extraer project ref del output con jq
+  SB_REF=$(echo "$SB_OUTPUT" | jq -r '.id // empty' 2>/dev/null || echo "")
 
   if [[ -z "$SB_REF" ]]; then
     echo "  Proyecto posiblemente ya existe o error en creación. Buscando ref existente..."
     SB_REF=$(SUPABASE_ACCESS_TOKEN="$SB_TOKEN" \
       supabase projects list --output json 2>/dev/null \
-      | grep -o '"id":"[^"]*","name":"'"$SB_NAME"'"' \
-      | grep -o '"id":"[^"]*"' | cut -d'"' -f4 || echo "")
+      | jq -r --arg name "$SB_NAME" '.[] | select(.name == $name) | .id // empty' 2>/dev/null || echo "")
   fi
 
   if [[ -z "$SB_REF" ]]; then
@@ -94,11 +93,11 @@ deploy_project() {
   echo "[2/5] Esperando que el proyecto esté activo..."
   local ATTEMPTS=0
   local MAX=18
+  local STATUS
   while [[ $ATTEMPTS -lt $MAX ]]; do
     STATUS=$(SUPABASE_ACCESS_TOKEN="$SB_TOKEN" \
       supabase projects list --output json 2>/dev/null \
-      | grep -o '"id":"'"$SB_REF"'"[^}]*"status":"[^"]*"' \
-      | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || echo "unknown")
+      | jq -r --arg ref "$SB_REF" '.[] | select(.id == $ref) | .status // "unknown"' 2>/dev/null || echo "unknown")
     if [[ "$STATUS" == "ACTIVE_HEALTHY" ]]; then
       echo "  Proyecto activo."
       break
@@ -113,7 +112,7 @@ deploy_project() {
   # ----------------------------------------------------------
   echo "[3/5] Aplicando migraciones..."
   SUPABASE_ACCESS_TOKEN="$SB_TOKEN" \
-    supabase db push --db-url "$DB_URL"
+    supabase db push --db-url "$DB_URL" --yes
   echo "  Migraciones aplicadas."
 
   # ----------------------------------------------------------
@@ -123,20 +122,108 @@ deploy_project() {
 
   # Construir URL pública de Supabase para las env vars
   local SB_URL="https://${SB_REF}.supabase.co"
-  local SB_ANON_KEY=$(SUPABASE_ACCESS_TOKEN="$SB_TOKEN" \
+  local SB_ANON_KEY
+  SB_ANON_KEY=$(SUPABASE_ACCESS_TOKEN="$SB_TOKEN" \
     supabase projects api-keys --project-ref "$SB_REF" --output json 2>/dev/null \
-    | grep -o '"anon","key":"[^"]*"' | cut -d'"' -f4 || echo "")
+    | jq -r '.[] | select(.name == "anon") | .api_key // .key // empty' 2>/dev/null || echo "")
 
-  # Limpiar directorio .vercel para no reutilizar project.json de otro deploy
+  if [[ -z "$SB_ANON_KEY" ]]; then
+    echo "  WARN: No se pudo obtener el anon key. Verifica manualmente en el dashboard."
+  fi
+
+  # Obtener service role key de Supabase
+  local SB_SERVICE_KEY
+  SB_SERVICE_KEY=$(curl -s "https://api.supabase.com/v1/projects/${SB_REF}/api-keys" \
+    -H "Authorization: Bearer $SB_TOKEN" \
+    | jq -r '.[] | select(.name == "service_role" and .type == "legacy") | .api_key // empty' 2>/dev/null || echo "")
+
+  if [[ -z "$SB_SERVICE_KEY" ]]; then
+    echo "  WARN: No se pudo obtener el service_role key."
+  fi
+
+  # Crear el proyecto en Vercel via API REST (sin conexión a GitHub)
+  echo "  Creando proyecto en Vercel via API..."
+  local VCL_USER_ID
+  VCL_USER_ID=$(curl -s "https://api.vercel.com/v2/user" \
+    -H "Authorization: Bearer $VCL_TOKEN" | jq -r '.user.id')
+
+  local VCL_API_RESPONSE
+  VCL_API_RESPONSE=$(curl -s -X POST "https://api.vercel.com/v9/projects" \
+    -H "Authorization: Bearer $VCL_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"$VCL_NAME\",\"framework\":\"nextjs\"}")
+
+  local VCL_PROJECT_ID
+  VCL_PROJECT_ID=$(echo "$VCL_API_RESPONSE" | jq -r '.id // empty')
+
+  # Si ya existe, obtener el ID del proyecto existente
+  if [[ -z "$VCL_PROJECT_ID" ]]; then
+    VCL_PROJECT_ID=$(curl -s "https://api.vercel.com/v9/projects/$VCL_NAME" \
+      -H "Authorization: Bearer $VCL_TOKEN" | jq -r '.id // empty')
+  fi
+
+  if [[ -z "$VCL_PROJECT_ID" ]]; then
+    echo "  ERROR: No se pudo crear o encontrar el proyecto Vercel '$VCL_NAME'."
+    return 1
+  fi
+
+  echo "  Vercel project ID: $VCL_PROJECT_ID"
+
+  # Inyectar .vercel/project.json para que el CLI no intente ligar GitHub
   rm -rf "$SCRIPT_DIR/.vercel"
+  mkdir -p "$SCRIPT_DIR/.vercel"
+  printf '{"orgId":"%s","projectId":"%s"}' "$VCL_USER_ID" "$VCL_PROJECT_ID" \
+    > "$SCRIPT_DIR/.vercel/project.json"
 
-  vercel --prod \
+  # Desactivar git integration en el proyecto (evita bloqueo por email de commit)
+  curl -s -X PATCH "https://api.vercel.com/v9/projects/$VCL_PROJECT_ID" \
+    -H "Authorization: Bearer $VCL_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"link":null}' > /dev/null
+
+  # Compilar con vercel build --prod (genera .vercel/output para producción)
+  # Ocultamos .git durante build Y deploy para que Vercel no vincule a GitHub
+  echo "  Compilando con vercel build --prod..."
+  if [[ -d "$SCRIPT_DIR/.git" ]]; then
+    mv "$SCRIPT_DIR/.git" "$SCRIPT_DIR/.git_deploy_backup"
+  fi
+
+  NEXT_PUBLIC_SUPABASE_URL="$SB_URL" \
+  NEXT_PUBLIC_SUPABASE_ANON_KEY="$SB_ANON_KEY" \
+    vercel build --prod --token "$VCL_TOKEN" --yes
+
+  # Establecer variables de entorno en el proyecto Vercel
+  echo "  Configurando variables de entorno..."
+  # Upsert: primero borrar existentes para evitar duplicados, luego crear
+  local EXISTING_ENVS
+  EXISTING_ENVS=$(curl -s "https://api.vercel.com/v10/projects/$VCL_PROJECT_ID/env" \
+    -H "Authorization: Bearer $VCL_TOKEN" | jq -r '.envs[]? | .id' 2>/dev/null || echo "")
+  for ENV_ID in $EXISTING_ENVS; do
+    curl -s -X DELETE "https://api.vercel.com/v10/projects/$VCL_PROJECT_ID/env/$ENV_ID" \
+      -H "Authorization: Bearer $VCL_TOKEN" > /dev/null
+  done
+
+  local ALL_TARGETS='["production","preview","development"]'
+  curl -s -X POST "https://api.vercel.com/v10/projects/$VCL_PROJECT_ID/env" \
+    -H "Authorization: Bearer $VCL_TOKEN" -H "Content-Type: application/json" \
+    -d "{\"key\":\"NEXT_PUBLIC_SUPABASE_URL\",\"value\":\"$SB_URL\",\"type\":\"plain\",\"target\":$ALL_TARGETS}" > /dev/null
+  curl -s -X POST "https://api.vercel.com/v10/projects/$VCL_PROJECT_ID/env" \
+    -H "Authorization: Bearer $VCL_TOKEN" -H "Content-Type: application/json" \
+    -d "{\"key\":\"NEXT_PUBLIC_SUPABASE_ANON_KEY\",\"value\":\"$SB_ANON_KEY\",\"type\":\"plain\",\"target\":$ALL_TARGETS}" > /dev/null
+  curl -s -X POST "https://api.vercel.com/v10/projects/$VCL_PROJECT_ID/env" \
+    -H "Authorization: Bearer $VCL_TOKEN" -H "Content-Type: application/json" \
+    -d "{\"key\":\"SUPABASE_SERVICE_ROLE_KEY\",\"value\":\"$SB_SERVICE_KEY\",\"type\":\"encrypted\",\"target\":$ALL_TARGETS}" > /dev/null
+
+  # Deploy del build precompilado a producción — sin GitHub, sin prompts
+  echo "  Subiendo build a Vercel (producción)..."
+  vercel deploy --prebuilt --prod \
     --token "$VCL_TOKEN" \
-    --scope "$VCL_SCOPE" \
-    --name "$VCL_NAME" \
-    --yes \
-    -e NEXT_PUBLIC_SUPABASE_URL="$SB_URL" \
-    -e NEXT_PUBLIC_SUPABASE_ANON_KEY="$SB_ANON_KEY"
+    --yes
+
+  # Restaurar .git al terminar ambos pasos
+  if [[ -d "$SCRIPT_DIR/.git_deploy_backup" ]]; then
+    mv "$SCRIPT_DIR/.git_deploy_backup" "$SCRIPT_DIR/.git"
+  fi
 
   echo "  Vercel deploy completado."
 

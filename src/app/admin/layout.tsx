@@ -39,7 +39,7 @@ export default async function AdminLayout({
   };
 
   return (
-      <div className="flex h-screen flex-col md:flex-row bg-gray-50">
+      <div className="flex h-screen flex-col md:flex-row bg-white">
         {/* Sidebar - Desktop: sidebar vertical a la izquierda, Mobile: navbar fijo en la parte inferior */}
         <div className="fixed bottom-0 left-0 right-0 md:static md:w-64 md:flex-none z-50 md:order-1">
           <Sidebar />
@@ -48,17 +48,15 @@ export default async function AdminLayout({
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto md:order-2">
         {/* SuperAdmin Banner - Solo móvil */}
-        <div className="md:hidden pt-2">
+        <div className="md:hidden pt-2 px-3">
           <SuperAdminBanner userProfile={userProfile} />
         </div>
         
-        {/* Content Container con bordes redondeados */}
-        <div className="">
-          <div className="mx-auto max-w-7xl bg-white rounded-lg shadow-sm min-h-full p-4 md:p-6">
-            {/* Banner de error */}
-            <UnauthorizedBanner />
-            {children}
-          </div>
+        {/* Content Container — sin card anidada, fondo unificado */}
+        <div className="mx-auto max-w-7xl min-h-full px-3 py-4 md:px-6 md:py-6 pb-24 md:pb-6">
+          {/* Banner de error */}
+          <UnauthorizedBanner />
+          {children}
         </div>
       </div>
     </div>

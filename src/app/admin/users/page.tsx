@@ -17,7 +17,7 @@ export default async function Page() {
   ]);
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumbs items={breadcrumbItems} />
 

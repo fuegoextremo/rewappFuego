@@ -63,8 +63,8 @@ export default function PeriodSelector({ selectedPeriod }: PeriodSelectorProps) 
   };
 
   return (
-    <Card className="p-1 bg-gray-50/80 border-0 shadow-none">
-      <div className="flex items-center gap-1">
+    <Card className="p-1 bg-gray-50/80 border-0 shadow-none w-full sm:w-auto">
+      <div className="flex items-center gap-1 w-full sm:w-auto">
         {/* Botón 7 días */}
         <Button
           variant={selectedPeriod === '7' ? 'default' : 'ghost'}
@@ -72,14 +72,14 @@ export default function PeriodSelector({ selectedPeriod }: PeriodSelectorProps) 
           onClick={() => handlePeriodClick('7')}
           disabled={isPending}
           className={`
-            h-8 px-4 text-xs font-medium rounded-lg transition-all
-            ${selectedPeriod === '7' 
-              ? 'bg-white text-gray-900 shadow-sm border border-gray-200' 
+            h-8 px-2 sm:px-4 text-xs font-medium rounded-lg transition-all flex-1 sm:flex-initial
+            ${selectedPeriod === '7'
+              ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
               : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
             }
           `}
         >
-          {selectedPeriod === '7' ? getButtonLabel('7') : 'Últimos 7 días'}
+          7 días
         </Button>
 
         {/* Botón 30 días */}
@@ -89,14 +89,14 @@ export default function PeriodSelector({ selectedPeriod }: PeriodSelectorProps) 
           onClick={() => handlePeriodClick('30')}
           disabled={isPending}
           className={`
-            h-8 px-4 text-xs font-medium rounded-lg transition-all
-            ${selectedPeriod === '30' 
-              ? 'bg-white text-gray-900 shadow-sm border border-gray-200' 
+            h-8 px-2 sm:px-4 text-xs font-medium rounded-lg transition-all flex-1 sm:flex-initial
+            ${selectedPeriod === '30'
+              ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
               : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
             }
           `}
         >
-          {selectedPeriod === '30' ? getButtonLabel('30') : 'Últimos 30 días'}
+          30 días
         </Button>
 
         {/* Botón personalizado */}
@@ -106,15 +106,17 @@ export default function PeriodSelector({ selectedPeriod }: PeriodSelectorProps) 
           onClick={() => handlePeriodClick('custom')}
           disabled={isPending}
           className={`
-            h-8 px-4 text-xs font-medium rounded-lg transition-all
-            ${selectedPeriod === 'custom' 
-              ? 'bg-white text-gray-900 shadow-sm border border-gray-200' 
+            h-8 px-2 sm:px-4 text-xs font-medium rounded-lg transition-all flex-1 sm:flex-initial
+            ${selectedPeriod === 'custom'
+              ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
               : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
             }
           `}
         >
-          <CalendarIcon className="w-3 h-3 mr-1.5" />
-          {selectedPeriod === 'custom' ? getButtonLabel('custom') : 'Personalizado'}
+          <CalendarIcon className="w-3 h-3 mr-1" />
+          {selectedPeriod === 'custom' && customStartDate && customEndDate
+            ? getButtonLabel('custom')
+            : 'Personalizado'}
         </Button>
       </div>
 

@@ -33,14 +33,14 @@ export default function TopClients({ periodClients, allTimeClients, periodLabel 
               return (
                 <div
                   key={client.id}
-                  className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                    isTopThree 
-                      ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200' 
+                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 p-3 rounded-lg transition-colors ${
+                    isTopThree
+                      ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200'
                       : 'bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex items-center justify-center w-8 h-8 shrink-0">
                       {isTopThree ? (
                         rankIcons[index]
                       ) : (
@@ -49,16 +49,16 @@ export default function TopClients({ periodClients, allTimeClients, periodLabel 
                         </Badge>
                       )}
                     </div>
-                    <div>
-                      <p className={`font-medium ${isTopThree ? 'text-amber-900' : ''}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className={`font-medium truncate ${isTopThree ? 'text-amber-900' : ''}`}>
                         {client.name}
                       </p>
-                      <p className={`text-sm ${isTopThree ? 'text-amber-700' : 'text-muted-foreground'}`}>
+                      <p className={`text-sm truncate ${isTopThree ? 'text-amber-700' : 'text-muted-foreground'}`}>
                         {client.email}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center justify-around sm:justify-end gap-4 sm:gap-4 text-sm pl-11 sm:pl-0 shrink-0">
                     <div className="text-center">
                       <p className={`font-bold ${isTopThree ? 'text-green-700' : 'text-green-600'}`}>
                         {client.checkins}

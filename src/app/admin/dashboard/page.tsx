@@ -58,7 +58,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <Badge variant="outline" className="text-sm">

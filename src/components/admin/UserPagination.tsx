@@ -45,10 +45,10 @@ export function UserPagination({
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
         {/* Page Size Selector */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Por página:</span>
+          <span className="text-sm text-muted-foreground hidden sm:inline">Por página:</span>
           <Select
             value={pageSize.toString()}
             onValueChange={(value) => onPageSizeChange(Number(value))}
@@ -66,7 +66,7 @@ export function UserPagination({
           </Select>
         </div>
 
-        <div className="h-6 w-px bg-border" />
+        <div className="hidden sm:block h-6 w-px bg-border" />
 
         {/* Page Navigation */}
         <div className="flex items-center gap-1">
@@ -76,6 +76,7 @@ export function UserPagination({
             onClick={() => onPageChange(1)}
             disabled={!canGoPrevious || isLoading}
             title="Primera página"
+            className="hidden sm:inline-flex"
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -110,6 +111,7 @@ export function UserPagination({
             onClick={() => onPageChange(totalPages)}
             disabled={!canGoNext || isLoading}
             title="Última página"
+            className="hidden sm:inline-flex"
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>

@@ -126,7 +126,7 @@ export default function PrizesClient({
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumbs items={breadcrumbItems} />
       
@@ -145,18 +145,27 @@ export default function PrizesClient({
 
       {/* Tabs */}
       <Tabs defaultValue="roulette" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="roulette" className="flex items-center gap-2">
-            <Trophy className="w-4 h-4" />
-            Premios de Ruleta
+        <TabsList className="grid w-full grid-cols-3 h-auto gap-1 p-1">
+          <TabsTrigger
+            value="roulette"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm whitespace-normal text-center leading-tight min-h-[3rem]"
+          >
+            <Trophy className="w-4 h-4 shrink-0" />
+            <span>Ruleta</span>
           </TabsTrigger>
-          <TabsTrigger value="streak" className="flex items-center gap-2">
-            <Target className="w-4 h-4" />
-            Premios por Visitas
+          <TabsTrigger
+            value="streak"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm whitespace-normal text-center leading-tight min-h-[3rem]"
+          >
+            <Target className="w-4 h-4 shrink-0" />
+            <span>Visitas</span>
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="flex items-center gap-2">
-            <Package className="w-4 h-4" />
-            Gestión de Stock
+          <TabsTrigger
+            value="inventory"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm whitespace-normal text-center leading-tight min-h-[3rem]"
+          >
+            <Package className="w-4 h-4 shrink-0" />
+            <span>Stock</span>
           </TabsTrigger>
         </TabsList>
         

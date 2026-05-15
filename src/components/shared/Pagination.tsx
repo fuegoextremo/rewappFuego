@@ -53,7 +53,7 @@ export function Pagination({
       </div>
 
       {/* Controles de paginación */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2">
         {/* Selector de tamaño de página */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground hidden sm:inline">
@@ -76,18 +76,19 @@ export function Pagination({
           </Select>
         </div>
 
-        {/* Separador */}
-        <div className="h-6 w-px bg-border" />
+        {/* Separador (oculto en móvil) */}
+        <div className="hidden sm:block h-6 w-px bg-border" />
 
         {/* Botones de navegación */}
         <div className="flex items-center gap-1">
-          {/* Primera página */}
+          {/* Primera página (oculto en móvil) */}
           <Button
             variant="outline"
             size="icon"
             onClick={() => onPageChange(1)}
             disabled={!canGoPrevious || isLoading}
             title="Primera página"
+            className="hidden sm:inline-flex"
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -121,13 +122,14 @@ export function Pagination({
             <ChevronRight className="h-4 w-4" />
           </Button>
 
-          {/* Última página */}
+          {/* Última página (oculto en móvil) */}
           <Button
             variant="outline"
             size="icon"
             onClick={() => onPageChange(totalPages)}
             disabled={!canGoNext || isLoading}
             title="Última página"
+            className="hidden sm:inline-flex"
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>

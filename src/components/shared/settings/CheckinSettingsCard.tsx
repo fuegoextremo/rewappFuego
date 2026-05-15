@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { BellIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 // Tipos importados directamente
 type SystemSetting = {
@@ -135,79 +134,81 @@ export default function CheckinSettingsCard({
   };
 
   return (
-    <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <BellIcon className="w-6 h-6 text-indigo-600" />
-            <div>
-              <CardTitle className="text-indigo-800">
-                {isAdminView ? "Configuración de Check-ins" : "Configuración de Check-ins y Notificaciones"}
-              </CardTitle>
-              <CardDescription className="text-indigo-600">
-                Controla los puntos y límites para check-ins diarios
-              </CardDescription>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            disabled={isResetting || isLoading}
-            className="text-indigo-600 border-indigo-300 hover:bg-indigo-100"
-          >
-            <ArrowPathIcon className="w-4 h-4 mr-2" />
-            {isResetting ? "Reseteando..." : "Resetear"}
-          </Button>
+    <div className="space-y-6">
+      {/* Cabecera de sección */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Check-ins</p>
+          <h2 className="text-base font-semibold text-gray-900">Configuración de Check-ins</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Controla los puntos y límites para check-ins diarios</p>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Puntos por check-in */}
-          <div className="space-y-2">
-            <Label htmlFor="daily_points" className="text-sm font-medium text-gray-700">
-              Puntos por check-in diario
-            </Label>
-            <Input
-              id="daily_points"
-              type="number"
-              min="0"
-              max="1000"
-              value={formData.checkin_points_daily}
-              onChange={(e) => handleInputChange('checkin_points_daily', e.target.value)}
-              className="border-indigo-200 focus:border-indigo-400"
-              disabled={isLoading}
-            />
-            <p className="text-xs text-gray-500">
-              Puntos que recibe el usuario por cada check-in realizado (0-1000)
-            </p>
-          </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReset}
+          disabled={isResetting || isLoading}
+          className="text-gray-400 hover:text-gray-600 text-xs"
+        >
+          <ArrowPathIcon className="w-3.5 h-3.5 mr-1" />
+          {isResetting ? "Reseteando..." : "Resetear"}
+        </Button>
+      </div>
 
-          {/* Límite de check-ins */}
-          <div className="space-y-2">
-            <Label htmlFor="max_checkins" className="text-sm font-medium text-gray-700">
+      {/* Grupo: puntos y límites */}
+      <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+        {/* Puntos por check-in */}
+        <div className="flex items-center gap-4 px-4 py-3 bg-white">
+          <div className="flex-1 min-w-0">
+            <Label htmlFor="daily_points" className="text-sm font-medium text-gray-800 cursor-pointer">
+              Giros de ruleta por check-in
+            </Label>
+            <p className="text-xs text-gray-400 mt-0.5 leading-tight">Giros que recibe el usuario por cada check-in (0–1000)</p>
+          </div>
+          <Input
+            id="daily_points"
+            type="number"
+            min="0"
+            max="1000"
+            value={formData.checkin_points_daily}
+            onChange={(e) => handleInputChange('checkin_points_daily', e.target.value)}
+            disabled={isLoading}
+            className="w-20 text-right text-sm"
+          />
+        </div>
+
+        {/* Límite de check-ins */}
+        <div className="flex items-center gap-4 px-4 py-3 bg-white">
+          <div className="flex-1 min-w-0">
+            <Label htmlFor="max_checkins" className="text-sm font-medium text-gray-800 cursor-pointer">
               Límite de check-ins por día
             </Label>
-            <Input
-              id="max_checkins"
-              type="number"
-              min="1"
-              max="100"
-              value={formData.max_checkins_per_day}
-              onChange={(e) => handleInputChange('max_checkins_per_day', e.target.value)}
-              className="border-indigo-200 focus:border-indigo-400"
-              disabled={isLoading}
-            />
-            <p className="text-xs text-gray-500">
-              Máximo número de check-ins que puede hacer un usuario por día (1-100)
-            </p>
+            <p className="text-xs text-gray-400 mt-0.5 leading-tight">Máximo de check-ins que puede hacer un usuario al día (1–100)</p>
           </div>
+          <Input
+            id="max_checkins"
+            type="number"
+            min="1"
+            max="100"
+            value={formData.max_checkins_per_day}
+            onChange={(e) => handleInputChange('max_checkins_per_day', e.target.value)}
+            disabled={isLoading}
+            className="w-20 text-right text-sm"
+          />
+        </div>
+      </div>
 
+      {/* Grupo: rachas */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Rachas</p>
+        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
           {/* Días para romper racha */}
-          <div className="space-y-2">
-            <Label htmlFor="streak_break_days" className="text-sm font-medium text-gray-700">
-              Días sin check-in para romper racha
-            </Label>
+          <div className="flex items-center gap-4 px-4 py-3 bg-white">
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="streak_break_days" className="text-sm font-medium text-gray-800 cursor-pointer">
+                Días para romper racha
+              </Label>
+              <p className="text-xs text-gray-400 mt-0.5 leading-tight">Días consecutivos sin check-in antes de que la racha se rompa</p>
+            </div>
             <Input
               id="streak_break_days"
               type="number"
@@ -215,19 +216,19 @@ export default function CheckinSettingsCard({
               max="365"
               value={formData.streak_break_days}
               onChange={(e) => handleInputChange('streak_break_days', e.target.value)}
-              className="border-indigo-200 focus:border-indigo-400"
               disabled={isLoading}
+              className="w-20 text-right text-sm"
             />
-            <p className="text-xs text-gray-500">
-              Días consecutivos sin check-in antes de que la racha se rompa (1-365)
-            </p>
           </div>
 
           {/* Días para expirar racha */}
-          <div className="space-y-2">
-            <Label htmlFor="streak_expiry_days" className="text-sm font-medium text-gray-700">
-              Días para expirar racha completamente
-            </Label>
+          <div className="flex items-center gap-4 px-4 py-3 bg-white">
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="streak_expiry_days" className="text-sm font-medium text-gray-800 cursor-pointer">
+                Días para expirar racha
+              </Label>
+              <p className="text-xs text-gray-400 mt-0.5 leading-tight">Días totales para que la racha expire completamente (debe ser mayor a días de ruptura)</p>
+            </div>
             <Input
               id="streak_expiry_days"
               type="number"
@@ -235,73 +236,48 @@ export default function CheckinSettingsCard({
               max="365"
               value={formData.streak_expiry_days}
               onChange={(e) => handleInputChange('streak_expiry_days', e.target.value)}
-              className="border-indigo-200 focus:border-indigo-400"
               disabled={isLoading}
+              className="w-20 text-right text-sm"
             />
-            <p className="text-xs text-gray-500">
-              Días totales para que la racha expire completamente (debe ser mayor a días de ruptura)
-            </p>
           </div>
         </div>
+      </div>
 
-        {/* Información sobre funcionalidad */}
-        <div className="bg-indigo-100 p-4 rounded-lg border border-indigo-200">
-          <h4 className="font-medium text-indigo-800 mb-2">📋 Cómo funciona el sistema</h4>
-          <ul className="text-sm text-indigo-700 space-y-1">
-            <li>• Los usuarios ganan puntos automáticamente al hacer check-in</li>
-            <li>• Los puntos se pueden usar para obtener spins en la ruleta</li>
-            <li>• El límite diario previene abuso del sistema</li>
-            <li>• Los check-ins consecutivos crean rachas que pueden dar bonificaciones adicionales</li>
-            <li>• Las rachas se rompen si no hay check-in en los días configurados</li>
-            <li>• Las rachas expiran completamente después del tiempo límite configurado</li>
-          </ul>
-        </div>
-
-        {/* Vista previa */}
-        <div className="bg-white/50 p-4 rounded-lg border border-indigo-200">
-          <h4 className="font-medium text-indigo-800 mb-2">Vista previa de configuración:</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-gray-600">Puntos por check-in:</span>
-              <span className="ml-2 font-semibold text-indigo-700">
-                {formData.checkin_points_daily} puntos
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600">Límite diario:</span>
-              <span className="ml-2 font-semibold text-indigo-700">
-                {formData.max_checkins_per_day} check-in{parseInt(formData.max_checkins_per_day) > 1 ? 's' : ''} máximo
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600">Ruptura de racha:</span>
-              <span className="ml-2 font-semibold text-orange-600">
-                {formData.streak_break_days} día{parseInt(formData.streak_break_days) > 1 ? 's' : ''} sin check-in
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600">Expiración total:</span>
-              <span className="ml-2 font-semibold text-red-600">
-                {formData.streak_expiry_days} día{parseInt(formData.streak_expiry_days) > 1 ? 's' : ''} totales
-              </span>
-            </div>
+      {/* Vista previa compacta */}
+      <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Resumen</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-500">Giros/día máx.</span>
+            <span className="font-medium text-gray-800">
+              {parseInt(formData.checkin_points_daily) * parseInt(formData.max_checkins_per_day)}
+            </span>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Un usuario puede ganar máximo {parseInt(formData.checkin_points_daily) * parseInt(formData.max_checkins_per_day)} puntos por día mediante check-ins
-          </p>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Ruptura</span>
+            <span className="font-medium text-gray-800">{formData.streak_break_days}d</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Check-ins/día</span>
+            <span className="font-medium text-gray-800">{formData.max_checkins_per_day}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Expiración</span>
+            <span className="font-medium text-gray-800">{formData.streak_expiry_days}d</span>
+          </div>
         </div>
+      </div>
 
-        {/* Botón de guardar */}
-        <div className="flex justify-end">
-          <Button
-            onClick={handleSave}
-            disabled={isLoading || isResetting}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            {isLoading ? "Guardando..." : "Guardar Configuración"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Guardar */}
+      <div className="flex justify-end">
+        <Button
+          onClick={handleSave}
+          disabled={isLoading || isResetting}
+          size="sm"
+        >
+          {isLoading ? "Guardando..." : "Guardar"}
+        </Button>
+      </div>
+    </div>
   );
 }

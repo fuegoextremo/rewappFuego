@@ -78,7 +78,10 @@ export default async function SistemaPage() {
 
         <Suspense fallback={<div className="animate-pulse bg-gray-100 h-48 rounded-lg" />}>
           <NotificacionesSection 
-            settings={('notifications' in settingsResult.data) ? settingsResult.data.notifications : []} 
+            settings={[
+              ...('notifications' in settingsResult.data ? settingsResult.data.notifications : []),
+              ...('general' in settingsResult.data ? settingsResult.data.general : []),
+            ]}
           />
         </Suspense>
 

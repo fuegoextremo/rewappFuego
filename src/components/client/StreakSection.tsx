@@ -99,10 +99,10 @@ function calculateStreakStage(
     .filter(p => (p.streak_threshold || 0) <= currentCount)
     .sort((a, b) => (b.streak_threshold || 0) - (a.streak_threshold || 0))[0]
 
-  // 🎯 Usar imagen del último premio alcanzado (si tiene), sino imagen por defecto
+  // 🎯 Usar imagen del último premio alcanzado (si tiene), sino imagen inicial, sino default
   const achievedImage = (lastAchievedPrize?.image_url && lastAchievedPrize.image_url.trim() !== '') 
     ? lastAchievedPrize.image_url 
-    : settings?.streak_progress_default || defaultImages.progress
+    : settings?.streak_initial_image || settings?.streak_progress_default || defaultImages.progress
 
   if (!nextPrize) {
     // 🎯 CORREGIDO: Al completar, mostrar imagen del último premio alcanzado (no genérica)

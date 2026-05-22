@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { useAuthBranding } from '@/hooks/use-auth-branding'
 import { useSystemSettings } from '@/hooks/use-system-settings'
-import SocialButton from '@/components/auth/SocialButton'
+import { SocialButton } from '@/components/auth/SocialButton'
 
 import { createClientBrowser } from '@/lib/supabase/client'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'

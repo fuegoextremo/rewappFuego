@@ -27,57 +27,61 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
   const { pathname } = req.nextUrl
-  
-  // Solo validar rutas /admin/*
-  if (!pathname.startsWith('/admin')) {
+
+  const isAdminRoute = pathname.startsWith('/admin')
+  const isClientRoute = pathname.startsWith('/client')
+
+  if (!isAdminRoute && !isClientRoute) {
     return res
   }
 
   try {
-    // SEGURIDAD: Usar getUser() que verifica el JWT contra el servidor
-    // getSession() solo lee la cookie local sin verificar - vulnerable a manipulación
+    // SEGURIDAD: getUser() verifica el JWT contra el servidor (no getSession())
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.redirect(new URL('/login', req.url))
     }
 
-    // Obtener rol del usuario
+    // Obtener rol e is_active en una sola query
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('role')
+      .select('role, is_active')
       .eq('id', user.id)
       .single()
-    
+
+    // Cuenta desactivada (soft-delete): bloquear acceso a todas las rutas protegidas
+    if (profile?.is_active === false) {
+      const redirectUrl = new URL('/login', req.url)
+      redirectUrl.searchParams.set('error', 'cuenta_desactivada')
+      return NextResponse.redirect(redirectUrl)
+    }
+
     const userRole = profile?.role
-    
+
     if (!userRole) {
-      console.log('� Usuario sin rol, redirigiendo a client')
       return NextResponse.redirect(new URL('/client', req.url))
     }
 
-    // Normalizar pathname
-    const normalizedPath = pathname.split('?')[0].replace(/\/$/, '')
-    
-    // Obtener roles permitidos para esta ruta
-    const allowedRoles = ROUTE_PERMISSIONS[normalizedPath]
-    
-    // Si la ruta está en el mapa, validar permiso
-    if (allowedRoles && !allowedRoles.includes(userRole)) {
-      console.log(`🚫 Acceso denegado: ${userRole} intentó acceder a ${normalizedPath}`)
-      const redirectUrl = getRoleRedirect(userRole)
-      return NextResponse.redirect(new URL(redirectUrl, req.url))
+    // --- Rutas /admin: validar permisos por rol ---
+    if (isAdminRoute) {
+      const normalizedPath = pathname.split('?')[0].replace(/\/$/, '')
+      const allowedRoles = ROUTE_PERMISSIONS[normalizedPath]
+
+      if (allowedRoles && !allowedRoles.includes(userRole)) {
+        console.log(`Acceso denegado: ${userRole} intentó acceder a ${normalizedPath}`)
+        return NextResponse.redirect(new URL(getRoleRedirect(userRole), req.url))
+      }
     }
-    
-    console.log(`✅ Acceso permitido: ${userRole} → ${normalizedPath}`)
+
     return res
 
   } catch (error) {
-    console.error('❌ Error en middleware:', error)
+    console.error('Error en middleware:', error)
     return NextResponse.redirect(new URL('/login', req.url))
   }
 }
 
 export const config = {
-  matcher: '/admin/:path*',
+  matcher: ['/admin/:path*', '/client', '/client/:path*'],
 }

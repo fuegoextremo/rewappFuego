@@ -40,6 +40,13 @@ export type SystemSettings = {
   // Autenticación social
   enable_google_login?: string   // 'true' | 'false'
   enable_facebook_login?: string // 'true' | 'false'
+  // Cupón de bienvenida
+  welcome_coupon_enabled?: string      // 'true' | 'false'
+  welcome_coupon_prize_id?: string     // UUID del premio de bienvenida seleccionado
+  welcome_coupon_expiry_mode?: string  // 'days' | 'fixed_date'
+  welcome_coupon_expiry_days?: string  // número de días
+  welcome_coupon_expiry_date?: string  // fecha ISO (modo fixed_date)
+  welcome_coupon_campaign_end?: string // fecha ISO límite para otorgar nuevos cupones
 }
 
 // Configuraciones por defecto (única fuente de verdad)
@@ -82,4 +89,11 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   // Autenticación social (deshabilitada por defecto)
   enable_google_login: 'false',
   enable_facebook_login: 'false',
+  // Cupón de bienvenida (deshabilitado por defecto)
+  welcome_coupon_enabled: 'false',
+  welcome_coupon_prize_id: '',
+  welcome_coupon_expiry_mode: 'days',
+  welcome_coupon_expiry_days: '30',
+  welcome_coupon_expiry_date: '',
+  welcome_coupon_campaign_end: '',
 }

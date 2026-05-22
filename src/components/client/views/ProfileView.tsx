@@ -17,7 +17,7 @@ import EditProfileForm from "@/components/client/EditProfileForm";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { useRouter } from "next/navigation";
 import { useSystemSettings } from "@/hooks/use-system-settings";
-import { useDeactivateAccount } from "@/hooks/queries/useUserQueries";
+import { deactivateAccountAction } from "@/app/client/actions";
 import { useExtendedProfileData } from "@/hooks/use-extended-profile";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -31,7 +31,7 @@ export default function ProfileView() {
   const router = useRouter();
   const systemSettings = useSystemSettings();
   const extendedData = useExtendedProfileData(user?.id);
-  const deactivateAccount = useDeactivateAccount();
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [activeSheet, setActiveSheet] = useState<BottomSheetType>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
@@ -95,15 +95,17 @@ export default function ProfileView() {
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "ELIMINAR") return;
 
+    setIsDeletingAccount(true);
     try {
-      await deactivateAccount.mutateAsync(user.id);
+      const result = await deactivateAccountAction();
+      if (!result.success) throw new Error(result.error);
 
-      // 🔥 Usar Redux logout después del soft delete
       await dispatch(logout()).unwrap();
-      router.push("/login");
+      router.push("/login?error=cuenta_desactivada");
     } catch (error) {
       console.error("Error al eliminar cuenta:", error);
       alert("Error al eliminar la cuenta. Intenta de nuevo.");
+      setIsDeletingAccount(false);
     }
   };
 
@@ -373,11 +375,11 @@ export default function ProfileView() {
                     onClick={handleDeleteAccount}
                     disabled={
                       deleteConfirmText !== "ELIMINAR" ||
-                      deactivateAccount.isPending
+                      isDeletingAccount
                     }
                     className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-red-600 px-5 text-white font-semibold shadow hover:bg-red-700 transition-colors active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {deactivateAccount.isPending
+                    {isDeletingAccount
                       ? "Eliminando..."
                       : "Confirmar eliminación"}
                   </button>

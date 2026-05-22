@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { updateSystemSettings, resetSettingsToDefault, type SystemSetting } from "../actions";
-import { BuildingOfficeIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import {
+  updateSystemSettings,
+  resetSettingsToDefault,
+  getWelcomePrizes,
+  createWelcomePrize,
+  updateWelcomePrize,
+  deactivateWelcomePrize,
+  type SystemSetting,
+  type WelcomePrize,
+} from "../actions";
+import { BuildingOfficeIcon, ArrowPathIcon, PencilIcon, TrashIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EmpresaSectionProps {
   settings: SystemSetting[];
@@ -20,6 +30,64 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const { toast } = useToast();
+
+  // --- Estado del mini-CRUD de premios de bienvenida ---
+  const [welcomePrizes, setWelcomePrizes] = useState<WelcomePrize[]>([]);
+  const [newPrizeName, setNewPrizeName] = useState('');
+  const [newPrizeDesc, setNewPrizeDesc] = useState('');
+  const [isSavingPrize, setIsSavingPrize] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
+  const loadWelcomePrizes = useCallback(async () => {
+    const result = await getWelcomePrizes();
+    if (result.success) setWelcomePrizes(result.data);
+  }, []);
+
+  useEffect(() => { loadWelcomePrizes(); }, [loadWelcomePrizes]);
+
+  const handleCreatePrize = async () => {
+    if (!newPrizeName.trim()) return;
+    setIsSavingPrize(true);
+    const result = await createWelcomePrize(newPrizeName, newPrizeDesc);
+    if (result.success && result.data) {
+      setWelcomePrizes(prev => [result.data!, ...prev]);
+      setNewPrizeName('');
+      setNewPrizeDesc('');
+      toast({ title: 'Premio creado' });
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+    setIsSavingPrize(false);
+  };
+
+  const handleEditSave = async (id: string) => {
+    if (!editName.trim()) return;
+    setIsSavingPrize(true);
+    const result = await updateWelcomePrize(id, editName, editDesc);
+    if (result.success) {
+      setWelcomePrizes(prev => prev.map(p => p.id === id ? { ...p, name: editName, description: editDesc || null } : p));
+      setEditingId(null);
+      toast({ title: 'Premio actualizado' });
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+    setIsSavingPrize(false);
+  };
+
+  const handleDeactivate = async (id: string) => {
+    const result = await deactivateWelcomePrize(id);
+    if (result.success) {
+      setWelcomePrizes(prev => prev.map(p => p.id === id ? { ...p, is_active: false } : p));
+      if (formData.welcome_coupon_prize_id === id) {
+        handleInputChange('welcome_coupon_prize_id', '');
+      }
+      toast({ title: 'Premio desactivado' });
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+  };
 
   // Extraer valores actuales
   const getSettingValue = (key: string, defaultValue: string = "") => {
@@ -41,6 +109,12 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
     company_privacy_policy: getSettingValue('company_privacy_policy', 'Política de privacidad por definir...'),
     enable_google_login: getSettingValue('enable_google_login', 'false'),
     enable_facebook_login: getSettingValue('enable_facebook_login', 'false'),
+    welcome_coupon_enabled: getSettingValue('welcome_coupon_enabled', 'false'),
+    welcome_coupon_prize_id: getSettingValue('welcome_coupon_prize_id', ''),
+    welcome_coupon_expiry_mode: getSettingValue('welcome_coupon_expiry_mode', 'days'),
+    welcome_coupon_expiry_days: getSettingValue('welcome_coupon_expiry_days', '30'),
+    welcome_coupon_expiry_date: getSettingValue('welcome_coupon_expiry_date', ''),
+    welcome_coupon_campaign_end: getSettingValue('welcome_coupon_campaign_end', ''),
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -98,6 +172,12 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
           company_privacy_policy: 'Política de privacidad por definir...',
           enable_google_login: 'false',
           enable_facebook_login: 'false',
+          welcome_coupon_enabled: 'false',
+          welcome_coupon_prize_id: '',
+          welcome_coupon_expiry_mode: 'days',
+          welcome_coupon_expiry_days: '30',
+          welcome_coupon_expiry_date: '',
+          welcome_coupon_campaign_end: '',
         });
 
         toast({
@@ -377,6 +457,214 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
           </div>
         </div>
 
+        {/* Cupon de bienvenida */}
+        <div>
+          <h3 className="font-semibold text-blue-800 mb-4">Cupon de Bienvenida</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-blue-200">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Activar cupon de bienvenida</p>
+                <p className="text-xs text-gray-500">Regalar un cupon al completar el registro por primera vez</p>
+              </div>
+              <Switch
+                checked={formData.welcome_coupon_enabled === 'true'}
+                onCheckedChange={(checked) => handleInputChange('welcome_coupon_enabled', checked ? 'true' : 'false')}
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Mini-CRUD: premios de bienvenida */}
+            <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-gray-700">Premios de bienvenida</Label>
+                <span className="text-xs text-gray-400">Solo type=welcome • soft-delete</span>
+              </div>
+
+              {welcomePrizes.length > 0 && (
+                <div className="space-y-2">
+                  {welcomePrizes.map((prize) => (
+                    <div key={prize.id} className={`rounded-lg border px-3 py-2 text-sm ${
+                      prize.is_active ? 'border-blue-100 bg-blue-50' : 'border-gray-100 bg-gray-50 opacity-50'
+                    }`}>
+                      {editingId === prize.id ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            placeholder="Nombre"
+                            className="text-sm h-8 border-blue-200"
+                            disabled={isSavingPrize}
+                          />
+                          <Textarea
+                            value={editDesc}
+                            onChange={(e) => setEditDesc(e.target.value)}
+                            placeholder="Descripcion (opcional)"
+                            rows={2}
+                            className="text-sm resize-none border-blue-200"
+                            disabled={isSavingPrize}
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700" onClick={() => handleEditSave(prize.id)} disabled={isSavingPrize}>
+                              Guardar
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingId(null)}>
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-800 truncate">{prize.name}</p>
+                            {prize.description && <p className="text-xs text-gray-500 truncate">{prize.description}</p>}
+                            {!prize.is_active && <span className="text-xs text-gray-400">(inactivo)</span>}
+                          </div>
+                          {prize.is_active && (
+                            <div className="flex gap-1 shrink-0">
+                              <button
+                                onClick={() => { setEditingId(prize.id); setEditName(prize.name); setEditDesc(prize.description ?? ''); }}
+                                className="p-1 text-blue-400 hover:text-blue-700 rounded"
+                                title="Editar"
+                              >
+                                <PencilIcon className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeactivate(prize.id)}
+                                className="p-1 text-blue-400 hover:text-red-500 rounded"
+                                title="Desactivar"
+                              >
+                                <TrashIcon className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2 pt-1 border-t border-blue-100">
+                <p className="text-xs font-medium text-gray-500">Nuevo premio</p>
+                <Input
+                  value={newPrizeName}
+                  onChange={(e) => setNewPrizeName(e.target.value)}
+                  placeholder="Nombre del premio *"
+                  className="border-blue-200 focus:border-blue-400"
+                  disabled={isSavingPrize}
+                />
+                <Textarea
+                  value={newPrizeDesc}
+                  onChange={(e) => setNewPrizeDesc(e.target.value)}
+                  placeholder="Descripcion (opcional)"
+                  rows={2}
+                  className="resize-none border-blue-200 focus:border-blue-400"
+                  disabled={isSavingPrize}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                  onClick={handleCreatePrize}
+                  disabled={isSavingPrize || !newPrizeName.trim()}
+                >
+                  <PlusIcon className="w-3.5 h-3.5" />
+                  Agregar premio
+                </Button>
+              </div>
+            </div>
+
+            {/* Dropdown: seleccionar cual es el activo para el cupon */}
+            <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Premio activo del cupon</Label>
+              <p className="text-xs text-gray-500">El premio que recibe el usuario al registrarse</p>
+              <Select
+                value={formData.welcome_coupon_prize_id}
+                onValueChange={(value) => handleInputChange('welcome_coupon_prize_id', value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="border-blue-200 focus:border-blue-400">
+                  <SelectValue placeholder="Selecciona un premio de bienvenida" />
+                </SelectTrigger>
+                <SelectContent>
+                  {welcomePrizes.filter(p => p.is_active).map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Modo de expiracion del cupon</Label>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="expiry_mode_sa"
+                    value="days"
+                    checked={formData.welcome_coupon_expiry_mode === 'days'}
+                    onChange={() => handleInputChange('welcome_coupon_expiry_mode', 'days')}
+                    disabled={isLoading}
+                  />
+                  Por dias
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="expiry_mode_sa"
+                    value="fixed_date"
+                    checked={formData.welcome_coupon_expiry_mode === 'fixed_date'}
+                    onChange={() => handleInputChange('welcome_coupon_expiry_mode', 'fixed_date')}
+                    disabled={isLoading}
+                  />
+                  Fecha fija
+                </label>
+              </div>
+
+              {formData.welcome_coupon_expiry_mode === 'days' && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-600">Dias de validez</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.welcome_coupon_expiry_days}
+                    onChange={(e) => handleInputChange('welcome_coupon_expiry_days', e.target.value)}
+                    disabled={isLoading}
+                    className="w-32 border-blue-200 focus:border-blue-400"
+                  />
+                </div>
+              )}
+
+              {formData.welcome_coupon_expiry_mode === 'fixed_date' && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-600">
+                    Fecha de expiracion — si ya paso, no se generan cupones nuevos
+                  </Label>
+                  <Input
+                    type="date"
+                    value={formData.welcome_coupon_expiry_date}
+                    onChange={(e) => handleInputChange('welcome_coupon_expiry_date', e.target.value)}
+                    disabled={isLoading}
+                    className="w-48 border-blue-200 focus:border-blue-400"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Fin de campana</Label>
+              <p className="text-xs text-gray-500">Fecha limite para otorgar el cupon. Dejar vacio para sin limite.</p>
+              <Input
+                type="date"
+                value={formData.welcome_coupon_campaign_end}
+                onChange={(e) => handleInputChange('welcome_coupon_campaign_end', e.target.value)}
+                disabled={isLoading}
+                className="w-48 border-blue-200 focus:border-blue-400"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Boton de guardar */}
         <div className="flex justify-end">
           <Button
@@ -384,7 +672,7 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
             disabled={isLoading || isResetting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {isLoading ? "Guardando..." : "Guardar Configuración"}
+            {isLoading ? "Guardando..." : "Guardar Configuracion"}
           </Button>
         </div>
       </CardContent>

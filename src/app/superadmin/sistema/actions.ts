@@ -378,3 +378,102 @@ export async function resetSettingsToDefault(category: SystemSettingCategory) {
     };
   }
 }
+
+// ─── CRUD de premios de bienvenida (type = 'welcome') ──────────────────────
+
+export type WelcomePrize = {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export async function getWelcomePrizes() {
+  try {
+    const { supabase } = await verifyAdminPermissions();
+
+    const { data, error } = await supabase
+      .from('prizes')
+      .select('id, name, description, is_active, created_at')
+      .eq('type', 'welcome')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    return { success: true, data: (data ?? []) as WelcomePrize[] };
+  } catch (error) {
+    console.error('Error in getWelcomePrizes:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Error desconocido', data: [] as WelcomePrize[] };
+  }
+}
+
+export async function createWelcomePrize(name: string, description: string) {
+  try {
+    const { supabase } = await verifyAdminPermissions();
+
+    if (!name.trim()) throw new Error('El nombre del premio es obligatorio');
+
+    const { data, error } = await supabase
+      .from('prizes')
+      .insert({
+        name: name.trim(),
+        description: description.trim() || null,
+        type: 'welcome',
+        is_active: true,
+      })
+      .select('id, name, description, is_active, created_at')
+      .single();
+
+    if (error || !data) throw new Error(error?.message ?? 'Sin respuesta');
+
+    return { success: true, data: data as WelcomePrize };
+  } catch (error) {
+    console.error('Error in createWelcomePrize:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Error desconocido', data: null };
+  }
+}
+
+export async function updateWelcomePrize(id: string, name: string, description: string) {
+  try {
+    const { supabase } = await verifyAdminPermissions();
+
+    if (!name.trim()) throw new Error('El nombre del premio es obligatorio');
+
+    const { error } = await supabase
+      .from('prizes')
+      .update({
+        name: name.trim(),
+        description: description.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('type', 'welcome');
+
+    if (error) throw new Error(error.message);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in updateWelcomePrize:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
+  }
+}
+
+export async function deactivateWelcomePrize(id: string) {
+  try {
+    const { supabase } = await verifyAdminPermissions();
+
+    const { error } = await supabase
+      .from('prizes')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('type', 'welcome');
+
+    if (error) throw new Error(error.message);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in deactivateWelcomePrize:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
+  }
+}

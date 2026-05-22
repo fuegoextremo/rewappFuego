@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { updateSystemSettings, resetSettingsToDefault, type SystemSetting } from "../../../app/admin/settings/actions";
-import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import {
+  updateSystemSettings,
+  resetSettingsToDefault,
+  getWelcomePrizes,
+  createWelcomePrize,
+  updateWelcomePrize,
+  deactivateWelcomePrize,
+  type SystemSetting,
+  type WelcomePrize,
+} from "../../../app/admin/settings/actions";
+import { ArrowPathIcon, PencilIcon, TrashIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { ImageUploader } from "@/components/shared/ImageUploader";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EmpresaSectionProps {
   settings: SystemSetting[];
@@ -19,6 +29,65 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const { toast } = useToast();
+
+  // --- Estado del mini-CRUD de premios de bienvenida ---
+  const [welcomePrizes, setWelcomePrizes] = useState<WelcomePrize[]>([]);
+  const [newPrizeName, setNewPrizeName] = useState('');
+  const [newPrizeDesc, setNewPrizeDesc] = useState('');
+  const [isSavingPrize, setIsSavingPrize] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
+  const loadWelcomePrizes = useCallback(async () => {
+    const result = await getWelcomePrizes();
+    if (result.success) setWelcomePrizes(result.data);
+  }, []);
+
+  useEffect(() => { loadWelcomePrizes(); }, [loadWelcomePrizes]);
+
+  const handleCreatePrize = async () => {
+    if (!newPrizeName.trim()) return;
+    setIsSavingPrize(true);
+    const result = await createWelcomePrize(newPrizeName, newPrizeDesc);
+    if (result.success && result.data) {
+      setWelcomePrizes(prev => [result.data!, ...prev]);
+      setNewPrizeName('');
+      setNewPrizeDesc('');
+      toast({ title: 'Premio creado' });
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+    setIsSavingPrize(false);
+  };
+
+  const handleEditSave = async (id: string) => {
+    if (!editName.trim()) return;
+    setIsSavingPrize(true);
+    const result = await updateWelcomePrize(id, editName, editDesc);
+    if (result.success) {
+      setWelcomePrizes(prev => prev.map(p => p.id === id ? { ...p, name: editName, description: editDesc || null } : p));
+      setEditingId(null);
+      toast({ title: 'Premio actualizado' });
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+    setIsSavingPrize(false);
+  };
+
+  const handleDeactivate = async (id: string) => {
+    const result = await deactivateWelcomePrize(id);
+    if (result.success) {
+      setWelcomePrizes(prev => prev.map(p => p.id === id ? { ...p, is_active: false } : p));
+      // Si estaba seleccionado, limpiar el selector
+      if (formData.welcome_coupon_prize_id === id) {
+        handleInputChange('welcome_coupon_prize_id', '');
+      }
+      toast({ title: 'Premio desactivado' });
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+  };
 
   // Extraer valores actuales
   const getSettingValue = (key: string, defaultValue: string = "") => {
@@ -38,6 +107,12 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
     company_privacy_policy: getSettingValue('company_privacy_policy', 'Política de privacidad por definir...'),
     enable_google_login: getSettingValue('enable_google_login', 'false'),
     enable_facebook_login: getSettingValue('enable_facebook_login', 'false'),
+    welcome_coupon_enabled: getSettingValue('welcome_coupon_enabled', 'false'),
+    welcome_coupon_prize_id: getSettingValue('welcome_coupon_prize_id', ''),
+    welcome_coupon_expiry_mode: getSettingValue('welcome_coupon_expiry_mode', 'days'),
+    welcome_coupon_expiry_days: getSettingValue('welcome_coupon_expiry_days', '30'),
+    welcome_coupon_expiry_date: getSettingValue('welcome_coupon_expiry_date', ''),
+    welcome_coupon_campaign_end: getSettingValue('welcome_coupon_campaign_end', ''),
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -56,6 +131,7 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
         throw new Error('El email de contacto debe tener un formato válido');
       }
 
+      // Si hay titulo, crear/actualizar el premio de bienvenida aislado primero
       const result = await updateSystemSettings({
         company_name: formData.company_name.trim(),
         company_logo_url: formData.company_logo_url.trim(),
@@ -68,6 +144,12 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
         company_privacy_policy: formData.company_privacy_policy.trim(),
         enable_google_login: formData.enable_google_login,
         enable_facebook_login: formData.enable_facebook_login,
+        welcome_coupon_enabled: formData.welcome_coupon_enabled,
+        welcome_coupon_prize_id: formData.welcome_coupon_prize_id,
+        welcome_coupon_expiry_mode: formData.welcome_coupon_expiry_mode,
+        welcome_coupon_expiry_days: formData.welcome_coupon_expiry_days,
+        welcome_coupon_expiry_date: formData.welcome_coupon_expiry_date,
+        welcome_coupon_campaign_end: formData.welcome_coupon_campaign_end,
       });
 
       if (result.success) {
@@ -113,6 +195,12 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
           company_privacy_policy: 'Política de privacidad por definir...',
           enable_google_login: 'false',
           enable_facebook_login: 'false',
+          welcome_coupon_enabled: 'false',
+          welcome_coupon_prize_id: '',
+          welcome_coupon_expiry_mode: 'days',
+          welcome_coupon_expiry_days: '30',
+          welcome_coupon_expiry_date: '',
+          welcome_coupon_campaign_end: '',
         });
       } else {
         throw new Error(result.error);
@@ -342,6 +430,219 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
               checked={formData.enable_facebook_login === 'true'}
               onCheckedChange={(checked) => handleInputChange('enable_facebook_login', checked ? 'true' : 'false')}
               disabled={isLoading}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Grupo: cupon de bienvenida */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Cupon de bienvenida</p>
+        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Activar cupon de bienvenida</p>
+              <p className="text-xs text-gray-500">Regalar un cupon al completar el registro por primera vez</p>
+            </div>
+            <Switch
+              checked={formData.welcome_coupon_enabled === 'true'}
+              onCheckedChange={(checked) => handleInputChange('welcome_coupon_enabled', checked ? 'true' : 'false')}
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Mini-CRUD: lista de premios de bienvenida */}
+          <div className="px-4 py-3 bg-white space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-gray-800">Premios de bienvenida</Label>
+              <span className="text-xs text-gray-400">Solo type=welcome • soft-delete</span>
+            </div>
+
+            {/* Lista */}
+            {welcomePrizes.length > 0 && (
+              <div className="space-y-2">
+                {welcomePrizes.map((prize) => (
+                  <div key={prize.id} className={`rounded-lg border px-3 py-2 text-sm ${
+                    prize.is_active ? 'border-gray-200 bg-gray-50' : 'border-gray-100 bg-gray-50 opacity-50'
+                  }`}>
+                    {editingId === prize.id ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Nombre"
+                          className="text-sm h-8"
+                          disabled={isSavingPrize}
+                        />
+                        <Textarea
+                          value={editDesc}
+                          onChange={(e) => setEditDesc(e.target.value)}
+                          placeholder="Descripcion (opcional)"
+                          rows={2}
+                          className="text-sm resize-none"
+                          disabled={isSavingPrize}
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" className="h-7 text-xs" onClick={() => handleEditSave(prize.id)} disabled={isSavingPrize}>
+                            Guardar
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingId(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 truncate">{prize.name}</p>
+                          {prize.description && <p className="text-xs text-gray-500 truncate">{prize.description}</p>}
+                          {!prize.is_active && <span className="text-xs text-gray-400">(inactivo)</span>}
+                        </div>
+                        {prize.is_active && (
+                          <div className="flex gap-1 shrink-0">
+                            <button
+                              onClick={() => { setEditingId(prize.id); setEditName(prize.name); setEditDesc(prize.description ?? ''); }}
+                              className="p-1 text-gray-400 hover:text-gray-700 rounded"
+                              title="Editar"
+                            >
+                              <PencilIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeactivate(prize.id)}
+                              className="p-1 text-gray-400 hover:text-red-500 rounded"
+                              title="Desactivar"
+                            >
+                              <TrashIcon className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Formulario de creacion */}
+            <div className="space-y-2 pt-1 border-t border-gray-100">
+              <p className="text-xs font-medium text-gray-500">Nuevo premio</p>
+              <Input
+                value={newPrizeName}
+                onChange={(e) => setNewPrizeName(e.target.value)}
+                placeholder="Nombre del premio *"
+                className="text-sm"
+                disabled={isSavingPrize}
+              />
+              <Textarea
+                value={newPrizeDesc}
+                onChange={(e) => setNewPrizeDesc(e.target.value)}
+                placeholder="Descripcion (opcional)"
+                rows={2}
+                className="text-sm resize-none"
+                disabled={isSavingPrize}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1"
+                onClick={handleCreatePrize}
+                disabled={isSavingPrize || !newPrizeName.trim()}
+              >
+                <PlusIcon className="w-3.5 h-3.5" />
+                Agregar premio
+              </Button>
+            </div>
+          </div>
+
+          {/* Dropdown: seleccionar cual es el activo para el cupon */}
+          <div className="px-4 py-3 bg-white space-y-1.5">
+            <Label className="text-sm font-medium text-gray-800">Premio activo del cupon</Label>
+            <p className="text-xs text-gray-500">El premio que recibe el usuario al registrarse</p>
+            <Select
+              value={formData.welcome_coupon_prize_id}
+              onValueChange={(value) => handleInputChange('welcome_coupon_prize_id', value)}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Selecciona un premio de bienvenida" />
+              </SelectTrigger>
+              <SelectContent>
+                {welcomePrizes.filter(p => p.is_active).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="px-4 py-3 bg-white space-y-2">
+            <Label className="text-sm font-medium text-gray-800">Modo de expiracion del cupon</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="expiry_mode"
+                  value="days"
+                  checked={formData.welcome_coupon_expiry_mode === 'days'}
+                  onChange={() => handleInputChange('welcome_coupon_expiry_mode', 'days')}
+                  disabled={isLoading}
+                />
+                Por dias
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="expiry_mode"
+                  value="fixed_date"
+                  checked={formData.welcome_coupon_expiry_mode === 'fixed_date'}
+                  onChange={() => handleInputChange('welcome_coupon_expiry_mode', 'fixed_date')}
+                  disabled={isLoading}
+                />
+                Fecha fija
+              </label>
+            </div>
+
+            {formData.welcome_coupon_expiry_mode === 'days' && (
+              <div className="space-y-1">
+                <Label htmlFor="welcome_expiry_days" className="text-xs text-gray-600">Dias de validez</Label>
+                <Input
+                  id="welcome_expiry_days"
+                  type="number"
+                  min="1"
+                  value={formData.welcome_coupon_expiry_days}
+                  onChange={(e) => handleInputChange('welcome_coupon_expiry_days', e.target.value)}
+                  disabled={isLoading}
+                  className="w-32 text-sm"
+                />
+              </div>
+            )}
+
+            {formData.welcome_coupon_expiry_mode === 'fixed_date' && (
+              <div className="space-y-1">
+                <Label htmlFor="welcome_expiry_date" className="text-xs text-gray-600">
+                  Fecha de expiracion — si ya paso, no se generan cupones nuevos
+                </Label>
+                <Input
+                  id="welcome_expiry_date"
+                  type="date"
+                  value={formData.welcome_coupon_expiry_date}
+                  onChange={(e) => handleInputChange('welcome_coupon_expiry_date', e.target.value)}
+                  disabled={isLoading}
+                  className="w-48 text-sm"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="px-4 py-3 bg-white space-y-1.5">
+            <Label htmlFor="welcome_campaign_end" className="text-sm font-medium text-gray-800">Fin de campana</Label>
+            <p className="text-xs text-gray-500">Fecha limite para otorgar el cupon. Dejar vacio para sin limite.</p>
+            <Input
+              id="welcome_campaign_end"
+              type="date"
+              value={formData.welcome_coupon_campaign_end}
+              onChange={(e) => handleInputChange('welcome_coupon_campaign_end', e.target.value)}
+              disabled={isLoading}
+              className="w-48 text-sm"
             />
           </div>
         </div>

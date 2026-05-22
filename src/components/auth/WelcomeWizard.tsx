@@ -9,6 +9,8 @@
 import { useState, useEffect } from 'react'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import ProfileForm from '@/components/client/ProfileForm'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useToast } from '@/hooks/use-toast'
 
 interface WelcomeWizardProps {
   currentProfile: {
@@ -22,6 +24,7 @@ interface WelcomeWizardProps {
 
 export function WelcomeWizard({ currentProfile, missingFields }: WelcomeWizardProps) {
   const [showMissingFieldsHint, setShowMissingFieldsHint] = useState(true)
+  const { toast } = useToast()
 
   // Convertir profile para ProfileForm
   const profileFormDefaults = {
@@ -32,8 +35,22 @@ export function WelcomeWizard({ currentProfile, missingFields }: WelcomeWizardPr
   }
 
   // Callback cuando se completa el perfil
-  const handleProfileComplete = () => {
-    // Redirigir a /client después de completar
+  const handleProfileComplete = async () => {
+    const supabase = createClientComponentClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      try {
+        const { data } = await supabase.rpc('grant_welcome_coupon', { p_user_id: user.id })
+        if (data?.success === true) {
+          toast({
+            title: '¡Bienvenido!',
+            description: 'Tienes un cupon esperandote.',
+          })
+        }
+      } catch (err) {
+        console.error('grant_welcome_coupon error (non-blocking):', err)
+      }
+    }
     window.location.href = '/client'
   }
 

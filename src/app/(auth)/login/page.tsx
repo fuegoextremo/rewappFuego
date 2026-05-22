@@ -35,6 +35,16 @@ function LoginPageContent() {
           })
         }
 
+        // Mostrar error si la cuenta fue desactivada (redirect del middleware)
+        const error = searchParams.get('error')
+        if (error === 'cuenta_desactivada') {
+          toast({
+            title: "Cuenta desactivada",
+            description: "Tu cuenta ha sido desactivada. Contacta al establecimiento si crees que es un error.",
+            variant: "destructive",
+          })
+        }
+
         const { data: { user } } = await supabase.auth.getUser()
         
         if (user) {

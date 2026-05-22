@@ -149,13 +149,21 @@ export default function RegisterForm() {
         return
       }
 
+      // 4. Otorgar cupon de bienvenida si aplica (non-blocking)
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).rpc('grant_welcome_coupon', { p_user_id: loginData.user.id })
+      } catch (wcError) {
+        console.error('grant_welcome_coupon error (non-blocking):', wcError)
+      }
+
       toast({
         title: "¡Registro exitoso!",
         description: "Te estamos redirigiendo...",
         variant: "default",
       })
 
-      // 4. Redirigir segun el rol
+      // 5. Redirigir segun el rol
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('role')

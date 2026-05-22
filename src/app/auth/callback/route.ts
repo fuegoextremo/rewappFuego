@@ -124,6 +124,20 @@ export async function GET(request: NextRequest) {
       
       if (validation.isComplete) {
         console.log('✅ Profile complete, redirecting to /client')
+
+        // Otorgar cupón de bienvenida solo en registro nuevo (created_at < 10 min)
+        const isNewUser = user.created_at
+          ? Date.now() - new Date(user.created_at).getTime() < 10 * 60 * 1000
+          : false
+
+        if (isNewUser) {
+          try {
+            await supabase.rpc('grant_welcome_coupon', { p_user_id: user.id })
+          } catch (wcError) {
+            console.error('grant_welcome_coupon error (non-blocking):', wcError)
+          }
+        }
+
         return NextResponse.redirect(`${requestUrl.origin}/client`)
       } else {
         console.log('🔧 Profile incomplete, missing:', validation.missingFields)

@@ -70,28 +70,39 @@ export default function LoginForm() {
         throw new Error('No se pudo obtener información del usuario')
       }
 
-      // Obtener perfil del usuario para determinar redirección
+      // Obtener perfil del usuario para determinar redirección y verificar estado
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('role')
+        .select('role, is_active')
         .eq('id', authData.user.id)
         .single()
 
       if (profileError) {
         console.warn('Error obteniendo perfil:', profileError)
-        // Si no puede obtener el perfil, asume que es cliente
         router.push('/client')
+        return
+      }
+
+      // Bloquear acceso si la cuenta está desactivada
+      if (profile.is_active === false) {
+        await supabase.auth.signOut()
+        toast({
+          title: "Cuenta desactivada",
+          description: "Tu cuenta ha sido desactivada. Contacta al establecimiento si crees que es un error.",
+          variant: "destructive",
+        })
         return
       }
 
       // Redireccionar según el rol
       const destination = getRoleDestination(profile.role || 'client')
-      router.push(destination)
 
       toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión exitosamente.",
       })
+
+      router.push(destination)
 
     } catch (error) {
       console.error('Error en login:', error)

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { updateSystemSettings, resetSettingsToDefault, type SystemSetting } from "../../../app/admin/settings/actions";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { ImageUploader } from "@/components/shared/ImageUploader";
+import { Switch } from "@/components/ui/switch";
 
 interface EmpresaSectionProps {
   settings: SystemSetting[];
@@ -35,6 +36,8 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
     company_address: getSettingValue('company_address', ''),
     company_terms_conditions: getSettingValue('company_terms_conditions', 'Términos y condiciones por definir...'),
     company_privacy_policy: getSettingValue('company_privacy_policy', 'Política de privacidad por definir...'),
+    enable_google_login: getSettingValue('enable_google_login', 'false'),
+    enable_facebook_login: getSettingValue('enable_facebook_login', 'false'),
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -63,6 +66,8 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
         company_address: formData.company_address.trim(),
         company_terms_conditions: formData.company_terms_conditions.trim(),
         company_privacy_policy: formData.company_privacy_policy.trim(),
+        enable_google_login: formData.enable_google_login,
+        enable_facebook_login: formData.enable_facebook_login,
       });
 
       if (result.success) {
@@ -106,6 +111,8 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
           company_address: '',
           company_terms_conditions: 'Términos y condiciones por definir...',
           company_privacy_policy: 'Política de privacidad por definir...',
+          enable_google_login: 'false',
+          enable_facebook_login: 'false',
         });
       } else {
         throw new Error(result.error);
@@ -306,6 +313,35 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
               disabled={isLoading}
               rows={6}
               className="text-sm resize-y"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Grupo: autenticacion social */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Autenticacion social</p>
+        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Boton de Google</p>
+              <p className="text-xs text-gray-500">Mostrar opcion de inicio de sesion con Google</p>
+            </div>
+            <Switch
+              checked={formData.enable_google_login === 'true'}
+              onCheckedChange={(checked) => handleInputChange('enable_google_login', checked ? 'true' : 'false')}
+              disabled={isLoading}
+            />
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 bg-white">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Boton de Facebook</p>
+              <p className="text-xs text-gray-500">Mostrar opcion de inicio de sesion con Facebook</p>
+            </div>
+            <Switch
+              checked={formData.enable_facebook_login === 'true'}
+              onCheckedChange={(checked) => handleInputChange('enable_facebook_login', checked ? 'true' : 'false')}
+              disabled={isLoading}
             />
           </div>
         </div>

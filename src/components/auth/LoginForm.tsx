@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { useAuthBranding } from '@/hooks/use-auth-branding'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 
 import { createClientBrowser } from '@/lib/supabase/client'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
@@ -37,6 +38,9 @@ export default function LoginForm() {
   const router = useRouter()
   const { toast } = useToast()
   const { primaryColor } = useAuthBranding()
+  const { data: settings } = useSystemSettings()
+  const showGoogle = settings?.enable_google_login === 'true'
+  const showFacebook = settings?.enable_facebook_login === 'true'
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClientBrowser()
 
@@ -115,21 +119,22 @@ export default function LoginForm() {
 
   return (
     <div className="space-y-6">
-      {/* OAuth deshabilitado temporalmente
-      <div className="space-y-3">
-        <SocialButton provider="google" disabled={isLoading} />
-        <SocialButton provider="facebook" disabled={isLoading} />
-      </div>
-
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-300" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">o</span>
-        </div>
-      </div>
-      */}
+      {(showGoogle || showFacebook) && (
+        <>
+          <div className="space-y-3">
+            {showGoogle && <SocialButton provider="google" disabled={isLoading} />}
+            {showFacebook && <SocialButton provider="facebook" disabled={isLoading} />}
+          </div>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">o</span>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Formulario de email/password */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

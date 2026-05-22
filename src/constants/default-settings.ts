@@ -37,6 +37,9 @@ export type SystemSettings = {
   favicon_url?: string // URL del favicon
   apple_touch_icon_url?: string // URL del icono para iOS
   og_image_url?: string // URL de imagen para redes sociales
+  // Autenticación social
+  enable_google_login?: string   // 'true' | 'false'
+  enable_facebook_login?: string // 'true' | 'false'
 }
 
 // Configuraciones por defecto (única fuente de verdad)
@@ -76,4 +79,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   favicon_url: '',
   apple_touch_icon_url: '',
   og_image_url: '',
+  // Autenticación social (deshabilitada por defecto)
+  enable_google_login: 'false',
+  enable_facebook_login: 'false',
 }

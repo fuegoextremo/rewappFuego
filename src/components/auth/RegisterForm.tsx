@@ -12,6 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { createClientBrowser } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAuthBranding } from '@/hooks/use-auth-branding'
+import { useSystemSettings } from '@/hooks/use-system-settings'
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 
@@ -33,6 +34,9 @@ export default function RegisterForm() {
   const router = useRouter()
   const { toast } = useToast()
   const { primaryColor } = useAuthBranding()
+  const { data: settings } = useSystemSettings()
+  const showGoogle = settings?.enable_google_login === 'true'
+  const showFacebook = settings?.enable_facebook_login === 'true'
   const supabase = createClientBrowser()
 
   const [isLoading, setIsLoading] = useState(false)
@@ -180,20 +184,22 @@ export default function RegisterForm() {
 
   return (
     <div className="space-y-6">
-        {/* OAuth deshabilitado temporalmente
-        <div className="space-y-3">
-          <SocialButton provider="google" disabled={true} className="w-full" />
-          <SocialButton provider="facebook" disabled={true} className="w-full" />
-        </div>
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-300" />
+      {(showGoogle || showFacebook) && (
+        <>
+          <div className="space-y-3">
+            {showGoogle && <SocialButton provider="google" disabled={isLoading} className="w-full" />}
+            {showFacebook && <SocialButton provider="facebook" disabled={isLoading} className="w-full" />}
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-500">O registrarse con email</span>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-500">O registrarse con email</span>
+            </div>
           </div>
-        </div>
-        */}
+        </>
+      )}
 
       {/* Register Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

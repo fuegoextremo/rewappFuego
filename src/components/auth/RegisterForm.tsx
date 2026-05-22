@@ -13,6 +13,7 @@ import { createClientBrowser } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAuthBranding } from '@/hooks/use-auth-branding'
 import { useSystemSettings } from '@/hooks/use-system-settings'
+import SocialButton from '@/components/auth/SocialButton'
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 

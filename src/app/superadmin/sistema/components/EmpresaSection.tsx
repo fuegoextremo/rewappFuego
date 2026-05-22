@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { updateSystemSettings, resetSettingsToDefault, type SystemSetting } from "../actions";
 import { BuildingOfficeIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import { Switch } from "@/components/ui/switch";
 
 interface EmpresaSectionProps {
   settings: SystemSetting[];
@@ -38,6 +39,8 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
     company_address: getSettingValue('company_address', ''),
     company_terms_conditions: getSettingValue('company_terms_conditions', 'Términos y condiciones por definir...'),
     company_privacy_policy: getSettingValue('company_privacy_policy', 'Política de privacidad por definir...'),
+    enable_google_login: getSettingValue('enable_google_login', 'false'),
+    enable_facebook_login: getSettingValue('enable_facebook_login', 'false'),
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -93,6 +96,8 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
           company_address: '',
           company_terms_conditions: 'Términos y condiciones por definir...',
           company_privacy_policy: 'Política de privacidad por definir...',
+          enable_google_login: 'false',
+          enable_facebook_login: 'false',
         });
 
         toast({
@@ -343,7 +348,36 @@ export default function EmpresaSection({ settings }: EmpresaSectionProps) {
           </div>
         </div>
 
-        {/* Botón de guardar */}
+        {/* Autenticacion social */}
+        <div>
+          <h3 className="font-semibold text-blue-800 mb-4">Autenticacion Social</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-blue-200">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Boton de Google</p>
+                <p className="text-xs text-gray-500">Mostrar opcion de inicio de sesion con Google</p>
+              </div>
+              <Switch
+                checked={formData.enable_google_login === 'true'}
+                onCheckedChange={(checked) => handleInputChange('enable_google_login', checked ? 'true' : 'false')}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-blue-200">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Boton de Facebook</p>
+                <p className="text-xs text-gray-500">Mostrar opcion de inicio de sesion con Facebook</p>
+              </div>
+              <Switch
+                checked={formData.enable_facebook_login === 'true'}
+                onCheckedChange={(checked) => handleInputChange('enable_facebook_login', checked ? 'true' : 'false')}
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Boton de guardar */}
         <div className="flex justify-end">
           <Button
             onClick={handleSave}

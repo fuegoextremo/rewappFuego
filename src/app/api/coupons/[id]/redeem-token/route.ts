@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import type { Database } from '@/types/database'
 import { signPayload } from '@/lib/utils/qr'
 
@@ -8,7 +8,7 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const supa = createServerComponentClient<Database>({ cookies })
+  const supa = createRouteHandlerClient<Database>({ cookies })
   const { data: { user }, error: authErr } = await supa.auth.getUser()
   if (authErr || !user) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
@@ -34,8 +34,8 @@ export async function GET(
     return NextResponse.json({ ok: false, error: 'expired' }, { status: 400 })
   }
 
-  // 2) Generamos token corto con expiración (ej. 5 minutos)
-  const exp = Math.floor(Date.now() / 1000) + 5 * 60
+  // 2) Generamos token corto con expiración (15 minutos)
+  const exp = Math.floor(Date.now() / 1000) + 15 * 60
   const token = signPayload({ c: coupon.id, u: user.id, exp, kind: 'redeem' })
 
   // 3) Construimos la cadena a codificar como QR.

@@ -110,17 +110,28 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       return { success: false, message: "Este QR corresponde a check-in, no a canje.", resultType: 'redeem' };
     }
 
-    const supabase = createAdminClient();
+    const adminSupabase = createAdminClient();
     const { data: { user: verifierUser } } = await createActionClient().auth.getUser();
-    
+
     if (!verifierUser) {
       return { success: false, message: "No autorizado. Inicia sesión de nuevo.", resultType: 'redeem' };
     }
 
-    // Verificar que el cupón existe y no ha sido redimido
-    const { data: coupon, error: couponError } = await supabase
+    // Round-trip 1: verificar rol y branch del verificador
+    const { data: verifierProfile } = await adminSupabase
+      .from('user_profiles')
+      .select('role, branch_id')
+      .eq('id', verifierUser.id)
+      .single();
+
+    if (!verifierProfile || !['verifier', 'manager', 'admin', 'superadmin'].includes(verifierProfile.role || '')) {
+      return { success: false, message: "Sin permisos para canjear cupones.", resultType: 'redeem' };
+    }
+
+    // Round-trip 2: verificar cupón (incluye prize info — elimina el 3er SELECT original)
+    const { data: coupon, error: couponError } = await adminSupabase
       .from('coupons')
-      .select('id, user_id, is_redeemed, expires_at')
+      .select('id, user_id, is_redeemed, expires_at, prizes(name, type)')
       .eq('id', payload.c)
       .single();
 
@@ -136,13 +147,14 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       return { success: false, message: "Este cupón ha expirado.", resultType: 'redeem' };
     }
 
-    // Marcar cupón como redimido de forma atómica para evitar doble canje concurrente.
-    const { data: updatedCoupon, error: updateError } = await supabase
+    // Round-trip 3: UPDATE atómico — incluye branch_id para reportes correctos
+    const { data: updatedCoupon, error: updateError } = await adminSupabase
       .from('coupons')
       .update({
         is_redeemed: true,
         redeemed_at: new Date().toISOString(),
-        redeemed_by: verifierUser.id
+        redeemed_by: verifierUser.id,
+        branch_id: verifierProfile.branch_id,
       })
       .eq('id', payload.c)
       .eq('is_redeemed', false)
@@ -157,21 +169,11 @@ export async function redeemCoupon(qrToken: string): Promise<ActionResponse> {
       return { success: false, message: "Este cupón ya fue redimido por otro verificador.", resultType: 'redeem' };
     }
 
-    // Obtener información del premio para el mensaje
-    const { data: couponInfo } = await supabase
-      .from('coupons')
-      .select(`
-        prizes (name, type)
-      `)
-      .eq('id', payload.c)
-      .single();
+    const prizeName = coupon.prizes?.name || 'Premio';
 
-    const prizeName = couponInfo?.prizes?.name || 'Premio';
-    
-    // Invalidar caché del dashboard y de actividad reciente
     revalidatePath('/admin/dashboard');
     await invalidateScanActivityCache();
-    
+
     return { success: true, message: `Cupón "${prizeName}" redimido exitosamente.`, resultType: 'redeem' };
 
   } catch (error) {

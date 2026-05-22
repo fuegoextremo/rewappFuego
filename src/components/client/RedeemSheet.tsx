@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import Image from 'next/image'
 import BottomSheet from '@/components/ui/BottomSheet'
@@ -19,6 +19,7 @@ type ApiResp = {
   prizeDescription?: string | null
   code?: string
   error?: string
+  exp?: number
 }
 
 export default function RedeemSheet({ open, onClose, couponId }: Props) {
@@ -28,9 +29,16 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
   const [description, setDescription] = useState<string | null>(null)
   const [code, setCode] = useState<string>('—')
   const [err, setErr] = useState<string | null>(null)
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     let mounted = true
+
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current)
+      refreshTimerRef.current = null
+    }
+
     async function run() {
       setErr(null); setImg(null); setTitle('Reclamando…'); setCode('—'); setDescription(null)
       try {
@@ -43,6 +51,16 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
         setTitle(json.prizeName ?? 'Premio')
         setDescription(json.prizeDescription ?? null)
         setCode(json.code ?? '')
+
+        // Auto-refresh 60 segundos antes de que el token expire
+        if (json.exp) {
+          const msUntilRefresh = (json.exp * 1000) - Date.now() - 60_000
+          if (msUntilRefresh > 0) {
+            refreshTimerRef.current = setTimeout(() => {
+              if (mounted) run()
+            }, msUntilRefresh)
+          }
+        }
       } catch (e) {
         console.error('Error generando QR de cupón:', e)
         if (!mounted) return
@@ -50,7 +68,13 @@ export default function RedeemSheet({ open, onClose, couponId }: Props) {
       }
     }
     if (open) run()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
+    }
   }, [open, couponId])
 
   // 🎯 Escuchar cuando el cupón es redimido exitosamente para cerrar automáticamente

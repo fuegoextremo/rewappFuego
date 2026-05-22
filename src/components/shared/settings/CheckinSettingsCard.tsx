@@ -49,6 +49,8 @@ export default function CheckinSettingsCard({
     streak_break_days: getSettingValue('streak_break_days', '12'),
     streak_expiry_days: getSettingValue('streak_expiry_days', '90'),
     streak_initial_image: getSettingValue('streak_initial_image', '/images/badge-default.png'),
+    streak_complete_image: getSettingValue('streak_complete_image', '/images/badge-default.png'),
+    streak_broken_image: getSettingValue('streak_broken_image', '/images/badge-broken-streak.png'),
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -114,6 +116,8 @@ export default function CheckinSettingsCard({
           streak_break_days: '12',
           streak_expiry_days: '90',
           streak_initial_image: '/images/badge-default.png',
+          streak_complete_image: '/images/badge-default.png',
+          streak_broken_image: '/images/badge-broken-streak.png',
         });
 
         toast({
@@ -251,6 +255,38 @@ export default function CheckinSettingsCard({
               bucket="branding"
               value={formData.streak_initial_image}
               onChange={(url) => handleInputChange('streak_initial_image', url)}
+              disabled={isLoading}
+              previewWidth={60}
+              previewHeight={60}
+              recommendedSize="60x60"
+            />
+          </div>
+
+          {/* Imagen racha completada */}
+          <div className="px-4 py-3 bg-white space-y-1.5">
+            <ImageUploader
+              label="Imagen racha completada"
+              description="Se muestra en el escudo cuando el usuario completa todos los premios de racha"
+              fieldName="streak_complete"
+              bucket="branding"
+              value={formData.streak_complete_image}
+              onChange={(url) => handleInputChange('streak_complete_image', url)}
+              disabled={isLoading}
+              previewWidth={60}
+              previewHeight={60}
+              recommendedSize="60x60"
+            />
+          </div>
+
+          {/* Imagen racha rota */}
+          <div className="px-4 py-3 bg-white space-y-1.5">
+            <ImageUploader
+              label="Imagen racha rota"
+              description="Se muestra en el escudo cuando la racha del usuario se rompe por inactividad"
+              fieldName="streak_broken"
+              bucket="branding"
+              value={formData.streak_broken_image}
+              onChange={(url) => handleInputChange('streak_broken_image', url)}
               disabled={isLoading}
               previewWidth={60}
               previewHeight={60}

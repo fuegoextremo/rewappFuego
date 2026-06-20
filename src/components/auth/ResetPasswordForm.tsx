@@ -37,6 +37,7 @@ export function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isValidToken, setIsValidToken] = useState(true)
+  const [isVerifying, setIsVerifying] = useState(true)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -53,19 +54,72 @@ export function ResetPasswordForm() {
   })
 
   useEffect(() => {
-    // Verificar si hay tokens de reset en la URL
-    const error = searchParams.get('error')
-    const errorDescription = searchParams.get('error_description')
-    
-    if (error) {
-      setIsValidToken(false)
-      toast({
-        title: "Enlace inválido",
-        description: errorDescription || "El enlace de recuperación no es válido o ha expirado.",
-        variant: "destructive",
-      })
+    let cancelled = false
+
+    const establishSession = async () => {
+      // 1. Error explícito en la URL (link expirado/inválido)
+      const error = searchParams.get('error')
+      const errorDescription = searchParams.get('error_description')
+
+      if (error) {
+        if (!cancelled) {
+          setIsValidToken(false)
+          setIsVerifying(false)
+          toast({
+            title: "Enlace inválido",
+            description: errorDescription || "El enlace de recuperación no es válido o ha expirado.",
+            variant: "destructive",
+          })
+        }
+        return
+      }
+
+      // 2. Flujo PKCE: intercambiar el code por una sesión.
+      // Sin esto, updateUser() falla con "Auth session missing!".
+      const code = searchParams.get('code')
+
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (cancelled) return
+
+        if (exchangeError) {
+          setIsValidToken(false)
+          setIsVerifying(false)
+          toast({
+            title: "Enlace inválido",
+            description: "El enlace de recuperación no es válido o ha expirado.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        setIsVerifying(false)
+        return
+      }
+
+      // 3. Sin code: puede ser flujo implícito (#access_token en el hash,
+      // auto-detectado por el cliente) o un enlace ya consumido. Verificamos
+      // que exista una sesión antes de habilitar el formulario.
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+
+      if (!session) {
+        setIsValidToken(false)
+        toast({
+          title: "Enlace inválido",
+          description: "El enlace de recuperación no es válido o ha expirado.",
+          variant: "destructive",
+        })
+      }
+      setIsVerifying(false)
     }
-  }, [searchParams, toast])
+
+    establishSession()
+
+    return () => {
+      cancelled = true
+    }
+  }, [searchParams, toast, supabase])
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true)
@@ -100,6 +154,15 @@ export function ResetPasswordForm() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Mientras se establece la sesión a partir del enlace
+  if (isVerifying) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+      </div>
+    )
   }
 
   // Si el token no es válido, mostrar mensaje de error
